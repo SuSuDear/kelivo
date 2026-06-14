@@ -8,6 +8,7 @@ class IosBackgroundGenerationStatus {
     required this.liveActivityActive,
     required this.notificationsAuthorized,
     required this.liveActivitiesEnabled,
+    required this.immortalizerEnabled,
   });
 
   factory IosBackgroundGenerationStatus.fromMap(Map<dynamic, dynamic>? map) {
@@ -17,6 +18,7 @@ class IosBackgroundGenerationStatus {
       liveActivityActive: readBool('liveActivityActive'),
       notificationsAuthorized: readBool('notificationsAuthorized'),
       liveActivitiesEnabled: readBool('liveActivitiesEnabled'),
+      immortalizerEnabled: readBool('immortalizerEnabled'),
     );
   }
 
@@ -24,6 +26,7 @@ class IosBackgroundGenerationStatus {
   final bool liveActivityActive;
   final bool notificationsAuthorized;
   final bool liveActivitiesEnabled;
+  final bool immortalizerEnabled;
 }
 
 class IosBackgroundGenerationService {
@@ -48,6 +51,7 @@ class IosBackgroundGenerationService {
         liveActivityActive: false,
         notificationsAuthorized: false,
         liveActivitiesEnabled: false,
+        immortalizerEnabled: false,
       );
     }
     final result = await _channel.invokeMethod<dynamic>('getStatus');
@@ -72,6 +76,20 @@ class IosBackgroundGenerationService {
   Future<bool> openNotificationSettings() async {
     if (!_isIos) return false;
     return await _channel.invokeMethod<bool>('openNotificationSettings') ??
+        false;
+  }
+
+  Future<bool> getImmortalizerEnabled() async {
+    if (!_isIos) return false;
+    return await _channel.invokeMethod<bool>('getImmortalizerEnabled') ?? false;
+  }
+
+  Future<bool> setImmortalizerEnabled(bool enabled) async {
+    if (!_isIos) return false;
+    return await _channel.invokeMethod<bool>(
+          'setImmortalizerEnabled',
+          <String, Object?>{'enabled': enabled},
+        ) ??
         false;
   }
 

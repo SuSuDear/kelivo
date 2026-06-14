@@ -246,6 +246,8 @@
   "iosLiveActivitySubtitle": "支持时在锁屏和灵动岛显示后台回复状态。",
   "iosBackgroundNotificationsTitle": "任务通知",
   "iosBackgroundNotificationsSubtitle": "后台回复完成或中断时发送本地通知。",
+  "iosImmortalizerPluginTitle": "Immortalizer 插件保活",
+  "iosImmortalizerPluginSubtitle": "仅在 Kelivo 被 ImmortalizerJailed 插件注入后生效，普通用户无需开启。",
   "iosBackgroundLimitNoticeTitle": "iOS 仍可能暂停任务",
   "iosBackgroundLimitNoticeBody": "这些选项使用 Apple 支持的后台时间、BackgroundTasks、通知和实时活动。它们能提升连续性，但不能强制 iOS 永久保持 Kelivo 运行。",
   "iosBackgroundUnsupportedLiveActivity": "需要 iOS 16.1 或更高版本，并在系统设置中允许实时活动。",
