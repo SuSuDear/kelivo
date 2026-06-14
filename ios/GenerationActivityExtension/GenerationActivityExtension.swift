@@ -14,8 +14,8 @@ struct KelivoGenerationActivityWidget: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: KelivoGenerationActivityAttributes.self) { context in
       LockScreenLiveActivityView(context: context)
-        .activityBackgroundTint(Color(.systemBackground))
-        .activitySystemActionForegroundColor(.primary)
+        .activityBackgroundTint(Color(.secondarySystemBackground))
+        .activitySystemActionForegroundColor(Color.primary)
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
@@ -23,6 +23,7 @@ struct KelivoGenerationActivityWidget: Widget {
             context.state.displayTitle,
             systemImage: activitySymbolName(isFinished: context.state.isFinished)
           )
+            .foregroundStyle(Color.primary)
             .font(.caption)
             .fontWeight(.semibold)
             .lineLimit(1)
@@ -42,14 +43,14 @@ struct KelivoGenerationActivityWidget: Widget {
                 .font(.caption2)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
               if !context.state.tokenLabel.isEmpty {
                 Text(context.state.tokenLabel)
                   .font(.caption2)
                   .fontWeight(.semibold)
                   .monospacedDigit()
-                  .foregroundStyle(.secondary)
+                  .foregroundStyle(Color.secondary)
                   .lineLimit(1)
                   .minimumScaleFactor(0.72)
               }
@@ -62,9 +63,11 @@ struct KelivoGenerationActivityWidget: Widget {
         }
       } compactLeading: {
         Image(systemName: "sparkles")
+          .foregroundStyle(Color.primary)
       } compactTrailing: {
         if context.state.isFinished {
           Image(systemName: "checkmark")
+            .foregroundStyle(Color.primary)
             .font(.caption2)
             .fontWeight(.semibold)
         } else {
@@ -72,6 +75,7 @@ struct KelivoGenerationActivityWidget: Widget {
         }
       } minimal: {
         Image(systemName: activitySymbolName(isFinished: context.state.isFinished))
+          .foregroundStyle(Color.primary)
       }
     }
   }
@@ -93,16 +97,17 @@ private struct LockScreenLiveActivityView: View {
 
       VStack(alignment: .leading, spacing: 4) {
         Text(context.state.displayTitle)
+          .foregroundStyle(Color.primary)
           .font(.subheadline)
           .fontWeight(.semibold)
           .lineLimit(1)
           .minimumScaleFactor(0.82)
 
         Text(context.state.detail)
+          .foregroundStyle(Color.secondary)
           .font(.caption)
           .lineLimit(1)
           .minimumScaleFactor(0.82)
-          .foregroundStyle(.secondary)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -115,7 +120,7 @@ private struct LockScreenLiveActivityView: View {
             .font(.caption2)
             .fontWeight(.semibold)
             .monospacedDigit()
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color.secondary)
             .lineLimit(1)
             .minimumScaleFactor(0.72)
             .padding(.horizontal, 9)
@@ -141,7 +146,7 @@ private struct ActivityElapsedText: View {
       .font(.caption2)
       .fontWeight(.semibold)
       .monospacedDigit()
-      .foregroundStyle(.secondary)
+      .foregroundStyle(Color.secondary)
       .lineLimit(1)
       .minimumScaleFactor(0.72)
   }
