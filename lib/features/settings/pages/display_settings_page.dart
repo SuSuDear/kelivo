@@ -2284,7 +2284,7 @@ class _IosBackgroundSettingsPageState extends State<IosBackgroundSettingsPage> {
               _iosDivider(context),
               _iosSwitchRow(
                 context,
-                icon: Lucide.ShieldCheck,
+                icon: Lucide.Shield,
                 label: l10n.iosImmortalizerPluginTitle,
                 subtitle: l10n.iosImmortalizerPluginSubtitle,
                 value: sp.iosImmortalizerPluginEnabled,
