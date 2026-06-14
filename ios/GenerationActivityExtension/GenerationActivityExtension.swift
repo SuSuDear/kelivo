@@ -141,11 +141,7 @@ private struct LockScreenLiveActivityView: View {
 }
 
 private let liveActivityBackgroundColor = Color(
-  UIColor { traitCollection in
-    traitCollection.userInterfaceStyle == .dark
-      ? UIColor(red: 0.10, green: 0.10, blue: 0.12, alpha: 1.0)
-      : UIColor.secondarySystemBackground
-  }
+  UIColor(red: 0.10, green: 0.10, blue: 0.12, alpha: 1.0)
 )
 
 private struct ActivityElapsedText: View {
