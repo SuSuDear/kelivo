@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
-import 'package:Kelivo/core/providers/tts_provider.dart';
 import 'package:Kelivo/features/home/controllers/stream_controller.dart'
     as stream_ctrl;
 import 'package:Kelivo/features/home/controllers/streaming_content_notifier.dart';
@@ -259,7 +258,6 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: SettingsProvider()),
           ChangeNotifierProvider.value(value: AssistantProvider()),
-          ChangeNotifierProvider.value(value: TtsProvider()),
           ChangeNotifierProvider.value(value: AskUserInteractionService()),
           ChangeNotifierProvider.value(value: ToolApprovalService()),
         ],
@@ -334,7 +332,6 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: SettingsProvider()),
           ChangeNotifierProvider.value(value: AssistantProvider()),
-          ChangeNotifierProvider.value(value: TtsProvider()),
           ChangeNotifierProvider.value(value: AskUserInteractionService()),
           ChangeNotifierProvider.value(value: ToolApprovalService()),
         ],
@@ -415,7 +412,6 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: SettingsProvider()),
           ChangeNotifierProvider.value(value: AssistantProvider()),
-          ChangeNotifierProvider.value(value: TtsProvider()),
           ChangeNotifierProvider.value(value: AskUserInteractionService()),
           ChangeNotifierProvider.value(value: ToolApprovalService()),
         ],
@@ -505,7 +501,6 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: SettingsProvider()),
           ChangeNotifierProvider.value(value: AssistantProvider()),
-          ChangeNotifierProvider.value(value: TtsProvider()),
           ChangeNotifierProvider.value(value: AskUserInteractionService()),
           ChangeNotifierProvider.value(value: ToolApprovalService()),
         ],
@@ -591,7 +586,6 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: SettingsProvider()),
           ChangeNotifierProvider.value(value: AssistantProvider()),
-          ChangeNotifierProvider.value(value: TtsProvider()),
           ChangeNotifierProvider.value(value: AskUserInteractionService()),
           ChangeNotifierProvider.value(value: ToolApprovalService()),
         ],

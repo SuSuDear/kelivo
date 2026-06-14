@@ -1,6 +1,5 @@
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
-import 'package:Kelivo/core/providers/tts_provider.dart';
 import 'package:Kelivo/features/chat/widgets/chat_message_widget.dart';
 import 'package:Kelivo/features/home/services/ask_user_interaction_service.dart';
 import 'package:Kelivo/features/home/services/tool_approval_service.dart';
@@ -16,7 +15,6 @@ Widget _buildHarness({required Widget child}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => SettingsProvider()),
-      ChangeNotifierProvider(create: (_) => TtsProvider()),
       ChangeNotifierProvider(create: (_) => ToolApprovalService()),
       ChangeNotifierProvider(create: (_) => AskUserInteractionService()),
     ],

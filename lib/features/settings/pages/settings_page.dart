@@ -8,7 +8,6 @@ import '../../provider/pages/providers_page.dart';
 import 'display_settings_page.dart';
 import '../../mcp/pages/mcp_page.dart';
 import '../../assistant/pages/assistant_settings_page.dart';
-import 'tts_services_page.dart';
 import '../../search/pages/search_services_page.dart';
 import '../../backup/pages/backup_page.dart';
 import '../../quick_phrase/pages/quick_phrases_page.dart';
@@ -219,17 +218,6 @@ class SettingsPage extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (_) => const SearchServicesPage(),
                     ),
-                  );
-                },
-              ),
-              _iosDivider(context),
-              _iosNavRow(
-                context,
-                icon: Lucide.Volume2,
-                label: l10n.settingsPageTts,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const TtsServicesPage()),
                   );
                 },
               ),

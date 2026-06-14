@@ -11,12 +11,10 @@ import '../../../core/models/assistant_regex.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/mcp_provider.dart';
-import '../../../core/providers/tts_provider.dart';
 import '../../../core/providers/quick_phrase_provider.dart';
 import '../../../core/providers/instruction_injection_provider.dart';
 import '../../../core/providers/memory_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
-import '../../../core/services/tts/tts_text_selection.dart';
 import '../../../core/services/haptics.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
@@ -1207,48 +1205,6 @@ class HomePageController extends ChangeNotifier {
     }
   }
 
-  void _handleAssistantMessageFinished(ChatMessage message) {
-    if (!_context.mounted || message.role != 'assistant') return;
-    final settings = _context.read<SettingsProvider>();
-    if (!settings.ttsAutoPlayAssistantReplies) return;
-    unawaited(_speakAssistantMessage(message, autoPlay: true));
-  }
-
-  Future<void> speakMessage(ChatMessage message) async {
-    await _speakAssistantMessage(message, autoPlay: false);
-  }
-
-  Future<void> _speakAssistantMessage(
-    ChatMessage message, {
-    required bool autoPlay,
-  }) async {
-    final tts = _context.read<TtsProvider>();
-    if (!autoPlay && tts.playbackState.isActive) {
-      await tts.stop();
-      return;
-    }
-
-    if (PlatformUtils.isDesktopTarget) {
-      final sp = _context.read<SettingsProvider>();
-      final hasNetworkTts = sp.selectedTtsService != null;
-      if (!hasNetworkTts && !tts.isAvailable) {
-        showAppSnackBar(
-          _context,
-          message: AppLocalizations.of(_context)!.desktopTtsPleaseAddProvider,
-          type: NotificationType.warning,
-        );
-        return;
-      }
-    }
-
-    final sp = _context.read<SettingsProvider>();
-    final text = TtsTextSelection.apply(
-      message.content,
-      mode: sp.ttsTextSelectionMode,
-    );
-    if (text.trim().isEmpty) return;
-    await tts.speak(text);
-  }
 
   void shareMessage(int messageIndex, List<ChatMessage> messageList) {
     startMessageSelection(

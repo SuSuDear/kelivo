@@ -47,7 +47,6 @@ import '../shared/widgets/snackbar.dart';
 import 'setting/default_model_pane.dart';
 import 'setting/search_services_pane.dart';
 import 'setting/mcp_pane.dart';
-import 'setting/tts_services_pane.dart';
 import 'setting/quick_phrases_pane.dart';
 import 'setting/instruction_injection_pane.dart';
 import 'setting/world_book_pane.dart';
@@ -94,7 +93,6 @@ enum _SettingsMenuItem {
   quickPhrases,
   instructionInjection,
   worldBook,
-  tts,
   networkProxy,
   backup,
   hotkeys,
@@ -229,10 +227,6 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                           return const DesktopWorldBookPane(
                             key: ValueKey('worldBook'),
                           );
-                        case _SettingsMenuItem.tts:
-                          return const DesktopTtsServicesPane(
-                            key: ValueKey('tts'),
-                          );
                         case _SettingsMenuItem.stats:
                           return const DesktopStatsPane(key: ValueKey('stats'));
                         case _SettingsMenuItem.about:
@@ -301,7 +295,6 @@ class _SettingsMenu extends StatelessWidget {
         lucide.Lucide.BookOpen,
         l10n.settingsPageWorldBook,
       ),
-      (_SettingsMenuItem.tts, lucide.Lucide.Volume2, l10n.settingsPageTts),
       (
         _SettingsMenuItem.networkProxy,
         lucide.Lucide.EthernetPort,

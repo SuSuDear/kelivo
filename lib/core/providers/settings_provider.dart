@@ -10,8 +10,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:path/path.dart' as p;
 import '../services/search/search_service.dart';
-import '../services/tts/network_tts.dart';
-import '../services/tts/tts_text_selection.dart';
 import '../services/network/request_logger.dart';
 import '../services/logging/flutter_logger.dart';
 import '../models/api_keys.dart';
@@ -278,32 +276,6 @@ class SettingsProvider extends ChangeNotifier {
   static const String _globalProxyBypassKey = 'global_proxy_bypass_v1';
   static const String _defaultGlobalProxyBypassRules =
       'localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,::1';
-  // TTS services (network)
-  static const String _ttsServicesKey = 'tts_services_v1';
-  static const String _ttsSelectedKey = 'tts_selected_v1';
-  static const String _ttsAutoPlayAssistantRepliesKey =
-      'tts_auto_play_assistant_replies_v1';
-  static const String _ttsTextSelectionModeKey = 'tts_text_selection_mode_v1';
-  // Desktop UI
-  static const String _desktopSidebarWidthKey = 'desktop_sidebar_width_v1';
-  static const String _desktopSidebarOpenKey = 'desktop_sidebar_open_v1';
-  static const String _desktopRightSidebarWidthKey =
-      'desktop_right_sidebar_width_v1';
-
-  // ===== Network TTS services =====
-  List<TtsServiceOptions> _ttsServices = const <TtsServiceOptions>[];
-  int _ttsServiceSelected = -1; // -1 => use System TTS
-  bool _ttsAutoPlayAssistantReplies = false;
-  TtsTextSelectionMode _ttsTextSelectionMode = TtsTextSelectionMode.fullText;
-  List<TtsServiceOptions> get ttsServices => _ttsServices;
-  int get ttsServiceSelected => _ttsServiceSelected;
-  bool get usingSystemTts => _ttsServiceSelected < 0;
-  bool get ttsAutoPlayAssistantReplies => _ttsAutoPlayAssistantReplies;
-  TtsTextSelectionMode get ttsTextSelectionMode => _ttsTextSelectionMode;
-  TtsServiceOptions? get selectedTtsService =>
-      (_ttsServiceSelected >= 0 && _ttsServiceSelected < _ttsServices.length)
-      ? _ttsServices[_ttsServiceSelected]
-      : null;
 
   List<String> _providersOrder = const [];
   List<String> get providersOrder => _providersOrder;
@@ -1204,34 +1176,6 @@ class SettingsProvider extends ChangeNotifier {
       _globalProxyBypass = bypass;
     }
 
-    // load network TTS services
-    try {
-      final ttsStr = prefs.getString(_ttsServicesKey) ?? '';
-      if (ttsStr.isNotEmpty) {
-        final list = jsonDecode(ttsStr) as List;
-        _ttsServices = [
-          for (final e in list)
-            if (e is Map<String, dynamic>)
-              TtsServiceOptions.fromJson(e)
-            else
-              TtsServiceOptions.fromJson(Map<String, dynamic>.from(e as Map)),
-        ];
-      } else {
-        _ttsServices = const <TtsServiceOptions>[];
-      }
-    } catch (_) {
-      _ttsServices = const <TtsServiceOptions>[];
-    }
-    _ttsServiceSelected = prefs.getInt(_ttsSelectedKey) ?? -1;
-    if (_ttsServiceSelected >= _ttsServices.length) {
-      _ttsServiceSelected = _ttsServices.isEmpty ? -1 : 0;
-      await prefs.setInt(_ttsSelectedKey, _ttsServiceSelected);
-    }
-    _ttsAutoPlayAssistantReplies =
-        prefs.getBool(_ttsAutoPlayAssistantRepliesKey) ?? false;
-    _ttsTextSelectionMode = TtsTextSelectionModeStorage.fromStorageValue(
-      prefs.getString(_ttsTextSelectionModeKey),
-    );
     // webdav config
     final webdavStr = prefs.getString(_webDavConfigKey);
     if (webdavStr != null && webdavStr.isNotEmpty) {
@@ -1374,40 +1318,6 @@ class SettingsProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> setTtsServices(List<TtsServiceOptions> v) async {
-    _ttsServices = List.unmodifiable(v);
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    final list = v.map((e) => e.toJson()).toList();
-    await prefs.setString(_ttsServicesKey, jsonEncode(list));
-    if (_ttsServiceSelected >= _ttsServices.length) {
-      _ttsServiceSelected = _ttsServices.isEmpty ? -1 : 0;
-      await prefs.setInt(_ttsSelectedKey, _ttsServiceSelected);
-    }
-  }
-
-  Future<void> setTtsServiceSelected(int index) async {
-    _ttsServiceSelected = index;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_ttsSelectedKey, _ttsServiceSelected);
-  }
-
-  Future<void> setTtsAutoPlayAssistantReplies(bool value) async {
-    if (_ttsAutoPlayAssistantReplies == value) return;
-    _ttsAutoPlayAssistantReplies = value;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_ttsAutoPlayAssistantRepliesKey, value);
-  }
-
-  Future<void> setTtsTextSelectionMode(TtsTextSelectionMode mode) async {
-    if (_ttsTextSelectionMode == mode) return;
-    _ttsTextSelectionMode = mode;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_ttsTextSelectionModeKey, mode.storageValue);
-  }
 
   // ===== User Font Settings =====
   String? _appFontFamily; // system or Google font family to use globally
@@ -4152,10 +4062,6 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._searchEnabled = searchEnabled ?? _searchEnabled;
     copy._searchAutoTestOnLaunch =
         searchAutoTestOnLaunch ?? _searchAutoTestOnLaunch;
-    copy._ttsServices = _ttsServices;
-    copy._ttsServiceSelected = _ttsServiceSelected;
-    copy._ttsAutoPlayAssistantReplies = _ttsAutoPlayAssistantReplies;
-    copy._ttsTextSelectionMode = _ttsTextSelectionMode;
     // Copy other fields
     copy._providersOrder = _providersOrder;
     copy._themeMode = _themeMode;

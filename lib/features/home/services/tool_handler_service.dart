@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
@@ -8,7 +7,6 @@ import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/mcp_provider.dart';
 import '../../../core/providers/memory_provider.dart';
 import '../../../core/providers/settings_provider.dart';
-import '../../../core/providers/tts_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/mcp/mcp_tool_service.dart';
 import '../../../core/services/search/search_tool_service.dart';
@@ -369,24 +367,6 @@ class ToolHandlerService {
           name,
           args,
           assistant,
-          onSpeakText: (text) async {
-            final tts = contextProvider.read<TtsProvider>();
-            if (!tts.isAvailable) {
-              throw StateError('Text-to-speech is unavailable.');
-            }
-            unawaited(
-              tts.speak(text).catchError((Object error, StackTrace stack) {
-                FlutterError.reportError(
-                  FlutterErrorDetails(
-                    exception: error,
-                    stack: stack,
-                    library: 'Kelivo local tools',
-                    context: ErrorDescription('while playing text-to-speech'),
-                  ),
-                );
-              }),
-            );
-          },
         );
         if (localResult != null) {
           return localResult;

@@ -1180,7 +1180,6 @@ class _HomePageState extends State<HomePage>
               messageList: messages,
               mode: ChatSelectionMode.delete,
             ),
-        onSpeakMessage: (message) => _controller.speakMessage(message),
         onSuggestionTap: (suggestion) => _controller.sendSuggestion(suggestion),
         onRecoveredAskUserAnswer: (message, part, result) =>
             _controller.submitRecoveredAskUserAnswer(message, part, result),

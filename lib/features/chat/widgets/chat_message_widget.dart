@@ -26,7 +26,6 @@ import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/avatar_cache.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../core/models/assistant.dart';
-import '../../../core/providers/tts_provider.dart';
 import '../../../shared/widgets/markdown_with_highlight.dart';
 import '../../../shared/widgets/snackbar.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -125,7 +124,6 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
       'write' => Lucide.ClipboardPen,
       _ => Lucide.Clipboard,
     },
-    LocalToolNames.textToSpeech => Lucide.Volume2,
     _ => null,
   };
 }
@@ -145,80 +143,8 @@ String? _localToolTitleFor(
       'write' => l10n.chatMessageWidgetWriteClipboard,
       _ => l10n.assistantEditLocalToolClipboardTitle,
     },
-    LocalToolNames.textToSpeech => l10n.chatMessageWidgetSpeakingTitle,
     _ => null,
   };
-}
-
-String _textToSpeechToolText(Map<String, dynamic> args) {
-  return (args['text'] ?? '').toString().trim();
-}
-
-void _replayTextToSpeech(BuildContext context, String text) {
-  final content = text.trim();
-  if (content.isEmpty) return;
-
-  final tts = context.read<TtsProvider>();
-  if (!tts.isAvailable) {
-    FlutterError.reportError(
-      FlutterErrorDetails(
-        exception: StateError('Text-to-speech is unavailable.'),
-        library: 'Kelivo chat message tools',
-        context: ErrorDescription('while replaying text-to-speech'),
-      ),
-    );
-    return;
-  }
-
-  unawaited(
-    tts.speak(content).catchError((Object error, StackTrace stack) {
-      FlutterError.reportError(
-        FlutterErrorDetails(
-          exception: error,
-          stack: stack,
-          library: 'Kelivo chat message tools',
-          context: ErrorDescription('while replaying text-to-speech'),
-        ),
-      );
-    }),
-  );
-}
-
-Widget _buildTextToSpeechReplayRow(
-  BuildContext context, {
-  required String text,
-  required Color textColor,
-  required Color buttonColor,
-  double fontSize = 12,
-  int maxLines = 2,
-}) {
-  final l10n = AppLocalizations.of(context)!;
-  return Row(
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      Expanded(
-        child: Text(
-          text,
-          maxLines: maxLines,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: fontSize, height: 1.4, color: textColor),
-        ),
-      ),
-      const SizedBox(width: 8),
-      Tooltip(
-        message: l10n.ttsFloatingReplayTooltip,
-        child: IosIconButton(
-          size: 14,
-          minSize: 30,
-          padding: const EdgeInsets.all(6),
-          color: buttonColor,
-          semanticLabel: l10n.ttsFloatingReplayTooltip,
-          builder: (color) => Icon(Lucide.RefreshCw, size: 14, color: color),
-          onTap: () => _replayTextToSpeech(context, text),
-        ),
-      ),
-    ],
-  );
 }
 
 String _askUserToolTitleFor(AppLocalizations l10n, Map<String, dynamic> args) {
@@ -677,7 +603,6 @@ class ChatMessageWidget extends StatefulWidget {
   final VoidCallback? onResend;
   final VoidCallback? onCopy;
   final VoidCallback? onTranslate;
-  final VoidCallback? onSpeak;
   final VoidCallback? onMore;
   final VoidCallback? onEdit; // user: edit
   final VoidCallback? onDelete; // user: delete
@@ -728,7 +653,6 @@ class ChatMessageWidget extends StatefulWidget {
     this.onResend,
     this.onCopy,
     this.onTranslate,
-    this.onSpeak,
     this.onMore,
     this.onEdit,
     this.onDelete,
@@ -2504,45 +2428,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Consumer<TtsProvider>(
-                          builder: (context, tts, _) {
-                            final ttsActive = tts.playbackState.isActive;
-                            return SizedBox(
-                              width: 28,
-                              height: 28,
-                              child: Center(
-                                child: IosIconButton(
-                                  size: 16,
-                                  padding: EdgeInsets.all(4),
-                                  onTap: widget.onSpeak,
-                                  color: cs.onSurface.withValues(alpha: 0.9),
-                                  builder: (color) => AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 200),
-                                    transitionBuilder: (child, anim) =>
-                                        ScaleTransition(
-                                          scale: anim,
-                                          child: FadeTransition(
-                                            opacity: anim,
-                                            child: child,
-                                          ),
-                                        ),
-                                    child: Icon(
-                                      ttsActive
-                                          ? Lucide.CircleStop
-                                          : Lucide.Volume2,
-                                      key: ValueKey(
-                                        ttsActive ? 'stop' : 'speak',
-                                      ),
-                                      size: 16,
-                                      color: color,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 6),
                         SizedBox(
                           width: 28,
                           height: 28,
@@ -4005,21 +3890,11 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
               .toString();
     final bool shouldShowSummary = settings.showToolResultSummary;
     final askUserExpanded = _askUserExpanded ?? true;
-    final ttsText = widget.part.toolName == LocalToolNames.textToSpeech
-        ? _textToSpeechToolText(widget.part.arguments)
-        : '';
     final Widget? content = _isAskUser
         ? _AskUserInlineBody(
             part: widget.part,
             compact: true,
             onRecoveredAnswer: widget.onRecoveredAnswer,
-          )
-        : ttsText.isNotEmpty
-        ? _buildTextToSpeechReplayRow(
-            context,
-            text: ttsText,
-            textColor: fg.body,
-            buttonColor: fg.accent,
           )
         : !shouldShowSummary || summaryText.trim().isEmpty
         ? null
@@ -4197,9 +4072,6 @@ class _ToolCallItemState extends State<_ToolCallItem> {
     final fg = _chatSurfaceForegroundPalette(context);
     final hasImages = _imagePaths.isNotEmpty;
     final l10n = AppLocalizations.of(context)!;
-    final ttsText = widget.part.toolName == LocalToolNames.textToSpeech
-        ? _textToSpeechToolText(widget.part.arguments)
-        : '';
 
     if (widget.part.toolName == LocalToolNames.askUser) {
       return _AskUserToolCard(
@@ -4312,15 +4184,6 @@ class _ToolCallItemState extends State<_ToolCallItem> {
                 ),
               ],
             ),
-            if (ttsText.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              _buildTextToSpeechReplayRow(
-                context,
-                text: ttsText,
-                textColor: fg.body,
-                buttonColor: fg.accent,
-              ),
-            ],
             // Argument summary so users know what the tool is about to do
             if (isPendingApproval && widget.part.arguments.isNotEmpty) ...[
               const SizedBox(height: 8),

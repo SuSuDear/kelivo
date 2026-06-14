@@ -1,7 +1,6 @@
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
-import 'package:Kelivo/core/providers/tts_provider.dart';
 import 'package:Kelivo/core/providers/user_provider.dart';
 import 'package:Kelivo/features/home/controllers/stream_controller.dart'
     as stream_ctrl;
@@ -115,7 +114,6 @@ class _MessageListHarnessState extends State<_MessageListHarness> {
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => AssistantProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
-        ChangeNotifierProvider(create: (_) => TtsProvider()),
         ChangeNotifierProvider(create: (_) => AskUserInteractionService()),
         ChangeNotifierProvider(create: (_) => ToolApprovalService()),
       ],

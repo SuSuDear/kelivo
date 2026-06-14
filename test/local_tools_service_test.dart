@@ -16,7 +16,6 @@ void main() {
       localToolIds: [
         LocalToolNames.timeInfo,
         LocalToolNames.clipboard,
-        LocalToolNames.textToSpeech,
         LocalToolNames.askUser,
       ],
     );
@@ -109,18 +108,14 @@ void main() {
         expect(enabled.map((tool) => tool['function']['name']), const [
           LocalToolNames.timeInfo,
           LocalToolNames.clipboard,
-          LocalToolNames.textToSpeech,
-          LocalToolNames.askUser,
+            LocalToolNames.askUser,
         ]);
         expect(enabled.first['function']['parameters']['properties'], isEmpty);
         expect(
           enabled[1]['function']['parameters']['properties']['action']['enum'],
           const ['read', 'write'],
         );
-        final ttsParameters = enabled[2]['function']['parameters'];
-        expect(ttsParameters['required'], const ['text']);
-        expect(ttsParameters['properties']['text']['type'], 'string');
-        final askUserParameters = enabled[3]['function']['parameters'];
+        final askUserParameters = enabled[2]['function']['parameters'];
         expect(askUserParameters['required'], const ['questions']);
         final questionSchema =
             askUserParameters['properties']['questions']['items'];
@@ -135,44 +130,6 @@ void main() {
         );
       },
     );
-
-    test('text to speech call starts playback and returns success', () async {
-      final spokenTexts = <String>[];
-
-      final result = await LocalToolsService.tryHandleToolCall(
-        LocalToolNames.textToSpeech,
-        const {'text': 'Read this aloud.'},
-        localToolsAssistant,
-        onSpeakText: (text) async {
-          spokenTexts.add(text);
-        },
-      );
-
-      expect(spokenTexts, const ['Read this aloud.']);
-      expect(result, isNotNull);
-      expect(jsonDecode(result!) as Map<String, dynamic>, {'success': true});
-    });
-
-    test('text to speech requires non-empty text', () async {
-      expect(
-        () => LocalToolsService.tryHandleToolCall(
-          LocalToolNames.textToSpeech,
-          const {},
-          localToolsAssistant,
-          onSpeakText: (_) async {},
-        ),
-        throwsA(isA<ArgumentError>()),
-      );
-      expect(
-        () => LocalToolsService.tryHandleToolCall(
-          LocalToolNames.textToSpeech,
-          const {'text': '   '},
-          localToolsAssistant,
-          onSpeakText: (_) async {},
-        ),
-        throwsA(isA<ArgumentError>()),
-      );
-    });
 
     test(
       'time info call returns local date, weekday, time, timezone fields',
