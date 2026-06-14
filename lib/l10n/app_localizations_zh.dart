@@ -955,12 +955,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get iosBackgroundTaskRefreshSubtitle => '在系统条件允许时，向 iOS 请求刷新和处理机会。';
 
   @override
-  String get iosLiveActivityTitle => '实时活动';
-
-  @override
-  String get iosLiveActivitySubtitle => '支持时在锁屏和灵动岛显示后台回复状态。';
-
-  @override
   String get iosBackgroundNotificationsTitle => '任务通知';
 
   @override
@@ -6222,12 +6216,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get iosBackgroundTaskRefreshSubtitle => '在系统条件允许时，向 iOS 请求刷新和处理机会。';
 
   @override
-  String get iosLiveActivityTitle => '实时活动';
-
-  @override
-  String get iosLiveActivitySubtitle => '支持时在锁屏和灵动岛显示后台回复状态。';
-
-  @override
   String get iosBackgroundNotificationsTitle => '任务通知';
 
   @override
@@ -11487,12 +11475,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get iosBackgroundTaskRefreshSubtitle => '在系統條件允許時，向 iOS 請求重新整理和處理機會。';
-
-  @override
-  String get iosLiveActivityTitle => '即時活動';
-
-  @override
-  String get iosLiveActivitySubtitle => '支援時在鎖定畫面和動態島顯示後台回覆狀態。';
 
   @override
   String get iosBackgroundNotificationsTitle => '任務通知';

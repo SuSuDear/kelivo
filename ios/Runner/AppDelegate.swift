@@ -2,7 +2,6 @@ import Flutter
 import UIKit
 import BackgroundTasks
 import UserNotifications
-import ActivityKit
 
 private let backgroundRefreshIdentifier = "psyche.kelivo.background-generation.refresh"
 private let backgroundProcessingIdentifier = "psyche.kelivo.background-generation.processing"
@@ -59,28 +58,12 @@ private let backgroundProcessingIdentifier = "psyche.kelivo.background-generatio
     }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
-
-  override func applicationDidBecomeActive(_ application: UIApplication) {
-    super.applicationDidBecomeActive(application)
-    backgroundGenerationHandler.dismissFinishedLiveActivityIfNeeded()
-  }
 }
 
 private final class IosBackgroundGenerationHandler {
   private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
   private var notificationsEnabled = false
   private var refreshEnabled = false
-  private var liveActivity: Any?
-  private var liveActivityRefreshTimer: Timer?
-  private var liveActivityDisplayTitle = ""
-  private var liveActivityDetail = ""
-  private var liveActivityTokenCount = 0
-  private var liveActivityTokenLabel = ""
-  private var liveActivityStartedAt = Date()
-  private var liveActivityFinishedAt: Date?
-  private var liveActivityFinishedDetail = ""
-  private var liveActivityFinished = false
-  private var liveActivityWavePhase = 0
 
   func registerBackgroundTasks() {
     BGTaskScheduler.shared.register(forTaskWithIdentifier: backgroundRefreshIdentifier, using: nil) { task in
@@ -120,24 +103,10 @@ private final class IosBackgroundGenerationHandler {
     refreshEnabled = args["refreshEnabled"] as? Bool ?? false
     beginBackgroundTask()
     if refreshEnabled { scheduleBackgroundTasks() }
-    if args["liveActivityEnabled"] as? Bool ?? false {
-      startLiveActivity(
-        title: args["title"] as? String ?? "Kelivo",
-        detail: args["detail"] as? String ?? "",
-        tokenCount: args["tokenCount"] as? Int ?? 0,
-        tokenLabel: args["tokenLabel"] as? String ?? ""
-      )
-    }
     result(true)
   }
 
   private func update(arguments: Any?, result: @escaping FlutterResult) {
-    let args = arguments as? [String: Any] ?? [:]
-    updateLiveActivity(
-      detail: args["detail"] as? String ?? "",
-      tokenCount: args["tokenCount"] as? Int ?? 0,
-      tokenLabel: args["tokenLabel"] as? String ?? ""
-    )
     result(true)
   }
 
@@ -145,7 +114,6 @@ private final class IosBackgroundGenerationHandler {
     let args = arguments as? [String: Any] ?? [:]
     let title = args["title"] as? String ?? "Kelivo"
     let detail = args["detail"] as? String ?? ""
-    finishLiveActivity(title: title, detail: detail)
     if notificationsEnabled { showCompletionNotification(title: title, body: detail) }
     endBackgroundTask()
     resetGenerationOptions()
@@ -153,11 +121,6 @@ private final class IosBackgroundGenerationHandler {
   }
 
   private func cancel(arguments: Any?, result: @escaping FlutterResult) {
-    let args = arguments as? [String: Any] ?? [:]
-    finishLiveActivity(
-      title: liveActivityDisplayTitle.isEmpty ? "Kelivo" : liveActivityDisplayTitle,
-      detail: args["detail"] as? String ?? ""
-    )
     endBackgroundTask()
     resetGenerationOptions()
     result(true)
@@ -171,15 +134,9 @@ private final class IosBackgroundGenerationHandler {
   private func getStatus(result: @escaping FlutterResult) {
     UNUserNotificationCenter.current().getNotificationSettings { settings in
       DispatchQueue.main.async {
-        var liveActivitiesEnabled = false
-        if #available(iOS 16.1, *) {
-          liveActivitiesEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
-        }
         result([
           "backgroundTaskActive": self.backgroundTask != .invalid,
-          "liveActivityActive": self.isLiveActivityActive(),
           "notificationsAuthorized": settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional,
-          "liveActivitiesEnabled": liveActivitiesEnabled,
         ])
       }
     }
@@ -266,201 +223,6 @@ private final class IosBackgroundGenerationHandler {
     UNUserNotificationCenter.current().add(request)
   }
 
-  private func isLiveActivityActive() -> Bool {
-    if #available(iOS 16.1, *) {
-      return liveActivity as? Activity<KelivoGenerationActivityAttributes> != nil
-    }
-    return false
-  }
-
-  private func startLiveActivity(title: String, detail: String, tokenCount: Int, tokenLabel: String) {
-    if #available(iOS 16.1, *) {
-      guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-      liveActivityDisplayTitle = title
-      liveActivityDetail = detail
-      liveActivityStartedAt = Date()
-      liveActivityFinishedAt = nil
-      liveActivityFinishedDetail = ""
-      liveActivityFinished = false
-      liveActivityWavePhase = 0
-      liveActivityTokenCount = tokenCount
-      liveActivityTokenLabel = tokenLabel
-      let state = liveActivityState(
-        displayTitle: title,
-        detail: detail,
-        tokenCount: tokenCount,
-        tokenLabel: tokenLabel,
-        finishedAt: nil,
-        isFinished: false
-      )
-      do {
-        if #available(iOS 16.2, *) {
-          liveActivity = try Activity<KelivoGenerationActivityAttributes>.request(attributes: KelivoGenerationActivityAttributes(title: title), content: ActivityContent(state: state, staleDate: nil), pushType: nil)
-        } else {
-          liveActivity = try Activity<KelivoGenerationActivityAttributes>.request(attributes: KelivoGenerationActivityAttributes(title: title), contentState: state, pushType: nil)
-        }
-        startLiveActivityRefreshTimer()
-      } catch {
-        NSLog("Kelivo live activity start failed: \(error)")
-        liveActivity = nil
-      }
-    }
-  }
-
-  private func updateLiveActivity(detail: String, tokenCount: Int, tokenLabel: String) {
-    guard isLiveActivityActive(), !liveActivityFinished else { return }
-    liveActivityTokenCount = tokenCount
-    liveActivityTokenLabel = tokenLabel
-    liveActivityDetail = detail
-    liveActivityFinishedAt = nil
-    liveActivityFinishedDetail = ""
-  }
-
-  func dismissFinishedLiveActivityIfNeeded() {
-    guard liveActivityFinished else { return }
-    endLiveActivity(detail: liveActivityFinishedDetail)
-  }
-
-  private func finishLiveActivity(title: String, detail: String) {
-    liveActivityDisplayTitle = title
-    liveActivityDetail = detail
-    stopLiveActivityRefreshTimer()
-    if UIApplication.shared.applicationState == .active {
-      liveActivityFinishedAt = Date()
-      liveActivityFinishedDetail = detail
-      liveActivityFinished = true
-      endLiveActivity(detail: detail)
-      return
-    }
-    markLiveActivityFinished(title: title, detail: detail)
-  }
-
-  private func markLiveActivityFinished(title: String, detail: String) {
-    if #available(iOS 16.1, *), let activity = liveActivity as? Activity<KelivoGenerationActivityAttributes> {
-      let finishedAt = Date()
-      liveActivityDisplayTitle = title
-      liveActivityDetail = detail
-      liveActivityFinishedAt = finishedAt
-      liveActivityFinishedDetail = detail
-      liveActivityFinished = true
-      let state = liveActivityState(
-        displayTitle: title,
-        detail: detail,
-        tokenCount: liveActivityTokenCount,
-        tokenLabel: liveActivityTokenLabel,
-        finishedAt: finishedAt,
-        isFinished: true
-      )
-      Task {
-        if #available(iOS 16.2, *) {
-          await activity.update(ActivityContent(state: state, staleDate: nil))
-        } else {
-          await activity.update(using: state)
-        }
-      }
-    }
-  }
-
-  private func endLiveActivity(detail: String) {
-    if #available(iOS 16.1, *), let activity = liveActivity as? Activity<KelivoGenerationActivityAttributes> {
-      let state = liveActivityState(
-        displayTitle: liveActivityDisplayTitle,
-        detail: detail,
-        tokenCount: liveActivityTokenCount,
-        tokenLabel: liveActivityTokenLabel,
-        finishedAt: liveActivityFinishedAt,
-        isFinished: liveActivityFinished
-      )
-      Task {
-        if #available(iOS 16.2, *) {
-          await activity.end(ActivityContent(state: state, staleDate: nil), dismissalPolicy: .immediate)
-        } else {
-          await activity.end(using: state, dismissalPolicy: .immediate)
-        }
-      }
-      liveActivity = nil
-      stopLiveActivityRefreshTimer()
-      liveActivityDisplayTitle = ""
-      liveActivityDetail = ""
-      liveActivityTokenCount = 0
-      liveActivityTokenLabel = ""
-      liveActivityStartedAt = Date()
-      liveActivityFinishedAt = nil
-      liveActivityFinishedDetail = ""
-      liveActivityFinished = false
-      liveActivityWavePhase = 0
-    }
-  }
-
-  private func startLiveActivityRefreshTimer() {
-    stopLiveActivityRefreshTimer()
-    let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
-      self?.refreshLiveActivity()
-    }
-    liveActivityRefreshTimer = timer
-    RunLoop.main.add(timer, forMode: .common)
-  }
-
-  private func stopLiveActivityRefreshTimer() {
-    liveActivityRefreshTimer?.invalidate()
-    liveActivityRefreshTimer = nil
-  }
-
-  private func refreshLiveActivity() {
-    guard #available(iOS 16.1, *), let activity = liveActivity as? Activity<KelivoGenerationActivityAttributes> else { return }
-    guard !liveActivityFinished else { return }
-    liveActivityWavePhase += 1
-    let state = liveActivityState(
-      displayTitle: liveActivityDisplayTitle,
-      detail: liveActivityDetail,
-      tokenCount: liveActivityTokenCount,
-      tokenLabel: liveActivityTokenLabel,
-      finishedAt: nil,
-      isFinished: false
-    )
-    Task {
-      if #available(iOS 16.2, *) {
-        await activity.update(ActivityContent(state: state, staleDate: nil))
-      } else {
-        await activity.update(using: state)
-      }
-    }
-  }
-
-  @available(iOS 16.1, *)
-  private func liveActivityState(
-    displayTitle: String,
-    detail: String,
-    tokenCount: Int,
-    tokenLabel: String,
-    finishedAt: Date?,
-    isFinished: Bool
-  ) -> KelivoGenerationActivityAttributes.ContentState {
-    let startedAt = liveActivityStartedAt
-    let effectiveFinishedAt = finishedAt ?? Date()
-    return KelivoGenerationActivityAttributes.ContentState(
-      displayTitle: displayTitle,
-      detail: detail,
-      tokenCount: tokenCount,
-      tokenLabel: tokenLabel,
-      startedAt: startedAt,
-      finishedAt: finishedAt,
-      elapsedSeconds: isFinished
-        ? elapsedSeconds(from: startedAt, to: effectiveFinishedAt)
-        : elapsedSeconds(since: startedAt),
-      wavePhase: liveActivityWavePhase,
-      isFinished: isFinished
-    )
-  }
-
-  private func elapsedSeconds(since startedAt: Date) -> Int {
-    elapsedSeconds(from: startedAt, to: Date())
-  }
-
-  private func elapsedSeconds(from startedAt: Date, to endedAt: Date) -> Int {
-    max(0, Int(endedAt.timeIntervalSince(startedAt)))
-  }
-}
 
 private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
   weak var presentingViewController: UIViewController?

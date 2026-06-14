@@ -231,8 +231,6 @@ class SettingsProvider extends ChangeNotifier {
       'ios_background_generation_enabled_v1';
   static const String _iosBackgroundTaskRefreshEnabledKey =
       'ios_background_task_refresh_enabled_v1';
-  static const String _iosLiveActivityEnabledKey =
-      'ios_live_activity_enabled_v1';
   static const String _iosBackgroundNotificationsEnabledKey =
       'ios_background_notifications_enabled_v1';
   // Fonts
@@ -1136,8 +1134,6 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool(_iosBackgroundGenerationEnabledKey) ?? false;
     _iosBackgroundTaskRefreshEnabled =
         prefs.getBool(_iosBackgroundTaskRefreshEnabledKey) ?? false;
-    _iosLiveActivityEnabled =
-        prefs.getBool(_iosLiveActivityEnabledKey) ?? false;
     _iosBackgroundNotificationsEnabled =
         prefs.getBool(_iosBackgroundNotificationsEnabledKey) ?? false;
 
@@ -2301,7 +2297,6 @@ class SettingsProvider extends ChangeNotifier {
     _iosBackgroundGenerationEnabled = v;
     if (!v) {
       _iosBackgroundTaskRefreshEnabled = false;
-      _iosLiveActivityEnabled = false;
       _iosBackgroundNotificationsEnabled = false;
     }
     notifyListeners();
@@ -2312,7 +2307,6 @@ class SettingsProvider extends ChangeNotifier {
     );
     if (!v) {
       await prefs.setBool(_iosBackgroundTaskRefreshEnabledKey, false);
-      await prefs.setBool(_iosLiveActivityEnabledKey, false);
       await prefs.setBool(_iosBackgroundNotificationsEnabledKey, false);
     }
   }
@@ -2329,20 +2323,6 @@ class SettingsProvider extends ChangeNotifier {
       _iosBackgroundTaskRefreshEnabledKey,
       _iosBackgroundTaskRefreshEnabled,
     );
-    if (v) {
-      await prefs.setBool(_iosBackgroundGenerationEnabledKey, true);
-    }
-  }
-
-  bool _iosLiveActivityEnabled = false;
-  bool get iosLiveActivityEnabled => _iosLiveActivityEnabled;
-  Future<void> setIosLiveActivityEnabled(bool v) async {
-    if (_iosLiveActivityEnabled == v) return;
-    _iosLiveActivityEnabled = v;
-    if (v) _iosBackgroundGenerationEnabled = true;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_iosLiveActivityEnabledKey, _iosLiveActivityEnabled);
     if (v) {
       await prefs.setBool(_iosBackgroundGenerationEnabledKey, true);
     }
@@ -4138,7 +4118,6 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._newChatAfterDelete = _newChatAfterDelete;
     copy._iosBackgroundGenerationEnabled = _iosBackgroundGenerationEnabled;
     copy._iosBackgroundTaskRefreshEnabled = _iosBackgroundTaskRefreshEnabled;
-    copy._iosLiveActivityEnabled = _iosLiveActivityEnabled;
     copy._iosBackgroundNotificationsEnabled =
         _iosBackgroundNotificationsEnabled;
     copy._desktopSendShortcut = _desktopSendShortcut;

@@ -425,8 +425,6 @@
   "iosBackgroundGenerationEnableSubtitle": "Use iOS background time to keep the current reply running after the app leaves the foreground.",
   "iosBackgroundTaskRefreshTitle": "Background Task Recovery",
   "iosBackgroundTaskRefreshSubtitle": "Ask iOS for refresh and processing opportunities when system conditions allow.",
-  "iosLiveActivityTitle": "Live Activity",
-  "iosLiveActivitySubtitle": "Show background replies on the Lock Screen and Dynamic Island when supported.",
   "iosBackgroundNotificationsTitle": "Task Notifications",
   "iosBackgroundNotificationsSubtitle": "Send a local notification when a background reply completes or is interrupted.",
   "iosBackgroundLimitNoticeTitle": "iOS may still suspend work",

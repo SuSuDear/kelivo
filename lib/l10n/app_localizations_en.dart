@@ -983,12 +983,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get iosBackgroundTaskRefreshSubtitle =>
       'Ask iOS for refresh and processing opportunities when system conditions allow.';
 
-  @override
-  String get iosLiveActivityTitle => 'Live Activity';
 
-  @override
-  String get iosLiveActivitySubtitle =>
-      'Show background replies on the Lock Screen and Dynamic Island when supported.';
 
   @override
   String get iosBackgroundNotificationsTitle => 'Task Notifications';

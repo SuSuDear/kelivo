@@ -20,9 +20,7 @@ void main() {
             case 'getStatus':
               return <String, Object?>{
                 'backgroundTaskActive': false,
-                'liveActivityActive': false,
                 'notificationsAuthorized': true,
-                'liveActivitiesEnabled': true,
               };
             case 'start':
             case 'update':
@@ -46,7 +44,6 @@ void main() {
   test('does nothing on non-iOS platforms', () async {
     await IosBackgroundGenerationService.instance.start(
       enabled: true,
-      liveActivityEnabled: true,
       notificationsEnabled: true,
       refreshEnabled: true,
       title: 'Generating',
@@ -62,7 +59,6 @@ void main() {
   test('does nothing when the primary setting is disabled', () async {
     await IosBackgroundGenerationService.instance.start(
       enabled: false,
-      liveActivityEnabled: true,
       notificationsEnabled: true,
       refreshEnabled: true,
       title: 'Generating',
@@ -79,7 +75,6 @@ void main() {
 
     await service.start(
       enabled: true,
-      liveActivityEnabled: true,
       notificationsEnabled: true,
       refreshEnabled: true,
       title: 'Generating',
@@ -95,7 +90,6 @@ void main() {
 
     await service.start(
       enabled: false,
-      liveActivityEnabled: true,
       notificationsEnabled: true,
       refreshEnabled: true,
       title: 'Generating',
@@ -113,13 +107,12 @@ void main() {
     expect(calls, isEmpty);
   });
 
-  test('sends live activity data without synthetic progress', () async {
+  test('sends background generation data without synthetic progress', () async {
     final service = IosBackgroundGenerationService.instance
       ..debugForceIosForTest = true;
 
     await service.start(
       enabled: true,
-      liveActivityEnabled: true,
       notificationsEnabled: true,
       refreshEnabled: true,
       title: 'Generating',
@@ -144,7 +137,6 @@ void main() {
       'finish',
     ]);
     expect(calls[1].arguments, <String, Object?>{
-      'liveActivityEnabled': true,
       'notificationsEnabled': true,
       'refreshEnabled': true,
       'title': 'Generating',
@@ -165,7 +157,6 @@ void main() {
 
     await service.start(
       enabled: true,
-      liveActivityEnabled: true,
       notificationsEnabled: false,
       refreshEnabled: true,
       title: 'Generating',
@@ -189,9 +180,7 @@ void main() {
     final status = await service.getStatus();
 
     expect(status.backgroundTaskActive, isFalse);
-    expect(status.liveActivityActive, isFalse);
     expect(status.notificationsAuthorized, isTrue);
-    expect(status.liveActivitiesEnabled, isTrue);
   });
 
   test(

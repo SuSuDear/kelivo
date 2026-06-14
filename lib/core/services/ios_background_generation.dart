@@ -5,25 +5,19 @@ import 'package:flutter/services.dart';
 class IosBackgroundGenerationStatus {
   const IosBackgroundGenerationStatus({
     required this.backgroundTaskActive,
-    required this.liveActivityActive,
     required this.notificationsAuthorized,
-    required this.liveActivitiesEnabled,
   });
 
   factory IosBackgroundGenerationStatus.fromMap(Map<dynamic, dynamic>? map) {
     bool readBool(String key) => map?[key] == true;
     return IosBackgroundGenerationStatus(
       backgroundTaskActive: readBool('backgroundTaskActive'),
-      liveActivityActive: readBool('liveActivityActive'),
       notificationsAuthorized: readBool('notificationsAuthorized'),
-      liveActivitiesEnabled: readBool('liveActivitiesEnabled'),
     );
   }
 
   final bool backgroundTaskActive;
-  final bool liveActivityActive;
   final bool notificationsAuthorized;
-  final bool liveActivitiesEnabled;
 }
 
 class IosBackgroundGenerationService {
@@ -45,9 +39,7 @@ class IosBackgroundGenerationService {
     if (!_isIos) {
       return const IosBackgroundGenerationStatus(
         backgroundTaskActive: false,
-        liveActivityActive: false,
         notificationsAuthorized: false,
-        liveActivitiesEnabled: false,
       );
     }
     final result = await _channel.invokeMethod<dynamic>('getStatus');
@@ -78,7 +70,6 @@ class IosBackgroundGenerationService {
 
   Future<void> start({
     required bool enabled,
-    required bool liveActivityEnabled,
     required bool notificationsEnabled,
     required bool refreshEnabled,
     required String title,
@@ -95,7 +86,6 @@ class IosBackgroundGenerationService {
     }
     final started = await _channel
         .invokeMethod<bool>('start', <String, Object?>{
-          'liveActivityEnabled': liveActivityEnabled,
           'notificationsEnabled': notificationsEnabled,
           'refreshEnabled': refreshEnabled,
           'title': title,

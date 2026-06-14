@@ -1919,18 +1919,6 @@ abstract class AppLocalizations {
   /// **'Ask iOS for refresh and processing opportunities when system conditions allow.'**
   String get iosBackgroundTaskRefreshSubtitle;
 
-  /// No description provided for @iosLiveActivityTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Live Activity'**
-  String get iosLiveActivityTitle;
-
-  /// No description provided for @iosLiveActivitySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show background replies on the Lock Screen and Dynamic Island when supported.'**
-  String get iosLiveActivitySubtitle;
-
   /// No description provided for @iosBackgroundNotificationsTitle.
   ///
   /// In en, this message translates to:

@@ -257,8 +257,6 @@
   "iosBackgroundGenerationEnableSubtitle": "App 離開前台後，使用 iOS 分配的後台時間繼續目前回覆。",
   "iosBackgroundTaskRefreshTitle": "後台任務恢復",
   "iosBackgroundTaskRefreshSubtitle": "在系統條件允許時，向 iOS 請求重新整理和處理機會。",
-  "iosLiveActivityTitle": "即時活動",
-  "iosLiveActivitySubtitle": "支援時在鎖定畫面和動態島顯示後台回覆狀態。",
   "iosBackgroundNotificationsTitle": "任務通知",
   "iosBackgroundNotificationsSubtitle": "後台回覆完成或中斷時發送本機通知。",
   "iosBackgroundLimitNoticeTitle": "iOS 仍可能暫停任務",

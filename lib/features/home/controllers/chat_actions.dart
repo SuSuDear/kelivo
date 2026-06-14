@@ -141,7 +141,6 @@ class ChatActions {
     try {
       await IosBackgroundGenerationService.instance.start(
         enabled: settings.iosBackgroundGenerationEnabled,
-        liveActivityEnabled: settings.iosLiveActivityEnabled,
         notificationsEnabled: settings.iosBackgroundNotificationsEnabled,
         refreshEnabled: settings.iosBackgroundTaskRefreshEnabled,
         title: l10n.iosBackgroundGenerationActiveTitle,

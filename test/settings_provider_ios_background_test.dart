@@ -21,7 +21,6 @@ void main() {
 
       expect(settings.iosBackgroundGenerationEnabled, isFalse);
       expect(settings.iosBackgroundTaskRefreshEnabled, isFalse);
-      expect(settings.iosLiveActivityEnabled, isFalse);
       expect(settings.iosBackgroundNotificationsEnabled, isFalse);
     });
 
@@ -29,7 +28,6 @@ void main() {
       SharedPreferences.setMockInitialValues({
         'ios_background_generation_enabled_v1': true,
         'ios_background_task_refresh_enabled_v1': true,
-        'ios_live_activity_enabled_v1': true,
         'ios_background_notifications_enabled_v1': true,
       });
       final settings = SettingsProvider();
@@ -38,7 +36,6 @@ void main() {
 
       expect(settings.iosBackgroundGenerationEnabled, isTrue);
       expect(settings.iosBackgroundTaskRefreshEnabled, isTrue);
-      expect(settings.iosLiveActivityEnabled, isTrue);
       expect(settings.iosBackgroundNotificationsEnabled, isTrue);
     });
 
@@ -49,17 +46,14 @@ void main() {
       await _waitForSettingsLoad();
       await settings.setIosBackgroundGenerationEnabled(true);
       await settings.setIosBackgroundTaskRefreshEnabled(true);
-      await settings.setIosLiveActivityEnabled(true);
       await settings.setIosBackgroundNotificationsEnabled(true);
 
       final prefs = await SharedPreferences.getInstance();
       expect(settings.iosBackgroundGenerationEnabled, isTrue);
       expect(settings.iosBackgroundTaskRefreshEnabled, isTrue);
-      expect(settings.iosLiveActivityEnabled, isTrue);
       expect(settings.iosBackgroundNotificationsEnabled, isTrue);
       expect(prefs.getBool('ios_background_generation_enabled_v1'), isTrue);
       expect(prefs.getBool('ios_background_task_refresh_enabled_v1'), isTrue);
-      expect(prefs.getBool('ios_live_activity_enabled_v1'), isTrue);
       expect(prefs.getBool('ios_background_notifications_enabled_v1'), isTrue);
     });
   });

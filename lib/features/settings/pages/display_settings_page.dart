@@ -2264,17 +2264,6 @@ class _IosBackgroundSettingsPageState extends State<IosBackgroundSettingsPage> {
               _iosDivider(context),
               _iosSwitchRow(
                 context,
-                icon: Lucide.Timer,
-                label: l10n.iosLiveActivityTitle,
-                subtitle: l10n.iosLiveActivitySubtitle,
-                value: sp.iosLiveActivityEnabled,
-                onChanged: (v) => context
-                    .read<SettingsProvider>()
-                    .setIosLiveActivityEnabled(v),
-              ),
-              _iosDivider(context),
-              _iosSwitchRow(
-                context,
                 icon: Lucide.MessageCircle,
                 label: l10n.iosBackgroundNotificationsTitle,
                 subtitle: l10n.iosBackgroundNotificationsSubtitle,
@@ -2296,9 +2285,7 @@ class _IosBackgroundSettingsPageState extends State<IosBackgroundSettingsPage> {
                     label: l10n.iosBackgroundNativeStatusTitle,
                     detailText: status == null
                         ? l10n.iosBackgroundNativeStatusUnavailable
-                        : status.liveActivitiesEnabled
-                        ? l10n.iosBackgroundLiveActivityAvailable
-                        : l10n.iosBackgroundLiveActivityUnavailable,
+                        : null,
                     onTap: _openAppSettings,
                   ),
                   _iosDivider(context),
@@ -2314,10 +2301,6 @@ class _IosBackgroundSettingsPageState extends State<IosBackgroundSettingsPage> {
               );
             },
           ),
-          if (sp.iosLiveActivityEnabled) ...[
-            const SizedBox(height: 12),
-            _plainFootnote(context, l10n.iosBackgroundUnsupportedLiveActivity),
-          ],
         ],
       ),
     );
