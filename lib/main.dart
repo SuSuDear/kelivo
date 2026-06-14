@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'dart:async';
 import 'l10n/app_localizations.dart';
 import 'features/home/pages/home_page.dart';
-import 'desktop/desktop_home_page.dart';
 import 'package:flutter/services.dart';
-import 'package:window_manager/window_manager.dart';
-import 'desktop/desktop_window_controller.dart';
-import 'desktop/desktop_tray_controller.dart';
 // import 'package:logging/logging.dart' as logging;
 // Theme is now managed in SettingsProvider
 import 'theme/theme_factory.dart';
@@ -31,7 +25,6 @@ import 'core/providers/memory_provider.dart';
 import 'core/providers/backup_provider.dart';
 import 'core/providers/s3_backup_provider.dart';
 import 'core/providers/backup_reminder_provider.dart';
-import 'core/providers/hotkey_provider.dart';
 import 'core/services/chat/chat_service.dart';
 import 'core/services/mcp/mcp_tool_service.dart';
 import 'core/services/logging/flutter_logger.dart';
@@ -40,11 +33,6 @@ import 'features/home/services/tool_approval_service.dart';
 import 'utils/sandbox_path_resolver.dart';
 import 'shared/widgets/app_overlays.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:system_fonts/system_fonts.dart';
-import 'dart:io'
-    show Platform; // kept for global override usage inside provider
-import 'core/services/android_background.dart';
-import 'core/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final RouteObserver<ModalRoute<dynamic>> routeObserver =
@@ -68,9 +56,6 @@ Future<void> main() async {
         PaintingBinding.instance.imageCache.maximumSizeBytes =
             48 << 20; // ~48MB
       } catch (_) {}
-      // Desktop (Windows) window setup: hide native title bar for custom Flutter bar
-      await _initDesktopWindow();
-      // Avoid preloading all system fonts at launch (huge memory on desktop)
       // Debug logging and global error handlers were enabled previously for diagnosis.
       // They are commented out now per request to reduce log noise.
       // FlutterError.onError = (FlutterErrorDetails details) { ... };
@@ -79,7 +64,7 @@ Future<void> main() async {
       // logging.Logger.root.onRecord.listen((rec) { ... });
       // Cache current Documents directory to fix sandboxed absolute paths on iOS
       await SandboxPathResolver.init();
-      // Enable edge-to-edge to allow content under system bars (Android)
+      // Enable edge-to-edge system UI.
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       // Start app (Flutter log capture is toggleable and off by default)
       runApp(const MyApp());
@@ -92,22 +77,6 @@ Future<void> main() async {
     ),
   );
 }
-
-Future<void> _initDesktopWindow() async {
-  if (kIsWeb) return;
-  try {
-    if (defaultTargetPlatform == TargetPlatform.windows) {
-      await windowManager.ensureInitialized();
-      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-    }
-    // Initialize and show desktop window with persisted size/position
-    await DesktopWindowController.instance.initializeAndShow(title: 'Kelivo');
-  } catch (_) {
-    // Ignore on unsupported platforms.
-  }
-}
-
-// Removed eager system font preloading to reduce memory footprint at launch.
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -145,8 +114,6 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WorldBookProvider()),
         ChangeNotifierProvider(create: (_) => MemoryProvider()),
         ChangeNotifierProvider(create: (_) => BackupReminderProvider()),
-        // Desktop hotkeys provider
-        ChangeNotifierProvider(create: (_) => HotkeyProvider()),
         ChangeNotifierProvider(
           create: (ctx) => BackupProvider(
             chatService: ctx.read<ChatService>(),
@@ -165,44 +132,6 @@ class MyApp extends StatelessWidget {
           final settings = context.watch<SettingsProvider>();
           // Apply global proxy overrides when settings change
           settings.applyGlobalProxyOverridesIfNeeded();
-          // Lazily ensure system fonts only if user selected a system family (desktop only)
-          // Load ONLY selected families to avoid huge memory from loading all system fonts.
-          WidgetsBinding.instance.addPostFrameCallback((_) async {
-            try {
-              final isDesktop =
-                  !kIsWeb &&
-                  (defaultTargetPlatform == TargetPlatform.windows ||
-                      defaultTargetPlatform == TargetPlatform.macOS ||
-                      defaultTargetPlatform == TargetPlatform.linux);
-              if (!isDesktop) return;
-              // Selected system app/code fonts (not Google, not local alias)
-              final wantsAppSystem =
-                  (settings.appFontFamily?.isNotEmpty == true) &&
-                  !settings.appFontIsGoogle &&
-                  (settings.appFontLocalAlias == null ||
-                      settings.appFontLocalAlias!.isEmpty);
-              final wantsCodeSystem =
-                  (settings.codeFontFamily?.isNotEmpty == true) &&
-                  !settings.codeFontIsGoogle &&
-                  (settings.codeFontLocalAlias == null ||
-                      settings.codeFontLocalAlias!.isEmpty);
-              if (wantsAppSystem || wantsCodeSystem) {
-                final sf = SystemFonts();
-                if (wantsAppSystem) {
-                  final fam = settings.appFontFamily!;
-                  try {
-                    await sf.loadFont(fam);
-                  } catch (_) {}
-                }
-                if (wantsCodeSystem) {
-                  final fam = settings.codeFontFamily!;
-                  try {
-                    if (fam != settings.appFontFamily) await sf.loadFont(fam);
-                  } catch (_) {}
-                }
-              }
-            } catch (_) {}
-          });
           // One-time app update check after first build
           if (settings.showAppUpdates && !_didCheckUpdates) {
             _didCheckUpdates = true;
@@ -224,63 +153,8 @@ class MyApp extends StatelessWidget {
               // } else {
               //   debugPrint('[DynamicColor] Dark dynamic not available');
               // }
-              final isAndroid =
-                  Theme.of(context).platform == TargetPlatform.android;
-              // Update dynamic color capability for settings UI (avoid notify during build)
-              final dynSupported =
-                  isAndroid && (lightDynamic != null || darkDynamic != null);
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                try {
-                  settings.setDynamicColorSupported(dynSupported);
-                } catch (_) {}
-              });
-
-              // Initialize desktop hotkeys on supported platforms
-              WidgetsBinding.instance.addPostFrameCallback((_) async {
-                try {
-                  final isDesktop =
-                      !kIsWeb &&
-                      (defaultTargetPlatform == TargetPlatform.windows ||
-                          defaultTargetPlatform == TargetPlatform.macOS ||
-                          defaultTargetPlatform == TargetPlatform.linux);
-                  if (isDesktop) {
-                    await context.read<HotkeyProvider>().initialize();
-                  }
-                } catch (_) {}
-              });
-
-              // Android-only: ensure background execution matches setting and prepare notifications if needed
-              WidgetsBinding.instance.addPostFrameCallback((_) async {
-                try {
-                  if (Platform.isAndroid) {
-                    final mode = settings.androidBackgroundChatMode;
-                    if (mode != AndroidBackgroundChatMode.off) {
-                      final l10n = AppLocalizations.of(context);
-                      if (l10n == null) return;
-                      // Enable only if currently disabled to avoid duplicate ROM prompts
-                      try {
-                        final already =
-                            await AndroidBackgroundManager.isEnabled();
-                        if (!already) {
-                          await AndroidBackgroundManager.ensureInitialized(
-                            notificationTitle:
-                                l10n.androidBackgroundNotificationTitle,
-                            notificationText:
-                                l10n.androidBackgroundNotificationText,
-                          );
-                          await AndroidBackgroundManager.setEnabled(true);
-                        }
-                      } catch (_) {}
-                      if (mode == AndroidBackgroundChatMode.onNotify) {
-                        await NotificationService.ensureInitialized();
-                        await NotificationService.ensureAndroidNotificationsPermission();
-                      }
-                    }
-                  }
-                } catch (_) {}
-              });
-
-              final useDyn = isAndroid && settings.useDynamicColor;
+              settings.setDynamicColorSupported(false);
+              const useDyn = false;
               final palette = ThemePalettes.byId(settings.themePaletteId);
 
               final light = buildLightThemeForScheme(
@@ -409,28 +283,6 @@ class MyApp extends StatelessWidget {
                     });
                   }
 
-                  // Desktop tray + close behaviour (minimize to tray) sync
-                  final l10n = AppLocalizations.of(ctx);
-                  if (l10n != null) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) async {
-                      try {
-                        final isDesktop =
-                            !kIsWeb &&
-                            (defaultTargetPlatform == TargetPlatform.windows ||
-                                defaultTargetPlatform == TargetPlatform.macOS ||
-                                defaultTargetPlatform == TargetPlatform.linux);
-                        if (!isDesktop) return;
-                        final sp = ctx.read<SettingsProvider>();
-                        await DesktopTrayController.instance.syncFromSettings(
-                          l10n,
-                          showTray: sp.desktopShowTray,
-                          minimizeToTrayOnClose:
-                              sp.desktopMinimizeToTrayOnClose,
-                        );
-                      } catch (_) {}
-                    });
-                  }
-
                   // Enforce app font as a default across the tree for Texts without explicit family
                   final appWithOverlays = AppOverlays(
                     child: child ?? const SizedBox.shrink(),
@@ -454,14 +306,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-Widget _selectHome() {
-  // Mobile remains the default platform. Desktop is an added platform.
-  if (kIsWeb) return const HomePage();
-  final isDesktop =
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux;
-  return isDesktop ? const DesktopHomePage() : const HomePage();
-}
+Widget _selectHome() => const HomePage();
 
 // Overrides logic is implemented within SettingsProvider now.
