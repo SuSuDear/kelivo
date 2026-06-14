@@ -13,7 +13,6 @@ import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../utils/platform_utils.dart';
 import '../../chat/pages/image_viewer_page.dart';
-import 'log_viewer_page.dart';
 import '../../../theme/app_font_weights.dart';
 
 class StorageSpacePage extends StatefulWidget {
@@ -1120,16 +1119,6 @@ class _CategoryDetail extends StatelessWidget {
         spacing: 10,
         runSpacing: 10,
         children: [
-          IosTileButton(
-            label: l10n.storageSpaceViewLogsButton,
-            icon: Lucide.Eye,
-            backgroundColor: cs.primary,
-            onTap: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const LogViewerPage()));
-            },
-          ),
           IosTileButton(
             label: l10n.storageSpaceClearLogsButton,
             icon: Lucide.Trash2,
