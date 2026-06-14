@@ -18,7 +18,6 @@ import '../models/api_keys.dart';
 import '../models/backup.dart';
 import '../models/provider_group.dart';
 import '../services/haptics.dart';
-import '../services/ios_background_generation.dart';
 import '../../utils/app_directories.dart';
 import '../../utils/sandbox_path_resolver.dart';
 import '../../utils/avatar_cache.dart';
@@ -238,8 +237,6 @@ class SettingsProvider extends ChangeNotifier {
       'ios_live_activity_enabled_v1';
   static const String _iosBackgroundNotificationsEnabledKey =
       'ios_background_notifications_enabled_v1';
-  static const String _iosImmortalizerPluginEnabledKey =
-      'immortalized';
   // Fonts
   static const String _displayAppFontFamilyKey = 'display_app_font_family_v1';
   static const String _displayCodeFontFamilyKey = 'display_code_font_family_v1';
@@ -1166,9 +1163,6 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool(_iosLiveActivityEnabledKey) ?? false;
     _iosBackgroundNotificationsEnabled =
         prefs.getBool(_iosBackgroundNotificationsEnabledKey) ?? false;
-    _iosImmortalizerPluginEnabled =
-        prefs.getBool(_iosImmortalizerPluginEnabledKey) ?? false;
-    unawaited(_syncIosImmortalizerPluginEnabledFromNative());
 
     // load search settings
     final searchServicesStr = prefs.getString(_searchServicesKey);
@@ -2385,19 +2379,6 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   // ===== iOS background chat generation =====
-  Future<void> _syncIosImmortalizerPluginEnabledFromNative() async {
-    if (!Platform.isIOS) return;
-    try {
-      final nativeEnabled = await IosBackgroundGenerationService.instance
-          .getImmortalizerEnabled();
-      if (_iosImmortalizerPluginEnabled == nativeEnabled) return;
-      _iosImmortalizerPluginEnabled = nativeEnabled;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_iosImmortalizerPluginEnabledKey, nativeEnabled);
-      notifyListeners();
-    } catch (_) {}
-  }
-
   bool _iosBackgroundGenerationEnabled = false;
   bool get iosBackgroundGenerationEnabled => _iosBackgroundGenerationEnabled;
   Future<void> setIosBackgroundGenerationEnabled(bool v) async {
@@ -2470,22 +2451,6 @@ class SettingsProvider extends ChangeNotifier {
     }
   }
 
-  bool _iosImmortalizerPluginEnabled = false;
-  bool get iosImmortalizerPluginEnabled => _iosImmortalizerPluginEnabled;
-  Future<void> setIosImmortalizerPluginEnabled(bool v) async {
-    if (_iosImmortalizerPluginEnabled == v) return;
-    _iosImmortalizerPluginEnabled = v;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_iosImmortalizerPluginEnabledKey, v);
-    if (Platform.isIOS) {
-      final ok = await IosBackgroundGenerationService.instance
-          .setImmortalizerEnabled(v);
-      if (!ok) {
-        await _syncIosImmortalizerPluginEnabledFromNative();
-      }
-    }
-  }
 
   void setDynamicColorSupported(bool v) {
     if (_dynamicColorSupported == v) return;
@@ -4265,7 +4230,6 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._iosLiveActivityEnabled = _iosLiveActivityEnabled;
     copy._iosBackgroundNotificationsEnabled =
         _iosBackgroundNotificationsEnabled;
-    copy._iosImmortalizerPluginEnabled = _iosImmortalizerPluginEnabled;
     copy._desktopSendShortcut = _desktopSendShortcut;
     copy._desktopMessageNavButtonsMode = _desktopMessageNavButtonsMode;
     copy._chatFontScale = _chatFontScale;

@@ -430,8 +430,6 @@
   "iosLiveActivitySubtitle": "Show background replies on the Lock Screen and Dynamic Island when supported.",
   "iosBackgroundNotificationsTitle": "Task Notifications",
   "iosBackgroundNotificationsSubtitle": "Send a local notification when a background reply completes or is interrupted.",
-  "iosImmortalizerPluginTitle": "Immortalizer Plugin",
-  "iosImmortalizerPluginSubtitle": "Only works when Kelivo is injected with the ImmortalizerJailed plugin. Regular users do not need to enable this.",
   "iosBackgroundLimitNoticeTitle": "iOS may still suspend work",
   "iosBackgroundLimitNoticeBody": "These options use Apple-supported background time, BackgroundTasks, notifications, and Live Activities. They improve continuity but cannot force iOS to keep Kelivo running forever.",
   "iosBackgroundUnsupportedLiveActivity": "Requires iOS 16.1 or later and Live Activities enabled in Settings.",

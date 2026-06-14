@@ -6,8 +6,6 @@ import ActivityKit
 
 private let backgroundRefreshIdentifier = "psyche.kelivo.background-generation.refresh"
 private let backgroundProcessingIdentifier = "psyche.kelivo.background-generation.processing"
-private let immortalizerDefaultsKey = "immortalized"
-private let immortalizerPrefsNotification = "com.sergy.immortalizerjailed.updateprefs"
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -103,10 +101,6 @@ private final class IosBackgroundGenerationHandler {
       openAppSettings(result: result)
     case "openNotificationSettings":
       openNotificationSettings(result: result)
-    case "getImmortalizerEnabled":
-      getImmortalizerEnabled(result: result)
-    case "setImmortalizerEnabled":
-      setImmortalizerEnabled(arguments: call.arguments, result: result)
     case "start":
       start(arguments: call.arguments, result: result)
     case "update":
@@ -186,7 +180,6 @@ private final class IosBackgroundGenerationHandler {
           "liveActivityActive": self.isLiveActivityActive(),
           "notificationsAuthorized": settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional,
           "liveActivitiesEnabled": liveActivitiesEnabled,
-          "immortalizerEnabled": UserDefaults.standard.bool(forKey: immortalizerDefaultsKey),
         ])
       }
     }
@@ -224,24 +217,6 @@ private final class IosBackgroundGenerationHandler {
     }
   }
 
-  private func getImmortalizerEnabled(result: @escaping FlutterResult) {
-    result(UserDefaults.standard.bool(forKey: immortalizerDefaultsKey))
-  }
-
-  private func setImmortalizerEnabled(arguments: Any?, result: @escaping FlutterResult) {
-    let args = arguments as? [String: Any] ?? [:]
-    let enabled = args["enabled"] as? Bool ?? false
-    UserDefaults.standard.set(enabled, forKey: immortalizerDefaultsKey)
-    UserDefaults.standard.synchronize()
-    CFNotificationCenterPostNotification(
-      CFNotificationCenterGetDarwinNotifyCenter(),
-      CFNotificationName(immortalizerPrefsNotification as CFString),
-      nil,
-      nil,
-      true
-    )
-    result(true)
-  }
 
   private func beginBackgroundTask() {
     if backgroundTask != .invalid { return }
