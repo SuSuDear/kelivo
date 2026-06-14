@@ -419,7 +419,6 @@ class HomePageController extends ChangeNotifier {
       // Trigger UI update when streaming finishes
       notifyListeners();
     };
-    _viewModel.onAssistantMessageFinished = _handleAssistantMessageFinished;
   }
 
   String _localizeGenerationError(AppLocalizations l10n, String error) {

@@ -277,6 +277,11 @@ class SettingsProvider extends ChangeNotifier {
   static const String _defaultGlobalProxyBypassRules =
       'localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,::1';
 
+  static const String _desktopSidebarWidthKey = 'desktop_sidebar_width_v1';
+  static const String _desktopSidebarOpenKey = 'desktop_sidebar_open_v1';
+  static const String _desktopRightSidebarWidthKey =
+      'desktop_right_sidebar_width_v1';
+
   List<String> _providersOrder = const [];
   List<String> get providersOrder => _providersOrder;
 
