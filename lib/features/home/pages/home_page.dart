@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../main.dart';
@@ -24,6 +25,13 @@ import '../../../core/models/chat_message.dart';
 import '../../../core/services/android_process_text.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/platform_utils.dart';
+import '../../../desktop/search_provider_popover.dart';
+import '../../../desktop/reasoning_budget_popover.dart';
+import '../../../desktop/mcp_servers_popover.dart';
+import '../../../desktop/mini_map_popover.dart';
+import '../../../desktop/quick_phrase_popover.dart';
+import '../../../desktop/instruction_injection_popover.dart';
+import '../../../desktop/world_book_popover.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../chat/widgets/bottom_tools_sheet.dart';
 import '../../chat/widgets/context_management_sheet.dart';
@@ -54,6 +62,7 @@ import '../controllers/home_page_controller.dart';
 import '../controllers/home_view_model.dart';
 import '../controllers/scroll_controller.dart' as scroll_ctrl;
 import 'home_mobile_layout.dart';
+import 'home_desktop_layout.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -669,7 +678,7 @@ class _HomePageState extends State<HomePage>
               onInvertSelection: _controller.invertSelection,
             )
           : null,
-      body: _buildMobileBody(context, cs),
+      body: _wrapWithDropTarget(_buildMobileBody(context, cs)),
     );
   }
 
@@ -812,13 +821,30 @@ class _HomePageState extends State<HomePage>
               onInvertSelection: _controller.invertSelection,
             )
           : null,
-      body: _buildTabletBody(context, cs),
+      body: _wrapWithDropTarget(_buildTabletBody(context, cs)),
     );
   }
 
   Future<void> _openSelectionMiniMap() async {
     final collapsed = _controller.allCollapsedMessagesForCurrentConversation();
     if (collapsed.isEmpty) return;
+
+    if (PlatformUtils.isDesktop &&
+        _selectionActionBarKey.currentContext != null) {
+      await showDesktopMiniMapPopover(
+        context,
+        anchorKey: _selectionActionBarKey,
+        messages: collapsed,
+        selecting: true,
+        selectedMessageIds: _controller.selectedItems,
+        selectionListenable: _controller,
+        onToggleSelection: (id) => _controller.toggleSelection(
+          id,
+          !_controller.selectedItems.contains(id),
+        ),
+      );
+      return;
+    }
 
     await showMiniMapSheet(
       context,
@@ -1199,7 +1225,15 @@ class _HomePageState extends State<HomePage>
       onOpenMcp: () {
         final a = context.read<AssistantProvider>().currentAssistant;
         if (a != null) {
-          showAssistantMcpSheet(context, assistantId: a.id);
+          if (PlatformUtils.isDesktop) {
+            showDesktopMcpServersPopover(
+              context,
+              anchorKey: _inputBarKey,
+              assistantId: a.id,
+            );
+          } else {
+            showAssistantMcpSheet(context, assistantId: a.id);
+          }
         }
       },
       onLongPressMcp: () {
@@ -1255,7 +1289,7 @@ class _HomePageState extends State<HomePage>
       onOpenWorldBook: _openWorldBookPopover,
       onLongPressLearning: _showLearningPromptSheet,
       onClearContext: _controller.clearContext,
-      onCompressContext: _controller.clearContext,
+      onCompressContext: _handleDesktopCompressContext,
       backgroundImageActive: _assistantBackgroundActive(context),
     );
   }
@@ -1270,7 +1304,7 @@ class _HomePageState extends State<HomePage>
         }
         var visible = _controller.scrollCtrl.showNavButtons;
         var hoverEnabled = false;
-        if (false) {
+        if (_controller.isDesktopPlatform) {
           switch (settings.desktopMessageNavButtonsMode) {
             case DesktopMessageNavButtonsMode.always:
               visible = true;
@@ -1346,12 +1380,406 @@ class _HomePageState extends State<HomePage>
     final collapsed = _controller.allCollapsedMessagesForCurrentConversation();
     if (collapsed.isEmpty) return;
 
-    final selectedId = await showMiniMapSheet(context, collapsed);
+    String? selectedId;
+    if (PlatformUtils.isDesktop) {
+      selectedId = await showDesktopMiniMapPopover(
+        context,
+        anchorKey: _inputBarKey,
+        messages: collapsed,
+      );
+    } else {
+      selectedId = await showMiniMapSheet(context, collapsed);
+    }
     if (!mounted) return;
     if (selectedId != null && selectedId.isNotEmpty) {
       await _controller.scrollToMessageId(selectedId);
     }
   }
 
+  Widget _wrapWithDropTarget(Widget child) {
+    if (!_controller.isDesktopPlatform) return child;
+    return DropTarget(
+      onDragEntered: (_) {
+        _controller.setDragHovering(true);
+      },
+      onDragExited: (_) {
+        _controller.setDragHovering(false);
+      },
+      onDragDone: (details) async {
+        _controller.setDragHovering(false);
+        try {
+          final files = details.files;
+          await _controller.onFilesDroppedDesktop(files);
+        } catch (_) {}
+      },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          child,
+          if (_controller.isDragHovering)
+            IgnorePointer(
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.12),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surface.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.4),
+                        width: 2,
+                      ),
+                    ),
+                    child: Text(
+                      AppLocalizations.of(context)!.homePageDropToUpload,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: AppFontWeights.semibold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 
+  // ============================================================================
+  // Action Handlers (UI-specific, not in controller)
+  // ============================================================================
+
+  void _openSearchSettings() {
+    if (PlatformUtils.isDesktop) {
+      showDesktopSearchProviderPopover(context, anchorKey: _inputBarKey);
+    } else {
+      showSearchSettingsSheet(context);
+    }
+  }
+
+  Future<void> _openReasoningSettings() async {
+    if (PlatformUtils.isDesktop) {
+      await showDesktopReasoningBudgetPopover(context, anchorKey: _inputBarKey);
+    } else {
+      await showReasoningBudgetSheet(context);
+    }
+  }
+
+  Future<void> _openInstructionInjectionPopover() async {
+    final isDesktop = PlatformUtils.isDesktop;
+    final assistantId = context.read<AssistantProvider>().currentAssistantId;
+    final provider = context.read<InstructionInjectionProvider>();
+    await provider.initialize();
+    if (!mounted) return;
+    final items = provider.items;
+    if (items.isEmpty) return;
+
+    if (isDesktop) {
+      await showDesktopInstructionInjectionPopover(
+        context,
+        anchorKey: _inputBarKey,
+        items: items,
+        assistantId: assistantId,
+      );
+    } else {
+      await showInstructionInjectionSheet(context, assistantId: assistantId);
+    }
+  }
+
+  Future<void> _openWorldBookPopover() async {
+    final isDesktop = PlatformUtils.isDesktop;
+    final assistantId = context.read<AssistantProvider>().currentAssistantId;
+    final provider = context.read<WorldBookProvider>();
+    await provider.initialize();
+    if (!mounted) return;
+    final books = provider.books;
+    if (books.isEmpty) return;
+
+    if (isDesktop) {
+      await showDesktopWorldBookPopover(
+        context,
+        anchorKey: _inputBarKey,
+        books: books,
+        assistantId: assistantId,
+      );
+    } else {
+      await showWorldBookSheet(context, assistantId: assistantId);
+    }
+  }
+
+  Future<void> _showLearningPromptSheet() async {
+    await showLearningPromptSheet(context);
+  }
+
+  void _toggleTools() async {
+    _controller.dismissKeyboard();
+    final cs = Theme.of(context).colorScheme;
+    final assistantId = context.read<AssistantProvider>().currentAssistantId;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: BottomToolsSheet(
+            onPhotos: () {
+              Navigator.of(ctx).maybePop();
+              _controller.onPickPhotos();
+            },
+            onCamera: () {
+              Navigator.of(ctx).maybePop();
+              _controller.onPickCamera();
+            },
+            onUpload: () {
+              Navigator.of(ctx).maybePop();
+              _controller.onPickFiles();
+            },
+            onClear: () async {
+              await Navigator.of(ctx).maybePop();
+              _showContextManagementSheet();
+            },
+            assistantId: assistantId,
+          ),
+        );
+      },
+    );
+  }
+
+  void _showContextManagementSheet() async {
+    final cs = Theme.of(context).colorScheme;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: ContextManagementSheet(
+            clearLabel: _controller.clearContextLabel(),
+            onCompress: () async {
+              await Navigator.of(ctx).maybePop();
+              if (!mounted) return;
+              await _showCompressContextOptions();
+            },
+            onClear: () async {
+              Navigator.of(ctx).maybePop();
+              await _controller.clearContext();
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  void _handleDesktopCompressContext() async {
+    await _showCompressContextOptions();
+  }
+
+  Future<void> _showCompressContextOptions() async {
+    final options = await showDialog<CompressContextOptions>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => const _CompressContextOptionsDialog(),
+    );
+    if (options == null || !mounted) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => LoadingDialogCard(label: l10n.compressingContext),
+      ),
+    );
+
+    String? error;
+    try {
+      error = await _controller.compressContext(options: options);
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).maybePop();
+      }
+    }
+    if (error != null && mounted) {
+      showAppSnackBar(
+        context,
+        message: _compressContextErrorMessage(l10n, error),
+        type: NotificationType.error,
+        duration: const Duration(seconds: 6),
+      );
+    }
+  }
+
+  Future<void> _showQuickPhraseMenu() async {
+    final assistant = context.read<AssistantProvider>().currentAssistant;
+    final quickPhraseProvider = context.read<QuickPhraseProvider>();
+    final globalPhrases = quickPhraseProvider.globalPhrases;
+    final assistantPhrases = assistant != null
+        ? quickPhraseProvider.getForAssistant(assistant.id)
+        : <QuickPhrase>[];
+
+    final allAvailable = [...globalPhrases, ...assistantPhrases];
+    if (allAvailable.isEmpty) return;
+
+    final RenderBox? inputBox =
+        _inputBarKey.currentContext?.findRenderObject() as RenderBox?;
+    if (inputBox == null) return;
+
+    final inputBarHeight = inputBox.size.height;
+    final topLeft = inputBox.localToGlobal(Offset.zero);
+    final position = Offset(topLeft.dx, inputBarHeight);
+
+    _controller.dismissKeyboard();
+
+    QuickPhrase? selected;
+    if (PlatformUtils.isDesktop) {
+      selected = await showDesktopQuickPhrasePopover(
+        context,
+        anchorKey: _inputBarKey,
+        phrases: allAvailable,
+      );
+    } else {
+      selected = await showQuickPhraseMenu(
+        context: context,
+        phrases: allAvailable,
+        position: position,
+      );
+    }
+
+    if (selected != null && mounted) {
+      await _controller.handleQuickPhraseSelection(selected);
+    }
+  }
+
+  Future<void> _handleDeleteMessage(
+    BuildContext context,
+    ChatMessage message,
+    Map<String, List<ChatMessage>> byGroup, {
+    bool deleteAllVersions = false,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          deleteAllVersions
+              ? l10n.homePageDeleteAllVersions
+              : l10n.homePageDeleteMessage,
+        ),
+        content: Text(
+          deleteAllVersions
+              ? l10n.homePageDeleteAllVersionsConfirm
+              : l10n.homePageDeleteMessageConfirm,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.homePageCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              l10n.homePageDelete,
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    if (deleteAllVersions) {
+      await _controller.deleteAllMessageVersions(
+        message: message,
+        byGroup: byGroup,
+      );
+      return;
+    }
+
+    await _controller.deleteMessage(message: message, byGroup: byGroup);
+  }
+
+  Future<void> _handleDeleteSelectedMessages(
+    BuildContext context, {
+    required bool deleteAllVersions,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    if (_controller.selectedItems.isEmpty) {
+      showAppSnackBar(
+        context,
+        message: l10n.chatSelectionSelectMessagesToDelete,
+        type: NotificationType.info,
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          deleteAllVersions
+              ? l10n.homePageDeleteAllVersions
+              : l10n.chatSelectionDeleteSelected,
+        ),
+        content: Text(
+          deleteAllVersions
+              ? l10n.chatSelectionDeleteSelectedAllVersionsConfirm(
+                  _controller.selectedItems.length,
+                )
+              : l10n.chatSelectionDeleteSelectedConfirm(
+                  _controller.selectedItems.length,
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.homePageCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              l10n.homePageDelete,
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    await _controller.deleteSelectedMessages(
+      deleteAllVersions: deleteAllVersions,
+    );
+  }
+
+  Map<String, TranslationUiState> _buildTranslationUiStates() {
+    final result = <String, TranslationUiState>{};
+    for (final entry in _controller.translations.entries) {
+      result[entry.key] = TranslationUiState(
+        expanded: entry.value.expanded,
+        onToggle: () {
+          _controller.toggleTranslation(entry.key);
+        },
+      );
+    }
+    return result;
+  }
 }

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:io' show Platform;
+import '../../../core/services/android_background.dart';
 import '../../../core/services/ios_background_generation.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'package:syncfusion_flutter_sliders/sliders.dart';
 import 'package:syncfusion_flutter_core/theme.dart';
@@ -145,6 +147,52 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                 ),
               ),
               _iosDivider(context),
+              if (Platform.isAndroid)
+                _iosNavRow(
+                  context,
+                  icon: Lucide.Monitor,
+                  label: l10n.displaySettingsPageAndroidBackgroundChatTitle,
+                  detailBuilder: (ctx) {
+                    final sp = ctx.watch<SettingsProvider>();
+                    switch (sp.androidBackgroundChatMode) {
+                      case AndroidBackgroundChatMode.off:
+                        return Text(
+                          l10n.androidBackgroundStatusOff,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                          style: TextStyle(
+                            color: cs.onSurface.withValues(alpha: 0.6),
+                            fontSize: 13,
+                          ),
+                        );
+                      case AndroidBackgroundChatMode.on:
+                        return Text(
+                          l10n.androidBackgroundStatusOn,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                          style: TextStyle(
+                            color: cs.onSurface.withValues(alpha: 0.6),
+                            fontSize: 13,
+                          ),
+                        );
+                      case AndroidBackgroundChatMode.onNotify:
+                        return Text(
+                          l10n.androidBackgroundStatusOther,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                          style: TextStyle(
+                            color: cs.onSurface.withValues(alpha: 0.6),
+                            fontSize: 13,
+                          ),
+                        );
+                    }
+                  },
+                  onTap: () => _showAndroidBackgroundChatSheet(context),
+                ),
+              if (Platform.isAndroid) _iosDivider(context),
               if (Platform.isIOS)
                 _iosNavRow(
                   context,
@@ -494,6 +542,84 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
         await sp.setChatMessageBackgroundStyle(
           ChatMessageBackgroundStyle.defaultStyle,
         );
+    }
+  }
+
+  Future<void> _showAndroidBackgroundChatSheet(BuildContext context) async {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _sheetOption(
+                ctx,
+                label: l10n.androidBackgroundOptionOn,
+                onTap: () => Navigator.of(ctx).pop('on'),
+              ),
+              _sheetDividerNoIcon(ctx),
+              _sheetOption(
+                ctx,
+                label: l10n.androidBackgroundOptionOnNotify,
+                onTap: () => Navigator.of(ctx).pop('on_notify'),
+              ),
+              _sheetDividerNoIcon(ctx),
+              _sheetOption(
+                ctx,
+                label: l10n.androidBackgroundOptionOff,
+                onTap: () => Navigator.of(ctx).pop('off'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (choice == null) return;
+    if (!context.mounted) return;
+
+    final sp = context.read<SettingsProvider>();
+    final notificationTitle = l10n.androidBackgroundNotificationTitle;
+    final notificationText = l10n.androidBackgroundNotificationText;
+    switch (choice) {
+      case 'on_notify':
+        await sp.setAndroidBackgroundChatMode(
+          AndroidBackgroundChatMode.onNotify,
+        );
+        try {
+          await AndroidBackgroundManager.ensureInitialized(
+            notificationTitle: notificationTitle,
+            notificationText: notificationText,
+          );
+          await AndroidBackgroundManager.setEnabled(true);
+          await NotificationService.ensureInitialized();
+          await NotificationService.ensureAndroidNotificationsPermission();
+        } catch (_) {}
+        break;
+      case 'on':
+        await sp.setAndroidBackgroundChatMode(AndroidBackgroundChatMode.on);
+        try {
+          await AndroidBackgroundManager.ensureInitialized(
+            notificationTitle: notificationTitle,
+            notificationText: notificationText,
+          );
+          await AndroidBackgroundManager.setEnabled(true);
+          // Prepare notification channel as well to avoid FGS notification issues on some ROMs
+          await NotificationService.ensureInitialized();
+        } catch (_) {}
+        break;
+      default:
+        await sp.setAndroidBackgroundChatMode(AndroidBackgroundChatMode.off);
+        try {
+          await AndroidBackgroundManager.setEnabled(false);
+        } catch (_) {}
     }
   }
 
