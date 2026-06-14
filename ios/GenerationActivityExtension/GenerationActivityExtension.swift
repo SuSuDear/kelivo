@@ -1,6 +1,7 @@
 import ActivityKit
 import Foundation
 import SwiftUI
+import UIKit
 import WidgetKit
 
 @main
@@ -14,7 +15,7 @@ struct KelivoGenerationActivityWidget: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: KelivoGenerationActivityAttributes.self) { context in
       LockScreenLiveActivityView(context: context)
-        .activityBackgroundTint(Color(.secondarySystemBackground))
+        .activityBackgroundTint(liveActivityBackgroundColor)
         .activitySystemActionForegroundColor(Color.primary)
     } dynamicIsland: { context in
       DynamicIsland {
@@ -135,8 +136,17 @@ private struct LockScreenLiveActivityView: View {
     }
     .padding(.horizontal, 14)
     .padding(.vertical, 10)
+    .background(liveActivityBackgroundColor)
   }
 }
+
+private let liveActivityBackgroundColor = Color(
+  UIColor { traitCollection in
+    traitCollection.userInterfaceStyle == .dark
+      ? UIColor(red: 0.10, green: 0.10, blue: 0.12, alpha: 1.0)
+      : UIColor.secondarySystemBackground
+  }
+)
 
 private struct ActivityElapsedText: View {
   let context: ActivityViewContext<KelivoGenerationActivityAttributes>
