@@ -257,9 +257,6 @@ class _ServerCardState extends State<_ServerCard> {
       case McpTransportType.stdio:
         transportText = AppLocalizations.of(context)!.mcpTransportTagStdio;
         break;
-      case McpTransportType.inmemory:
-        transportText = AppLocalizations.of(context)!.mcpTransportTagInmemory;
-        break;
     }
 
     return MouseRegion(

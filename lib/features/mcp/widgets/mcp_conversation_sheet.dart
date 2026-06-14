@@ -262,15 +262,9 @@ class _ConversationMcpSheet extends StatelessWidget {
                                                   ),
                                                 ),
                                                 tag(
-                                                  s.transport ==
-                                                          McpTransportType
-                                                              .inmemory
-                                                      ? l10n.mcpTransportTagInmemory
-                                                      : (s.transport ==
-                                                                McpTransportType
-                                                                    .sse
-                                                            ? 'SSE'
-                                                            : 'HTTP'),
+                                                  s.transport == McpTransportType.sse
+                                                      ? 'SSE'
+                                                      : 'HTTP',
                                                 ),
                                               ],
                                             ),

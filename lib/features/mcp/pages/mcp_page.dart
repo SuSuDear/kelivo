@@ -371,13 +371,9 @@ class McpPage extends StatelessWidget {
                                                       : Colors.redAccent),
                                           ),
                                           tagStyled(
-                                            s.transport ==
-                                                    McpTransportType.inmemory
-                                                ? l10n.mcpTransportTagInmemory
-                                                : (s.transport ==
-                                                          McpTransportType.sse
-                                                      ? l10n.mcpTransportTagSse
-                                                      : l10n.mcpTransportTagHttp),
+                                            s.transport == McpTransportType.sse
+                                                ? l10n.mcpTransportTagSse
+                                                : l10n.mcpTransportTagHttp,
                                           ),
                                           tagStyled(
                                             l10n.mcpPageToolsCount(

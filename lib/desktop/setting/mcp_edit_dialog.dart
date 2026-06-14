@@ -111,13 +111,6 @@ class _DesktopMcpEditDialogState extends State<_DesktopMcpEditDialog>
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context)!;
     final mcp = context.read<McpProvider>();
-    // Built-in server: only allow toggling enabled, no other changes
-    if (isEdit && _transport == McpTransportType.inmemory) {
-      final old = mcp.getById(widget.serverId!)!;
-      await mcp.updateServer(old.copyWith(enabled: _enabled));
-      if (mounted) Navigator.of(context).maybePop();
-      return;
-    }
     final name = _nameCtrl.text.trim().isEmpty ? 'MCP' : _nameCtrl.text.trim();
     final headers = <String, String>{
       for (final h in _headers)
@@ -265,7 +258,6 @@ class _DesktopMcpEditDialogState extends State<_DesktopMcpEditDialog>
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
-    final isBuiltin = isEdit && _transport == McpTransportType.inmemory;
     return ListView(
       children: [
         Padding(
@@ -289,30 +281,8 @@ class _DesktopMcpEditDialogState extends State<_DesktopMcpEditDialog>
           ),
         ),
         const SizedBox(height: 10),
-        // Name row: read-only text for builtin, editable for others
-        if (isBuiltin) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Text(
-                  l10n.mcpServerEditSheetNameLabel,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: AppFontWeights.medium,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    _nameCtrl.text,
-                    style: TextStyle(fontWeight: AppFontWeights.semibold),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ] else ...[
+        // Name row
+        ...[
           _labeledField(
             label: l10n.mcpServerEditSheetNameLabel,
             controller: _nameCtrl,
@@ -358,7 +328,7 @@ class _DesktopMcpEditDialogState extends State<_DesktopMcpEditDialog>
           ),
         ],
         const SizedBox(height: 10),
-        if (!isBuiltin && _transport == McpTransportType.sse)
+        if (_transport == McpTransportType.sse)
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
@@ -369,7 +339,7 @@ class _DesktopMcpEditDialogState extends State<_DesktopMcpEditDialog>
               ),
             ),
           ),
-        if (!isBuiltin && _transport != McpTransportType.stdio)
+        if (_transport != McpTransportType.stdio)
           _labeledField(
             label: l10n.mcpServerEditSheetUrlLabel,
             controller: _urlCtrl,
@@ -378,7 +348,7 @@ class _DesktopMcpEditDialogState extends State<_DesktopMcpEditDialog>
                 : 'http://localhost:3000',
             bold: true,
           ),
-        if (!isBuiltin && _transport == McpTransportType.stdio) ...[
+        if (_transport == McpTransportType.stdio) ...[
           _labeledField(
             label: l10n.mcpServerEditSheetStdioCommandLabel,
             controller: _cmdCtrl,
@@ -481,7 +451,7 @@ class _DesktopMcpEditDialogState extends State<_DesktopMcpEditDialog>
           ),
         ],
         const SizedBox(height: 16),
-        if (!isBuiltin && _transport != McpTransportType.stdio) ...[
+        if (_transport != McpTransportType.stdio) ...[
           Text(
             l10n.mcpServerEditSheetCustomHeadersTitle,
             style: TextStyle(fontSize: 13, fontWeight: AppFontWeights.semibold),

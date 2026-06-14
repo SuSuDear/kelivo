@@ -427,7 +427,6 @@
   "assistantTagsContextMenuManageTags": "管理標籤",
   "mcpTransportOptionStdio": "STDIO",
   "mcpTransportTagStdio": "STDIO",
-  "mcpTransportTagInmemory": "內建",
   "mcpTransportTagSse": "SSE",
   "mcpTransportTagHttp": "HTTP",
   "mcpServerEditSheetStdioOnlyDesktop": "STDIO 僅在桌面端可用",

@@ -282,7 +282,6 @@
   "assistantTagsContextMenuManageTags": "Manage Tags",
   "mcpTransportOptionStdio": "STDIO",
   "mcpTransportTagStdio": "STDIO",
-  "mcpTransportTagInmemory": "Built-in",
   "mcpTransportTagSse": "SSE",
   "mcpTransportTagHttp": "HTTP",
   "mcpServerEditSheetStdioOnlyDesktop": "STDIO is only available on desktop",

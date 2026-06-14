@@ -215,7 +215,6 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
   Widget _basicForm() {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isBuiltin = isEdit && _transport == McpTransportType.inmemory;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -229,33 +228,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
           ],
         ),
         const SizedBox(height: 10),
-        if (isBuiltin)
-          _iosCard(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  children: [
-                    Text(
-                      l10n.mcpServerEditSheetNameLabel,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: AppFontWeights.medium,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _nameCtrl.text,
-                        style: TextStyle(fontWeight: AppFontWeights.semibold),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          )
-        else ...[
+        ...[
           _inputRow(
             label: l10n.mcpServerEditSheetNameLabel,
             controller: _nameCtrl,
@@ -366,13 +339,6 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
 
   Future<void> _onSave() async {
     final mcp = context.read<McpProvider>();
-    // Built-in: only toggle enabled
-    if (isEdit && _transport == McpTransportType.inmemory) {
-      final old = mcp.getById(widget.serverId!)!;
-      await mcp.updateServer(old.copyWith(enabled: _enabled));
-      if (mounted) Navigator.of(context).pop();
-      return;
-    }
     final name = _nameCtrl.text.trim().isEmpty ? 'MCP' : _nameCtrl.text.trim();
     final url = _urlCtrl.text.trim();
     if (url.isEmpty) {
