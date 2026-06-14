@@ -37,10 +37,6 @@ import 'utils/sandbox_path_resolver.dart';
 import 'shared/widgets/app_overlays.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:system_fonts/system_fonts.dart';
-import 'dart:io'
-    show Platform; // kept for global override usage inside provider
-import 'core/services/android_background.dart';
-import 'core/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final RouteObserver<ModalRoute<dynamic>> routeObserver =
@@ -73,7 +69,7 @@ Future<void> main() async {
       // logging.Logger.root.onRecord.listen((rec) { ... });
       // Cache current Documents directory to fix sandboxed absolute paths on iOS
       await SandboxPathResolver.init();
-      // Enable edge-to-edge to allow content under system bars (Android)
+      // Enable edge-to-edge system UI.
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       // Start app (Flutter log capture is toggleable and off by default)
       runApp(const MyApp());
@@ -225,37 +221,6 @@ class MyApp extends StatelessWidget {
                           defaultTargetPlatform == TargetPlatform.linux);
                   if (isDesktop) {
                     await context.read<HotkeyProvider>().initialize();
-                  }
-                } catch (_) {}
-              });
-
-              // Android-only: ensure background execution matches setting and prepare notifications if needed
-              WidgetsBinding.instance.addPostFrameCallback((_) async {
-                try {
-                  if (Platform.isAndroid) {
-                    final mode = settings.androidBackgroundChatMode;
-                    if (mode != AndroidBackgroundChatMode.off) {
-                      final l10n = AppLocalizations.of(context);
-                      if (l10n == null) return;
-                      // Enable only if currently disabled to avoid duplicate ROM prompts
-                      try {
-                        final already =
-                            await AndroidBackgroundManager.isEnabled();
-                        if (!already) {
-                          await AndroidBackgroundManager.ensureInitialized(
-                            notificationTitle:
-                                l10n.androidBackgroundNotificationTitle,
-                            notificationText:
-                                l10n.androidBackgroundNotificationText,
-                          );
-                          await AndroidBackgroundManager.setEnabled(true);
-                        }
-                      } catch (_) {}
-                      if (mode == AndroidBackgroundChatMode.onNotify) {
-                        await NotificationService.ensureInitialized();
-                        await NotificationService.ensureAndroidNotificationsPermission();
-                      }
-                    }
                   }
                 } catch (_) {}
               });
