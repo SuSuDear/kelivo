@@ -222,7 +222,7 @@ private final class IosBackgroundGenerationHandler {
     let request = UNNotificationRequest(identifier: "kelivo.background-generation.\(Date().timeIntervalSince1970)", content: content, trigger: nil)
     UNUserNotificationCenter.current().add(request)
   }
-
+}
 
 private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
   weak var presentingViewController: UIViewController?
