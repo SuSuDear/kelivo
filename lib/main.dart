@@ -25,7 +25,6 @@ import 'core/providers/memory_provider.dart';
 import 'core/providers/backup_provider.dart';
 import 'core/providers/s3_backup_provider.dart';
 import 'core/providers/backup_reminder_provider.dart';
-import 'core/providers/hotkey_provider.dart';
 import 'core/services/chat/chat_service.dart';
 import 'core/services/mcp/mcp_tool_service.dart';
 import 'core/services/logging/flutter_logger.dart';
@@ -116,8 +115,6 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WorldBookProvider()),
         ChangeNotifierProvider(create: (_) => MemoryProvider()),
         ChangeNotifierProvider(create: (_) => BackupReminderProvider()),
-        // Desktop hotkeys provider
-        ChangeNotifierProvider(create: (_) => HotkeyProvider()),
         ChangeNotifierProvider(
           create: (ctx) => BackupProvider(
             chatService: ctx.read<ChatService>(),
@@ -197,19 +194,6 @@ class MyApp extends StatelessWidget {
                 } catch (_) {}
               });
 
-              // Initialize desktop hotkeys on supported platforms
-              WidgetsBinding.instance.addPostFrameCallback((_) async {
-                try {
-                  final isDesktop =
-                      !kIsWeb &&
-                      (defaultTargetPlatform == TargetPlatform.windows ||
-                          defaultTargetPlatform == TargetPlatform.macOS ||
-                          defaultTargetPlatform == TargetPlatform.linux);
-                  if (isDesktop) {
-                    await context.read<HotkeyProvider>().initialize();
-                  }
-                } catch (_) {}
-              });
 
               final useDyn = isAndroid && settings.useDynamicColor;
               final palette = ThemePalettes.byId(settings.themePaletteId);

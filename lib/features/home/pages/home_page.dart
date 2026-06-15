@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:desktop_drop/desktop_drop.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../main.dart';
@@ -1396,61 +1395,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _wrapWithDropTarget(Widget child) {
-    if (!_controller.isDesktopPlatform) return child;
-    return DropTarget(
-      onDragEntered: (_) {
-        _controller.setDragHovering(true);
-      },
-      onDragExited: (_) {
-        _controller.setDragHovering(false);
-      },
-      onDragDone: (details) async {
-        _controller.setDragHovering(false);
-        try {
-          final files = details.files;
-          await _controller.onFilesDroppedDesktop(files);
-        } catch (_) {}
-      },
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          child,
-          if (_controller.isDragHovering)
-            IgnorePointer(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.12),
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surface.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.4),
-                        width: 2,
-                      ),
-                    ),
-                    child: Text(
-                      AppLocalizations.of(context)!.homePageDropToUpload,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: AppFontWeights.semibold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+    return child;
   }
 
   // ============================================================================

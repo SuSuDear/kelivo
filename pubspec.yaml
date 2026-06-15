@@ -32,14 +32,6 @@ dependencies:
   flutter:
     sdk: flutter
   logging: ^1.2.0
-  # BitsDojo Window for Windows
-  bitsdojo_window: ^0.1.6
-  window_manager: ^0.5.1
-  tray_manager:
-    path: ./dependencies/tray_manager/packages/tray_manager
-  desktop_drop: ^0.7.1
-  hotkey_manager: ^0.2.3
-
   # Localizations for Chinese/English UI strings
   flutter_localizations:
     sdk: flutter
@@ -90,7 +82,6 @@ dependencies:
   flutter_animate: ^4.5.2
   webview_flutter: ^4.13.1
   webview_flutter_wkwebview: ^3.25.1
-  webview_windows: ^0.4.0
   flutter_math_fork: ^0.7.4
   scrollable_positioned_list: ^0.3.8
   scrollview_observer: ^1.26.0
