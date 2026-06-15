@@ -211,7 +211,6 @@ class _MessageListViewState extends State<MessageListView> {
   DateTime? _lastHistoryLoadAt;
   Timer? _scrollIdleTimer;
   bool _pointerScrollActivityCheckScheduled = false;
-  bool _isTextSelectionActive = false;
 
   bool get _isDesktopPlatform =>
       defaultTargetPlatform == TargetPlatform.macOS ||
@@ -289,9 +288,6 @@ class _MessageListViewState extends State<MessageListView> {
               ),
               itemCount: widget.messages.length,
               keyboardDismissBehavior: _keyboardDismissBehavior,
-              physics: _isTextSelectionActive
-                  ? const NeverScrollableScrollPhysics()
-                  : null,
               itemBuilder: (context, index) {
                 if (index < 0 || index >= widget.messages.length) {
                   return const SizedBox.shrink();
@@ -335,13 +331,6 @@ class _MessageListViewState extends State<MessageListView> {
         );
       },
     );
-  }
-
-  void _handleTextSelectionChanged(bool active) {
-    if (_isTextSelectionActive == active) return;
-    setState(() {
-      _isTextSelectionActive = active;
-    });
   }
 
   bool _handleScrollNotification(ScrollNotification notification) {
@@ -896,7 +885,6 @@ class _MessageListViewState extends State<MessageListView> {
           ? null
           : (part, result) =>
                 widget.onRecoveredAskUserAnswer!(message, part, result),
-      onTextSelectionChanged: _handleTextSelectionChanged,
     );
   }
 }
