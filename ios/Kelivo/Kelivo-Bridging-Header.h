@@ -1,1 +1,1 @@
-#import "GeneratedPluginRegistrant.h"
+#import "../Flutter/GeneratedPluginRegistrant.h"
