@@ -2202,30 +2202,46 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
             child: Stack(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      alignment: Alignment.topLeft,
-                      clipBehavior: Clip.hardEdge,
-                      child: buildCodeView(
-                        isCollapsed
-                            ? _collapsedHighlightedCode(settings)
-                            : _trimTrailingNewlines(widget.code),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        alignment: Alignment.topLeft,
+                        clipBehavior: Clip.hardEdge,
+                        child: buildCodeView(
+                          isCollapsed
+                              ? _collapsedHighlightedCode(settings)
+                              : _trimTrailingNewlines(widget.code),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 if (showCollapsedTailFade)
                   Positioned(
                     left: 0,
                     right: 0,
-                    bottom: 0,
+                    bottom: 28,
                     child: _CodeBlockCollapsedTailFade(color: bodyBg),
                   ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: _CodeBlockTextAction(
+                    icon: isCollapsed
+                        ? Lucide.ChevronsDownUp
+                        : Lucide.ChevronsUpDown,
+                    label: isCollapsed
+                        ? AppLocalizations.of(context)!.codeBlockExpandButton
+                        : AppLocalizations.of(context)!.codeBlockCollapseButton,
+                    onTap: () => _toggleExpanded(settings),
+                  ),
+                ),
               ],
             ),
           ),
@@ -2593,6 +2609,43 @@ class _CodeBlockCollapseIcon extends StatelessWidget {
               width: 0,
               height: 14,
             ),
+    );
+  }
+}
+
+class _CodeBlockTextAction extends StatelessWidget {
+  const _CodeBlockTextAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final color = cs.onSurfaceVariant.withValues(alpha: 0.72);
+    return Tooltip(
+      message: label,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest.withValues(alpha: 0.72),
+          ),
+          child: IosIconButton(
+            icon: icon,
+            semanticLabel: label,
+            onTap: onTap,
+            size: 16,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            color: color,
+          ),
+        ),
+      ),
     );
   }
 }
