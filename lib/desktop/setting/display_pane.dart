@@ -2383,20 +2383,6 @@ class _ToggleRowFlutterLogging extends StatelessWidget {
   }
 }
 
-class _ToggleRowShowUpdates extends StatelessWidget {
-  const _ToggleRowShowUpdates();
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final sp = context.watch<SettingsProvider>();
-    return _ToggleRow(
-      label: l10n.displaySettingsPageShowUpdatesTitle,
-      value: sp.showAppUpdates,
-      onChanged: (v) => context.read<SettingsProvider>().setShowAppUpdates(v),
-    );
-  }
-}
-
 class _ToggleRowAutoSwitchTopicsDesktop extends StatelessWidget {
   const _ToggleRowAutoSwitchTopicsDesktop();
   @override

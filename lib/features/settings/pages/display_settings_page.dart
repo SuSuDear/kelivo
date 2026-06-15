@@ -2040,15 +2040,6 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
                     .setShowRegenerateConfirmDialog(v),
               ),
               _iosDivider(context),
-              _iosSwitchRow(
-                context,
-                icon: Lucide.BadgeInfo,
-                label: l10n.displaySettingsPageShowUpdatesTitle,
-                value: sp.showAppUpdates,
-                onChanged: (v) =>
-                    context.read<SettingsProvider>().setShowAppUpdates(v),
-              ),
-              _iosDivider(context),
               _iosNavRow(
                 context,
                 icon: Lucide.ChevronRight,

@@ -16,7 +16,6 @@ import '../../settings/pages/settings_page.dart';
 import '../../translate/pages/translate_page.dart';
 import '../../backup/pages/backup_page.dart';
 import '../../../core/providers/assistant_provider.dart';
-import '../../../core/providers/update_provider.dart';
 import '../../../core/models/assistant.dart';
 import '../../chat/pages/chat_history_page.dart';
 import '../../../desktop/chat_history_dialog.dart';
@@ -24,7 +23,6 @@ import 'package:flutter/services.dart';
 import 'dart:io' show File;
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
@@ -2036,7 +2034,6 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         chatService,
                         pinnedList,
                         groups,
-                        includeUpdateBanner: true,
                       ),
                     );
                   }
@@ -2066,7 +2063,6 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           chatService,
                           pinnedList,
                           groups,
-                          includeUpdateBanner: true,
                         ),
                       ],
                     );
@@ -2084,7 +2080,6 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       chatService,
                       pinnedList,
                       groups,
-                      includeUpdateBanner: true,
                     ),
                   );
                 }(),
@@ -3242,103 +3237,16 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     );
   }
 
-  // Build conversations list area, optionally including the update banner.
+  // Build conversations list area.
   Widget _buildConversationsList(
     BuildContext context,
     ColorScheme cs,
     Color textBase,
     ChatService chatService,
     List<ChatItem> pinnedList,
-    List<_ChatGroup> groups, {
-    bool includeUpdateBanner = false,
-  }) {
+    List<_ChatGroup> groups,
+  ) {
     final children = <Widget>[];
-    if (includeUpdateBanner) {
-      children.add(
-        Builder(
-          builder: (context) {
-            final settings = context.watch<SettingsProvider>();
-            final upd = context.watch<UpdateProvider>();
-            if (!settings.showAppUpdates) return const SizedBox.shrink();
-            final info = upd.available;
-            if (upd.checking && info == null) return const SizedBox.shrink();
-            if (info == null) return const SizedBox.shrink();
-            final url = info.bestDownloadUrl();
-            if (url == null || url.isEmpty) return const SizedBox.shrink();
-            final ver = info.version;
-            final build = info.build;
-            final l10n = AppLocalizations.of(context)!;
-            final title = build != null
-                ? l10n.sideDrawerUpdateTitleWithBuild(ver, build)
-                : l10n.sideDrawerUpdateTitle(ver);
-            final cs2 = Theme.of(context).colorScheme;
-            final isDark2 = Theme.of(context).brightness == Brightness.dark;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Material(
-                color: isDark2 ? Colors.white10 : const Color(0xFFF2F3F5),
-                borderRadius: BorderRadius.circular(12),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () async {
-                    final uri = Uri.parse(url);
-                    try {
-                      // ignore: deprecated_member_use
-                      await launchUrl(uri);
-                    } catch (_) {
-                      Clipboard.setData(ClipboardData(text: url));
-                      if (!context.mounted) return;
-                      showAppSnackBar(
-                        context,
-                        message: l10n.sideDrawerLinkCopied,
-                        type: NotificationType.success,
-                      );
-                    }
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Lucide.BadgeInfo,
-                              size: 18,
-                              color: cs2.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                title,
-                                style: TextStyle(
-                                  fontWeight: AppFontWeights.emphasis,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if ((info.notes ?? '').trim().isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            info.notes!,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: cs2.onSurface.withValues(alpha: 0.8),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      );
-    }
-
     children.add(
       PageTransitionSwitcher(
         duration: const Duration(milliseconds: 260),

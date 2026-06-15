@@ -1033,25 +1033,6 @@
       }
     }
   },
-  "sideDrawerUpdateTitle": "New version: {version}",
-  "@sideDrawerUpdateTitle": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      }
-    }
-  },
-  "sideDrawerUpdateTitleWithBuild": "New version: {version} ({build})",
-  "@sideDrawerUpdateTitleWithBuild": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      },
-      "build": {
-        "type": "int"
-      }
-    }
-  },
   "sideDrawerLinkCopied": "Link copied",
   "sideDrawerPinnedLabel": "Pinned",
   "sideDrawerHistory": "History",
@@ -1636,8 +1617,6 @@
   "displaySettingsPageKeepSidebarOpenOnAssistantTapTitle": "Keep sidebar open when selecting assistant",
   "displaySettingsPageKeepSidebarOpenOnTopicTapTitle": "Keep sidebar open when selecting topic",
   "displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle": "Don't collapse assistant list when closing sidebar",
-  "displaySettingsPageShowUpdatesTitle": "Show Updates",
-  "displaySettingsPageShowUpdatesSubtitle": "Show app update notifications",
   "displaySettingsPageMessageNavButtonsTitle": "Message Navigation Buttons",
   "displaySettingsPageMessageNavButtonsSubtitle": "Choose when quick jump buttons appear",
   "displaySettingsPageMessageNavButtonsModeAlways": "Always show",
