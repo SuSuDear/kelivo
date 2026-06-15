@@ -637,6 +637,7 @@ class ChatMessageWidget extends StatefulWidget {
   final ValueChanged<String>? onSuggestionTap;
   final Future<void> Function(ToolUIPart part, AskUserResult result)?
   onRecoveredAskUserAnswer;
+  final ValueChanged<bool>? onTextSelectionChanged;
 
   const ChatMessageWidget({
     super.key,
@@ -679,6 +680,7 @@ class ChatMessageWidget extends StatefulWidget {
     this.suggestions = const <String>[],
     this.onSuggestionTap,
     this.onRecoveredAskUserAnswer,
+    this.onTextSelectionChanged,
   });
 
   @override
@@ -1537,6 +1539,12 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         : content;
   }
 
+  void _handleTextSelectionChanged(SelectedContent? selectedContent) {
+    widget.onTextSelectionChanged?.call(
+      selectedContent?.plainText.isNotEmpty == true,
+    );
+  }
+
   Widget? _buildUserAttachmentPreview(
     BuildContext context, {
     required _ParsedUserContent parsed,
@@ -1827,6 +1835,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     return RepaintBoundary(
       child: SelectionArea(
         key: ValueKey('assistant_${widget.message.id}'),
+        onSelectionChanged: _handleTextSelectionChanged,
         child: DefaultTextStyle.merge(
           style: TextStyle(fontSize: baseAssistant, height: 1.5),
           child: assistantContent,
