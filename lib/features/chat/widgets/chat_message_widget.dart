@@ -1539,10 +1539,8 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         : content;
   }
 
-  void _handleTextSelectionChanged(SelectedContent? selectedContent) {
-    widget.onTextSelectionChanged?.call(
-      selectedContent?.plainText.isNotEmpty == true,
-    );
+  void _handleTextSelectionChanged(bool active) {
+    widget.onTextSelectionChanged?.call(active);
   }
 
   Widget? _buildUserAttachmentPreview(
@@ -1835,7 +1833,11 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     return RepaintBoundary(
       child: SelectionArea(
         key: ValueKey('assistant_${widget.message.id}'),
-        onSelectionChanged: _handleTextSelectionChanged,
+        onSelectionChanged: (selectedContent) {
+          _handleTextSelectionChanged(
+            (selectedContent as dynamic)?.plainText?.isNotEmpty == true,
+          );
+        },
         child: DefaultTextStyle.merge(
           style: TextStyle(fontSize: baseAssistant, height: 1.5),
           child: assistantContent,
