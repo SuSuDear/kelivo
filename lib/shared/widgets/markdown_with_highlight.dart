@@ -2110,8 +2110,9 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
     final borderColor = _codeBlockBorderColor(cs, isDark);
     final isEffectivelyExpanded = _isEffectivelyExpanded(settings);
     final isCollapsed = !isEffectivelyExpanded;
-    final showCollapsedTailFade =
-        isCollapsed && _hasCollapsedHiddenLines(settings);
+    final canToggleCollapse = _hasCollapsedHiddenLines(settings);
+    final bottomActionHeight = canToggleCollapse ? 28.0 : 0.0;
+    final showCollapsedTailFade = isCollapsed && canToggleCollapse;
 
     return Container(
       width: double.infinity,
@@ -2203,7 +2204,7 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
             child: Stack(
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 28),
+                  padding: EdgeInsets.only(bottom: bottomActionHeight),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -2226,22 +2227,23 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
                   Positioned(
                     left: 0,
                     right: 0,
-                    bottom: 28,
+                    bottom: bottomActionHeight,
                     child: _CodeBlockCollapsedTailFade(color: bodyBg),
                   ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: _CodeBlockTextAction(
-                    icon: isCollapsed
-                        ? Lucide.ChevronsDownUp
-                        : Lucide.ChevronsUpDown,
-                    label: isCollapsed
-                        ? AppLocalizations.of(context)!.codeBlockExpandButton
-                        : AppLocalizations.of(context)!.codeBlockCollapseButton,
-                    onTap: () => _toggleExpanded(settings),
+                if (canToggleCollapse)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: _CodeBlockTextAction(
+                      icon: isCollapsed
+                          ? Lucide.ChevronsDownUp
+                          : Lucide.ChevronsUpDown,
+                      label: isCollapsed
+                          ? AppLocalizations.of(context)!.codeBlockExpandButton
+                          : AppLocalizations.of(context)!.codeBlockCollapseButton,
+                      onTap: () => _toggleExpanded(settings),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
