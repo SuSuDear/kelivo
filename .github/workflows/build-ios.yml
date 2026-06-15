@@ -48,6 +48,9 @@ jobs:
 
       - name: 🏗️ 构建 iOS (无签名)
         run: |
+          # Flutter tooling still generates iOS plugin registrant files under ios/Runner.
+          # Keep the repository renamed to Kelivo, but provide a transient CI symlink.
+          [ -e ios/Runner ] || ln -s Kelivo ios/Runner
           flutter build ios --release --no-codesign --flavor Kelivo
           cd build/ios/iphoneos
           mkdir Payload
