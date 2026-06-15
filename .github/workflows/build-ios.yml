@@ -51,7 +51,12 @@ jobs:
           flutter build ios --release --no-codesign
           cd build/ios/iphoneos
           mkdir Payload
-          cp -r Runner.app Payload/
+          APP_PATH=$(find . -maxdepth 1 -name "*.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found" >&2
+            exit 1
+          fi
+          cp -r "$APP_PATH" Payload/
           zip -r ../../../Kelivo_ios_${VERSION}.ipa Payload
 
       - name: 📤 上传 IPA

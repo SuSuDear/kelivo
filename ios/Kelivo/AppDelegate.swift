@@ -3,8 +3,8 @@ import UIKit
 import BackgroundTasks
 import UserNotifications
 
-private let backgroundRefreshIdentifier = "psyche.kelivo.background-generation.refresh"
-private let backgroundProcessingIdentifier = "psyche.kelivo.background-generation.processing"
+private let backgroundRefreshIdentifier = "com.susu.kelivo.background-generation.refresh"
+private let backgroundProcessingIdentifier = "com.susu.kelivo.background-generation.processing"
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
