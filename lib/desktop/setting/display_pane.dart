@@ -114,8 +114,6 @@ class _DisplaySettingsBody extends StatelessWidget {
                   _RowDivider(),
                   _ToggleRowShowRegenerateConfirmDialog(),
                   _RowDivider(),
-                  _ToggleRowShowUpdates(),
-                  _RowDivider(),
                   _ToggleRowShowChatListDate(),
                   _RowDivider(),
                   _ToggleRowNewChatOnAssistantSwitch(),
