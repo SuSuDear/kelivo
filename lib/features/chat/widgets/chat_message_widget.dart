@@ -124,6 +124,7 @@ IconData? _localToolIconFor(String name, Map<String, dynamic> args) {
       'write' => Lucide.ClipboardPen,
       _ => Lucide.Clipboard,
     },
+    LocalToolNames.calculate => Lucide.Calculator,
     _ => null,
   };
 }
@@ -143,6 +144,7 @@ String? _localToolTitleFor(
       'write' => l10n.chatMessageWidgetWriteClipboard,
       _ => l10n.assistantEditLocalToolClipboardTitle,
     },
+    LocalToolNames.calculate => l10n.assistantEditLocalToolCalculateTitle,
     _ => null,
   };
 }
