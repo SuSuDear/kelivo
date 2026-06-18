@@ -2638,6 +2638,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get defaultModelPageTitleModelSubtitle => '用于总结对话标题的模型，推荐使用快速且便宜的模型';
 
   @override
+  String get titleModelThinkingTitle => '是否开启思考';
+
+  @override
   String get defaultModelPageSummaryModelTitle => '摘要模型';
 
   @override
@@ -7941,6 +7944,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get defaultModelPageTitleModelSubtitle => '用于总结对话标题的模型，推荐使用快速且便宜的模型';
 
   @override
+  String get titleModelThinkingTitle => '是否开启思考';
+
+  @override
   String get defaultModelPageSummaryModelTitle => '摘要模型';
 
   @override
@@ -13241,6 +13247,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get defaultModelPageTitleModelSubtitle => '用於總結對話標題的模型，推薦使用快速且便宜的模型';
+
+  @override
+  String get titleModelThinkingTitle => '是否開啟思考';
 
   @override
   String get defaultModelPageSummaryModelTitle => '摘要模型';
