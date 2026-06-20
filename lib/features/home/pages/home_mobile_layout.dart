@@ -90,7 +90,7 @@ class HomeMobileScaffold extends StatelessWidget {
       controller: drawerController,
       side: DrawerSide.left,
       drawerWidth: MediaQuery.sizeOf(context).width * 0.75,
-      scrimColor: cs.onSurface,
+      scrimColor: Colors.black,
       maxScrimOpacity: 0.12,
       barrierDismissible: true,
       drawer: SideDrawer(
