@@ -25,8 +25,11 @@ class ChatInputOverlayLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final surfaceColor = Theme.of(context).colorScheme.surface;
+
     return Stack(
       children: [
+        Positioned.fill(child: ColoredBox(color: surfaceColor)),
         if (background != null) Positioned.fill(child: background!),
         Positioned.fill(
           child: Stack(
