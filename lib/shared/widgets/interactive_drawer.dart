@@ -165,7 +165,6 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
   late final AnimationController _anim;
   late InteractiveDrawerController _controllerProxy;
   double _drawerWidth = 0.0;
-  bool _childDragActive = false;
 
   bool get _isLeft => widget.side == DrawerSide.left;
 
@@ -207,35 +206,20 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
     _anim.stop();
   }
 
-  bool _shouldAcceptClosedChildDrag(DragStartDetails details) {
-    if (!_controllerProxy.isClosed) return true;
-    final width = context.size?.width ?? MediaQuery.sizeOf(context).width;
-    final dx = details.localPosition.dx;
-    if (_isLeft) {
-      return dx <= _kClosedEdgeDragWidth;
-    }
-    return dx >= width - _kClosedEdgeDragWidth;
-  }
-
-  void _onChildDragStart(DragStartDetails details) {
-    _childDragActive = _shouldAcceptClosedChildDrag(details);
-    if (!_childDragActive) return;
-    _onDragStart(details);
-  }
-
-  void _onChildDragUpdate(DragUpdateDetails details) {
-    if (!_childDragActive) return;
-    _onDragUpdate(details);
-  }
-
-  void _onChildDragEnd(DragEndDetails details) {
-    if (!_childDragActive) return;
-    _childDragActive = false;
-    _onDragEnd(details);
-  }
-
-  void _onChildDragCancel() {
-    _childDragActive = false;
+  Widget _buildClosedEdgeDragZone() {
+    return Align(
+      alignment: _isLeft ? Alignment.centerLeft : Alignment.centerRight,
+      child: SizedBox(
+        width: _kClosedEdgeDragWidth,
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onHorizontalDragStart: _onDragStart,
+          onHorizontalDragUpdate: _onDragUpdate,
+          onHorizontalDragEnd: _onDragEnd,
+          child: const SizedBox.expand(),
+        ),
+      ),
+    );
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
@@ -283,32 +267,29 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
 
     return Transform.translate(
       offset: Offset(dx, 0),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onHorizontalDragStart: _onChildDragStart,
-        onHorizontalDragUpdate: _onChildDragUpdate,
-        onHorizontalDragEnd: _onChildDragEnd,
-        onHorizontalDragCancel: _onChildDragCancel,
-        onTap: widget.barrierDismissible && _controllerProxy.isOpen
-            ? () {
-                // Haptic or other side effects can be hooked by parent.
-                widget.onScrimTap?.call();
-                _controllerProxy.close();
-              }
-            : null,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            widget.child,
-            if (_anim.value > 0.0)
-              IgnorePointer(
-                ignoring: !widget.barrierDismissible,
-                child: Container(
-                  color: widget.scrimColor.withValues(alpha: scrimOpacity),
-                ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          widget.child,
+          if (_anim.value > 0.0)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onHorizontalDragStart: _onDragStart,
+              onHorizontalDragUpdate: _onDragUpdate,
+              onHorizontalDragEnd: _onDragEnd,
+              onTap: widget.barrierDismissible && _controllerProxy.isOpen
+                  ? () {
+                      // Haptic or other side effects can be hooked by parent.
+                      widget.onScrimTap?.call();
+                      _controllerProxy.close();
+                    }
+                  : null,
+              child: Container(
+                color: widget.scrimColor.withValues(alpha: scrimOpacity),
               ),
-          ],
-        ),
+            ),
+          if (_controllerProxy.isClosed) _buildClosedEdgeDragZone(),
+        ],
       ),
     );
   }
