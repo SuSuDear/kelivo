@@ -165,6 +165,7 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
   late final AnimationController _anim;
   late InteractiveDrawerController _controllerProxy;
   double _drawerWidth = 0.0;
+  bool _edgeDragActive = false;
 
   bool get _isLeft => widget.side == DrawerSide.left;
 
@@ -206,6 +207,26 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
     _anim.stop();
   }
 
+  void _onEdgeDragStart(DragStartDetails details) {
+    setState(() {
+      _edgeDragActive = true;
+    });
+    _onDragStart(details);
+  }
+
+  void _onEdgeDragEnd(DragEndDetails details) {
+    _onDragEnd(details);
+    setState(() {
+      _edgeDragActive = false;
+    });
+  }
+
+  void _onEdgeDragCancel() {
+    setState(() {
+      _edgeDragActive = false;
+    });
+  }
+
   Widget _buildClosedEdgeDragZone() {
     return Align(
       alignment: _isLeft ? Alignment.centerLeft : Alignment.centerRight,
@@ -213,9 +234,10 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
         width: _kClosedEdgeDragWidth,
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
-          onHorizontalDragStart: _onDragStart,
+          onHorizontalDragStart: _onEdgeDragStart,
           onHorizontalDragUpdate: _onDragUpdate,
-          onHorizontalDragEnd: _onDragEnd,
+          onHorizontalDragEnd: _onEdgeDragEnd,
+          onHorizontalDragCancel: _onEdgeDragCancel,
           child: const SizedBox.expand(),
         ),
       ),
@@ -288,7 +310,8 @@ class _InteractiveDrawerState extends State<InteractiveDrawer>
                 color: widget.scrimColor.withValues(alpha: scrimOpacity),
               ),
             ),
-          if (_controllerProxy.isClosed) _buildClosedEdgeDragZone(),
+          if (_controllerProxy.isClosed || _edgeDragActive)
+            _buildClosedEdgeDragZone(),
         ],
       ),
     );
