@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 import '../../../core/services/ios_background_generation.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'package:syncfusion_flutter_sliders/sliders.dart';
@@ -12,7 +12,10 @@ import '../../../theme/palettes.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../core/services/haptics.dart';
+import '../../../utils/app_directories.dart';
+import '../../../utils/sandbox_path_resolver.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'google_fonts_picker_page.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
@@ -392,6 +395,27 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                   );
                 },
                 onTap: () => _showAutoScrollIdleSheet(context),
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Image,
+                label: l10n.assistantEditChatBackgroundTitle,
+                detailBuilder: (ctx) {
+                  final path = ctx
+                      .watch<SettingsProvider>()
+                      .chatBackgroundImagePath;
+                  return Text(
+                    path.trim().isEmpty
+                        ? l10n.defaultModelPageResetDefault
+                        : l10n.assistantEditClearButton,
+                    style: TextStyle(
+                      color: cs.onSurface.withValues(alpha: 0.6),
+                      fontSize: 13,
+                    ),
+                  );
+                },
+                onTap: () => _showChatBackgroundImageSheet(context),
               ),
               _iosDivider(context),
               _iosNavRow(
@@ -987,6 +1011,112 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
     );
   }
 
+  Future<void> _showChatBackgroundImageSheet(BuildContext context) async {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      isScrollControlled: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+            child: Builder(
+              builder: (context) {
+                final path = context
+                    .watch<SettingsProvider>()
+                    .chatBackgroundImagePath;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _SettingsActionButton(
+                            label: l10n.assistantEditChooseImageButton,
+                            icon: Icons.image,
+                            onTap: () => _pickChatBackgroundImage(context),
+                          ),
+                        ),
+                        if (path.trim().isNotEmpty) ...[
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _SettingsActionButton(
+                              label: l10n.assistantEditClearButton,
+                              icon: Lucide.X,
+                              onTap: () => context
+                                  .read<SettingsProvider>()
+                                  .setChatBackgroundImagePath(''),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (path.trim().isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: _SettingsBackgroundPreview(path: path),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickChatBackgroundImage(BuildContext context) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        imageQuality: 85,
+      );
+      if (!context.mounted || picked == null) return;
+      final raw = picked.path.trim();
+      if (raw.isEmpty) return;
+      final fixed = SandboxPathResolver.fix(raw);
+      final source = File(fixed);
+      if (!await source.exists()) return;
+      final imagesDir = await AppDirectories.getImagesDirectory();
+      if (!await imagesDir.exists()) {
+        await imagesDir.create(recursive: true);
+      }
+      var ext = 'jpg';
+      final dot = fixed.lastIndexOf('.');
+      if (dot != -1 && dot < fixed.length - 1) {
+        ext = fixed.substring(dot + 1).toLowerCase();
+        if (ext.length > 6) ext = 'jpg';
+      }
+      final dest = File(
+        '${imagesDir.path}/chat_background_${DateTime.now().millisecondsSinceEpoch}.$ext',
+      );
+      await source.copy(dest.path);
+      if (!context.mounted) return;
+      final settings = context.read<SettingsProvider>();
+      final previous = settings.chatBackgroundImagePath.trim();
+      await settings.setChatBackgroundImagePath(dest.path);
+      if (previous.isNotEmpty && previous.contains('/images/')) {
+        try {
+          final old = File(SandboxPathResolver.fix(previous));
+          if (await old.exists() && old.path != dest.path) {
+            await old.delete();
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
   Future<void> _showChatBackgroundMaskSheet(BuildContext context) async {
     final cs = Theme.of(context).colorScheme;
     await showModalBottomSheet(
@@ -1489,6 +1619,98 @@ class _TactileIconButtonState extends State<_TactileIconButton> {
         ),
       ),
     );
+  }
+}
+
+class _SettingsActionButton extends StatelessWidget {
+  const _SettingsActionButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return _TactileRow(
+      onTap: onTap,
+      pressedScale: 0.98,
+      builder: (pressed) {
+        final bg = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+        final overlay = isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.black.withValues(alpha: 0.05);
+        final pressedBg = Color.alphaBlend(overlay, bg);
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: pressed ? pressedBg : bg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: cs.onSurface.withValues(alpha: 0.75)),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: AppFontWeights.semibold,
+                    color: cs.onSurface.withValues(alpha: 0.9),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SettingsBackgroundPreview extends StatelessWidget {
+  const _SettingsBackgroundPreview({required this.path});
+
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
+    final raw = path.trim();
+    Widget child;
+    if (raw.startsWith('http')) {
+      child = Image.network(
+        raw,
+        height: 160,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    } else {
+      final file = File(SandboxPathResolver.fix(raw));
+      child = file.existsSync()
+          ? Image.file(
+              file,
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            )
+          : const SizedBox.shrink();
+    }
+    return child;
   }
 }
 

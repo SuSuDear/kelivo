@@ -171,6 +171,8 @@ class SettingsProvider extends ChangeNotifier {
       'display_auto_scroll_enabled_v1';
   static const String _displayAutoScrollIdleSecondsKey =
       'display_auto_scroll_idle_seconds_v1';
+  static const String _displayChatBackgroundImagePathKey =
+      'display_chat_background_image_path_v1';
   static const String _displayChatBackgroundMaskStrengthKey =
       'display_chat_background_mask_strength_v1';
   static const String _displayChatInputBackgroundOpacityLightKey =
@@ -997,6 +999,8 @@ class SettingsProvider extends ChangeNotifier {
     _autoScrollEnabled = prefs.getBool(_displayAutoScrollEnabledKey) ?? true;
     _autoScrollIdleSeconds =
         prefs.getInt(_displayAutoScrollIdleSecondsKey) ?? 8;
+    _chatBackgroundImagePath =
+        prefs.getString(_displayChatBackgroundImagePathKey) ?? '';
     _chatBackgroundMaskStrength =
         prefs.getDouble(_displayChatBackgroundMaskStrengthKey) ?? 1.0;
     _chatInputBackgroundOpacityLight =
@@ -3624,6 +3628,22 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     );
   }
 
+  // Display: global chat background image path.
+  String _chatBackgroundImagePath = '';
+  String get chatBackgroundImagePath => _chatBackgroundImagePath;
+  Future<void> setChatBackgroundImagePath(String path) async {
+    final v = path.trim();
+    if (_chatBackgroundImagePath == v) return;
+    _chatBackgroundImagePath = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    if (v.isEmpty) {
+      await prefs.remove(_displayChatBackgroundImagePathKey);
+    } else {
+      await prefs.setString(_displayChatBackgroundImagePathKey, v);
+    }
+  }
+
   // Display: chat background mask strength (0.0 - 2.0, default 1.0)
   double _chatBackgroundMaskStrength = 1.0;
   double get chatBackgroundMaskStrength => _chatBackgroundMaskStrength;
@@ -4174,6 +4194,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._desktopSendShortcut = _desktopSendShortcut;
     copy._desktopMessageNavButtonsMode = _desktopMessageNavButtonsMode;
     copy._chatFontScale = _chatFontScale;
+    copy._chatBackgroundImagePath = _chatBackgroundImagePath;
     copy._autoScrollEnabled = _autoScrollEnabled;
     copy._autoScrollIdleSeconds = _autoScrollIdleSeconds;
     copy._enableDollarLatex = _enableDollarLatex;

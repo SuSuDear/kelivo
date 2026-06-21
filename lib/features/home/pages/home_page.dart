@@ -961,14 +961,10 @@ class _HomePageState extends State<HomePage>
   Widget _buildChatBackground(BuildContext context, ColorScheme cs) {
     return Builder(
       builder: (context) {
-        final bg = context
-            .watch<AssistantProvider>()
-            .currentAssistant
-            ?.background;
-        final maskStrength = context
-            .watch<SettingsProvider>()
-            .chatBackgroundMaskStrength;
-        if (bg == null || bg.trim().isEmpty) return const SizedBox.shrink();
+        final settings = context.watch<SettingsProvider>();
+        final bg = settings.chatBackgroundImagePath;
+        final maskStrength = settings.chatBackgroundMaskStrength;
+        if (bg.trim().isEmpty) return const SizedBox.shrink();
         ImageProvider provider;
         if (bg.startsWith('http')) {
           provider = NetworkImage(bg);
@@ -1022,8 +1018,7 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildAssistantBackground(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final assistant = context.watch<AssistantProvider>().currentAssistant;
-    final bgRaw = (assistant?.background ?? '').trim();
+    final bgRaw = context.watch<SettingsProvider>().chatBackgroundImagePath.trim();
     Widget? bg;
     if (bgRaw.isNotEmpty) {
       if (bgRaw.startsWith('http')) {
@@ -1066,9 +1061,7 @@ class _HomePageState extends State<HomePage>
   }
 
   bool _assistantBackgroundActive(BuildContext context) {
-    final bgRaw =
-        (context.watch<AssistantProvider>().currentAssistant?.background ?? '')
-            .trim();
+    final bgRaw = context.watch<SettingsProvider>().chatBackgroundImagePath.trim();
     if (bgRaw.isEmpty) return false;
     if (bgRaw.startsWith('http')) return true;
     try {

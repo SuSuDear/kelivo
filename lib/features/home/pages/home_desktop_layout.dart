@@ -632,15 +632,14 @@ class _SidebarResizeHandleState extends State<SidebarResizeHandle> {
   }
 }
 
-/// Desktop background widget with assistant-specific image
+/// Desktop background widget with global image
 class DesktopBackgroundLayer extends StatelessWidget {
   const DesktopBackgroundLayer({super.key});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final assistant = context.watch<AssistantProvider>().currentAssistant;
-    final bgRaw = (assistant?.background ?? '').trim();
+    final bgRaw = context.watch<SettingsProvider>().chatBackgroundImagePath.trim();
 
     Widget? bg;
     if (bgRaw.isNotEmpty) {

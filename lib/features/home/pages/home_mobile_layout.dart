@@ -326,19 +326,18 @@ class HomeMobileScaffold extends StatelessWidget {
   }
 }
 
-/// Mobile background widget with assistant-specific image and gradient overlay
+/// Mobile background widget with global image and gradient overlay
 class MobileBackgroundLayer extends StatelessWidget {
   const MobileBackgroundLayer({super.key});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final bg = context.watch<AssistantProvider>().currentAssistant?.background;
-    final maskStrength = context
-        .watch<SettingsProvider>()
-        .chatBackgroundMaskStrength;
+    final settings = context.watch<SettingsProvider>();
+    final bg = settings.chatBackgroundImagePath;
+    final maskStrength = settings.chatBackgroundMaskStrength;
 
-    if (bg == null || bg.trim().isEmpty) return const SizedBox.shrink();
+    if (bg.trim().isEmpty) return const SizedBox.shrink();
 
     ImageProvider provider;
     if (bg.startsWith('http')) {

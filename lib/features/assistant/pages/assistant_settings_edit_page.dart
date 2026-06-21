@@ -1705,7 +1705,6 @@ class _DesktopAssistantBasicPaneState
   late final TextEditingController _nameCtrl;
   late final TextEditingController _maxTokensCtrl;
   bool _hoverChatModel = false;
-  bool _hoverBgChooser = false;
   final GlobalKey _avatarKey = GlobalKey();
 
   @override
@@ -2381,143 +2380,10 @@ class _DesktopAssistantBasicPaneState
                 ],
               ),
             ),
-            sectionDivider(),
-            // Chat background
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.assistantEditChatBackgroundTitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: AppFontWeights.semibold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if ((a.background ?? '').isEmpty) ...[
-                    MouseRegion(
-                      onEnter: (_) => setState(() => _hoverBgChooser = true),
-                      onExit: (_) => setState(() => _hoverBgChooser = false),
-                      child: _TactileRow(
-                        onTap: () => _pickBackground(context, a),
-                        pressedScale: 0.98,
-                        builder: (pressed) {
-                          final base = isDark
-                              ? Colors.white10
-                              : const Color(0xFFF2F3F5);
-                          final pressOv = isDark
-                              ? Colors.white.withValues(alpha: 0.06)
-                              : Colors.black.withValues(alpha: 0.05);
-                          final hoverOv = isDark
-                              ? Colors.white.withValues(alpha: 0.04)
-                              : Colors.black.withValues(alpha: 0.04);
-                          final bg = pressed
-                              ? Color.alphaBlend(pressOv, base)
-                              : (_hoverBgChooser
-                                    ? Color.alphaBlend(hoverOv, base)
-                                    : base);
-                          final iconColor = cs.onSurface.withValues(
-                            alpha: 0.75,
-                          );
-                          final textColor = cs.onSurface.withValues(alpha: 0.9);
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 160),
-                            curve: Curves.easeOutCubic,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: bg,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: cs.outlineVariant.withValues(
-                                  alpha: 0.35,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 2.0),
-                                  child: Icon(
-                                    Icons.image,
-                                    size: 18,
-                                    color: iconColor,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  l10n.assistantEditChooseImageButton,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: AppFontWeights.semibold,
-                                    color: textColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ] else ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _IosButton(
-                            label: l10n.assistantEditChooseImageButton,
-                            icon: Icons.image,
-                            onTap: () => _pickBackground(context, a),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _IosButton(
-                            label: l10n.assistantEditClearButton,
-                            icon: Lucide.X,
-                            onTap: () => context
-                                .read<AssistantProvider>()
-                                .updateAssistant(
-                                  a.copyWith(clearBackground: true),
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: _BackgroundPreview(path: a.background!),
-                    ),
-                  ],
-                ],
-              ),
-            ),
           ],
         ),
       ),
     );
-  }
-
-  Future<void> _pickBackground(BuildContext context, Assistant a) async {
-    final assistantProvider = context.read<AssistantProvider>();
-    try {
-      final picker = ImagePicker();
-      final XFile? file = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        imageQuality: 85,
-      );
-      if (file != null) {
-        await assistantProvider.updateAssistant(
-          a.copyWith(background: file.path),
-        );
-      }
-    } catch (_) {}
   }
 
   Future<void> _pickAssistantBuiltInIcon(
