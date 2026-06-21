@@ -1,7 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/chat_message.dart';
 import '../../models/conversation.dart';
 import '../../../utils/sandbox_path_resolver.dart';
@@ -12,6 +14,7 @@ class ChatService extends ChangeNotifier {
   static const String _messagesBoxName = 'messages';
   static const String _toolEventsBoxName = 'tool_events_v1';
   static const String _activeStreamingKey = '_active_streaming_ids';
+  static const String _lastConversationIdKey = 'chat_last_conversation_id_v1';
   static const int defaultInitialMessageMin = 2;
   static const int defaultInitialMessageMax = 240;
   static const int defaultInitialTextBudget = 20000;
@@ -43,6 +46,26 @@ class ChatService extends ChangeNotifier {
   bool get initialized => _initialized;
 
   String? get currentConversationId => _currentConversationId;
+
+  Future<String?> getLastConversationId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lastConversationIdKey);
+  }
+
+  void _saveLastConversationId(String? id) {
+    unawaited(_writeLastConversationId(id));
+  }
+
+  Future<void> _writeLastConversationId(String? id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (id == null || id.isEmpty) {
+        await prefs.remove(_lastConversationIdKey);
+      } else {
+        await prefs.setString(_lastConversationIdKey, id);
+      }
+    } catch (_) {}
+  }
 
   bool isTemporaryConversation(String? id) {
     return id != null && _temporaryConversationIds.contains(id);
@@ -298,6 +321,7 @@ class ChatService extends ChangeNotifier {
 
     await _conversationsBox.put(conversation.id, conversation);
     _currentConversationId = conversation.id;
+    _saveLastConversationId(conversation.id);
     notifyListeners();
     return conversation;
   }
@@ -391,6 +415,7 @@ class ChatService extends ChangeNotifier {
 
     if (_currentConversationId == id) {
       _currentConversationId = null;
+      _saveLastConversationId(null);
     }
     return true;
   }
@@ -904,6 +929,7 @@ class ChatService extends ChangeNotifier {
       _messagesCache.putIfAbsent(conversationId, () => <ChatMessage>[]);
     } else {
       await conversation.save();
+      _saveLastConversationId(conversationId);
     }
 
     // Update cache
@@ -1463,6 +1489,9 @@ class ChatService extends ChangeNotifier {
       _discardTemporaryConversation(_currentConversationId);
     }
     _currentConversationId = id;
+    if (id == null || _conversationsBox.containsKey(id)) {
+      _saveLastConversationId(id);
+    }
     notifyListeners();
   }
 
@@ -1478,6 +1507,7 @@ class ChatService extends ChangeNotifier {
     _temporaryToolEvents.clear();
     _temporaryGeminiThoughtSigs.clear();
     _currentConversationId = null;
+    _saveLastConversationId(null);
     // Remove uploads directory completely
     try {
       final uploadDir = await AppDirectories.getUploadDirectory();

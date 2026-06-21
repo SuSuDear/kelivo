@@ -574,14 +574,20 @@ class HomePageController extends ChangeNotifier {
     } else {
       final conversations = _chatService.getAllConversations();
       if (conversations.isNotEmpty) {
-        final recent = conversations.first;
-        if ((recent.assistantId ?? '').isNotEmpty) {
+        final lastConversationId = await _chatService.getLastConversationId();
+        final lastConversation = lastConversationId == null
+            ? null
+            : _chatService.getConversation(lastConversationId);
+        final conversation = lastConversation ?? conversations.first;
+        if ((conversation.assistantId ?? '').isNotEmpty) {
           try {
-            await assistantProvider.setCurrentAssistant(recent.assistantId!);
+            await assistantProvider.setCurrentAssistant(
+              conversation.assistantId!,
+            );
           } catch (_) {}
         }
-        _chatService.setCurrentConversation(recent.id);
-        _chatController.setCurrentConversation(recent);
+        _chatService.setCurrentConversation(conversation.id);
+        _chatController.setCurrentConversation(conversation);
         _streamController.clearGeminiThoughtSigs();
         _restoreMessageUiState();
         notifyListeners();
