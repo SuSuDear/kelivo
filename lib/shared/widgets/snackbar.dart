@@ -392,6 +392,8 @@ class _NotificationWidgetState extends State<NotificationWidget>
                   Expanded(
                     child: Text(
                       widget.notification.message,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
                       style:
                           (Theme.of(context).textTheme.bodyMedium ??
                                   TextStyle())
