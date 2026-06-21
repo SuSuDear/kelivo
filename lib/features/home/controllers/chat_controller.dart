@@ -82,10 +82,19 @@ class ChatController extends ChangeNotifier {
   ChatService get chatService => _chatService;
 
   void _syncCurrentConversationWithService() {
-    final conversation = _currentConversation;
-    if (conversation == null) return;
-    if (_chatService.getConversation(conversation.id) != null) return;
-    _clearCurrentConversationState();
+    final serviceConversationId = _chatService.currentConversationId;
+    if (serviceConversationId == _currentConversation?.id) return;
+
+    final serviceConversation = serviceConversationId == null
+        ? null
+        : _chatService.getConversation(serviceConversationId);
+    if (serviceConversation != null) {
+      _currentConversation = serviceConversation;
+      _loadVersionSelections();
+      _loadInitialMessageWindow(serviceConversation.id);
+    } else {
+      _clearCurrentConversationState();
+    }
     notifyListeners();
   }
 

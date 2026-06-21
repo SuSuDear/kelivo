@@ -502,6 +502,16 @@ class AssistantProvider extends ChangeNotifier {
       _currentAssistantId = _assistants.isNotEmpty
           ? _assistants.first.id
           : null;
+      String? nextConversationId;
+      final remainingConversations = chatService
+          ?.getAllConversations()
+          .where(
+            (conversation) => conversation.assistantId == _currentAssistantId,
+          );
+      if (remainingConversations != null && remainingConversations.isNotEmpty) {
+        nextConversationId = remainingConversations.first.id;
+      }
+      chatService?.setCurrentConversation(nextConversationId);
     }
     await _persist();
     final prefs = await SharedPreferences.getInstance();
