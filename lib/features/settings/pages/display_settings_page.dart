@@ -1639,7 +1639,6 @@ class _SettingsActionButton extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return _TactileRow(
       onTap: onTap,
-      pressedScale: 0.98,
       builder: (pressed) {
         final bg = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
         final overlay = isDark
