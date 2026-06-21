@@ -3362,9 +3362,6 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                   _collapsedAssistantIds.add(assistant.id);
                 }
               });
-              if (!isCurrentAssistant) {
-                unawaited(_handleSelectAssistant(assistant));
-              }
             },
             onEditTap: () => _openAssistantSettings(assistant.id),
             onLongPress: () => _showAssistantItemMenu(assistant),
