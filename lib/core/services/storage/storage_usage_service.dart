@@ -101,6 +101,10 @@ abstract final class StorageUsageService {
     return base.substring(0, dot);
   }
 
+  static bool _isChatBackgroundImage(String name) {
+    return p.basename(name).toLowerCase().startsWith('chat_background_');
+  }
+
   static Future<StorageUsageReport> computeReport() async {
     final root = await AppDirectories.getAppDataDirectory();
 
@@ -196,6 +200,7 @@ abstract final class StorageUsageService {
             assistantSubs['avatars']!.add(bytes);
             break;
           case 'images':
+            if (_isChatBackgroundImage(parts.last)) break;
             // Inline/generated images are stored under appData/images.
             // Treat them as "Images" so users can manage them together.
             byCat[StorageUsageCategoryKey.images]!.add(bytes);
@@ -448,6 +453,7 @@ abstract final class StorageUsageService {
           if (ent is! File) continue;
           final name = p.basename(ent.path);
           final isImg = _isImageExt(name);
+          if (isImg && _isChatBackgroundImage(name)) continue;
           if (isImg && !includeImages) continue;
           if (!isImg && !includeNonImages) continue;
           int bytes = 0;
@@ -498,6 +504,7 @@ abstract final class StorageUsageService {
     for (final raw in paths) {
       try {
         final abs = p.normalize(File(raw).absolute.path);
+        if (images && _isChatBackgroundImage(p.basename(abs))) continue;
         final allowed = roots.any(
           (root) => p.isWithin(root, abs) || abs == root,
         );

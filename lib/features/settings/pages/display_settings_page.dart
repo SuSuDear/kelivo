@@ -1693,23 +1693,23 @@ class _SettingsBackgroundPreview extends StatelessWidget {
     if (raw.startsWith('http')) {
       child = Image.network(
         raw,
-        height: 160,
-        width: double.infinity,
-        fit: BoxFit.cover,
+        fit: BoxFit.contain,
         errorBuilder: (_, __, ___) => const SizedBox.shrink(),
       );
     } else {
       final file = File(SandboxPathResolver.fix(raw));
       child = file.existsSync()
-          ? Image.file(
-              file,
-              height: 160,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            )
+          ? Image.file(file, fit: BoxFit.contain)
           : const SizedBox.shrink();
     }
-    return child;
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      height: 180,
+      width: double.infinity,
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+      alignment: Alignment.center,
+      child: child,
+    );
   }
 }
 
