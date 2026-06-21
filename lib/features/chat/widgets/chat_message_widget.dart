@@ -2848,7 +2848,8 @@ Widget _buildSharedChatSurface(
   final theme = Theme.of(context);
   final cs = theme.colorScheme;
   final isDark = theme.brightness == Brightness.dark;
-  final style = context.watch<SettingsProvider>().chatMessageBackgroundStyle;
+  final settings = context.watch<SettingsProvider>();
+  final style = settings.chatMessageBackgroundStyle;
   final paddedChild = Padding(padding: padding, child: child);
 
   switch (style) {
@@ -2860,8 +2861,12 @@ Widget _buildSharedChatSurface(
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: isDark
-                  ? const Color(0xFF1C1C1E).withValues(alpha: 0.66)
-                  : Colors.white.withValues(alpha: 0.66),
+                  ? const Color(
+                      0xFF1C1C1E,
+                    ).withValues(alpha: settings.chatMessageFrostedOpacity)
+                  : Colors.white.withValues(
+                      alpha: settings.chatMessageFrostedOpacity,
+                    ),
               borderRadius: borderRadius,
               border: Border.all(
                 color: cs.outlineVariant.withValues(alpha: 0.14),

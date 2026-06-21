@@ -206,6 +206,8 @@ class SettingsProvider extends ChangeNotifier {
       'display_use_pure_background_v1';
   static const String _displayChatMessageBackgroundStyleKey =
       'display_chat_message_background_style_v1';
+  static const String _displayChatMessageFrostedOpacityKey =
+      'display_chat_message_frosted_opacity_v1';
   static const String _mobileAssistantEditTabOrderKey =
       'mobile_assistant_edit_tab_order_v1';
   static const String _mobileAssistantEditTabHiddenKey =
@@ -1004,6 +1006,10 @@ class SettingsProvider extends ChangeNotifier {
     _chatInputBackgroundOpacityDark =
         (prefs.getDouble(_displayChatInputBackgroundOpacityDarkKey) ??
                 defaultChatInputBackgroundOpacityDark)
+            .clamp(0.0, 1.0);
+    _chatMessageFrostedOpacity =
+        (prefs.getDouble(_displayChatMessageFrostedOpacityKey) ??
+                defaultChatMessageFrostedOpacity)
             .clamp(0.0, 1.0);
     final pureBgPref = prefs.getBool(_displayUsePureBackgroundKey);
     if (pureBgPref == null) {
@@ -3633,6 +3639,19 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     );
   }
 
+  // Display: chat message frosted glass opacity.
+  static const double defaultChatMessageFrostedOpacity = 0.66;
+  double _chatMessageFrostedOpacity = defaultChatMessageFrostedOpacity;
+  double get chatMessageFrostedOpacity => _chatMessageFrostedOpacity;
+  Future<void> setChatMessageFrostedOpacity(double opacity) async {
+    final v = opacity.clamp(0.0, 1.0);
+    if (_chatMessageFrostedOpacity == v) return;
+    _chatMessageFrostedOpacity = v;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_displayChatMessageFrostedOpacityKey, v);
+  }
+
   // Display: chat input background opacity by theme brightness.
   static const double defaultChatInputBackgroundOpacityLight = 0.8236;
   static const double defaultChatInputBackgroundOpacityDark = 0.7396;
@@ -4170,6 +4189,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._desktopMinimizeToTrayOnClose = _desktopMinimizeToTrayOnClose;
     copy._usePureBackground = _usePureBackground;
     copy._chatMessageBackgroundStyle = _chatMessageBackgroundStyle;
+    copy._chatMessageFrostedOpacity = _chatMessageFrostedOpacity;
     copy._mobileAssistantEditTabOrder = _mobileAssistantEditTabOrder;
     copy._hiddenMobileAssistantEditTabs = _hiddenMobileAssistantEditTabs;
     copy._mobileAssistantDetailOutlineEnabled =

@@ -1865,6 +1865,12 @@ abstract class AppLocalizations {
   /// **'Solid Color'**
   String get displaySettingsPageChatMessageBackgroundSolid;
 
+  /// No description provided for @displaySettingsPageChatMessageFrostedOpacityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Frosted Glass Opacity'**
+  String get displaySettingsPageChatMessageFrostedOpacityTitle;
+
   /// No description provided for @displaySettingsPageAndroidBackgroundChatTitle.
   ///
   /// In en, this message translates to:

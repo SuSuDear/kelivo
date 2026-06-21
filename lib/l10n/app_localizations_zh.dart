@@ -927,6 +927,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get displaySettingsPageChatMessageBackgroundSolid => '纯色';
 
   @override
+  String get displaySettingsPageChatMessageFrostedOpacityTitle => '模糊背景透明度';
+
+  @override
   String get displaySettingsPageAndroidBackgroundChatTitle => '后台聊天生成';
 
   @override
@@ -6086,6 +6089,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get displaySettingsPageChatMessageBackgroundSolid => '纯色';
 
   @override
+  String get displaySettingsPageChatMessageFrostedOpacityTitle => '模糊背景透明度';
+
+  @override
   String get displaySettingsPageAndroidBackgroundChatTitle => '后台聊天生成';
 
   @override
@@ -11243,6 +11249,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get displaySettingsPageChatMessageBackgroundSolid => '純色';
+
+  @override
+  String get displaySettingsPageChatMessageFrostedOpacityTitle => '模糊背景透明度';
 
   @override
   String get displaySettingsPageAndroidBackgroundChatTitle => '後台聊天生成';

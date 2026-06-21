@@ -953,6 +953,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displaySettingsPageChatMessageBackgroundSolid => 'Solid Color';
 
   @override
+  String get displaySettingsPageChatMessageFrostedOpacityTitle =>
+      'Frosted Glass Opacity';
+
+  @override
   String get displaySettingsPageAndroidBackgroundChatTitle =>
       'Background Generation (Android)';
 

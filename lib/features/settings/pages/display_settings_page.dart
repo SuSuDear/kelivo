@@ -267,6 +267,28 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                 },
                 onTap: () => _showChatMessageBackgroundSheet(context),
               ),
+              if (context.watch<SettingsProvider>().chatMessageBackgroundStyle ==
+                  ChatMessageBackgroundStyle.frosted) ...[
+                _iosDivider(context),
+                _iosNavRow(
+                  context,
+                  icon: Lucide.RectangleHorizontal,
+                  label: l10n.displaySettingsPageChatMessageFrostedOpacityTitle,
+                  detailBuilder: (ctx) {
+                    final opacity = ctx
+                        .watch<SettingsProvider>()
+                        .chatMessageFrostedOpacity;
+                    return Text(
+                      '${(opacity * 100).round()}%',
+                      style: TextStyle(
+                        color: cs.onSurface.withValues(alpha: 0.6),
+                        fontSize: 13,
+                      ),
+                    );
+                  },
+                  onTap: () => _showChatMessageFrostedOpacitySheet(context),
+                ),
+              ],
               _iosDivider(context),
               _iosNavRow(
                 context,
@@ -923,6 +945,42 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
     );
   }
 
+  Future<void> _showChatMessageFrostedOpacitySheet(BuildContext context) async {
+    final cs = Theme.of(context).colorScheme;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      isScrollControlled: false,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+            child: Builder(
+              builder: (context) {
+                final theme = Theme.of(context);
+                final isDark = theme.brightness == Brightness.dark;
+                final opacity = context
+                    .watch<SettingsProvider>()
+                    .chatMessageFrostedOpacity;
+                return _opacitySlider(
+                  context,
+                  opacity: opacity,
+                  isDark: isDark,
+                  onChanged: (v) => context
+                      .read<SettingsProvider>()
+                      .setChatMessageFrostedOpacity(v),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _showChatBackgroundMaskSheet(BuildContext context) async {
     final cs = Theme.of(context).colorScheme;
     await showModalBottomSheet(
@@ -1094,6 +1152,97 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
     );
   }
 
+  Widget _opacitySlider(
+    BuildContext context, {
+    required double opacity,
+    required bool isDark,
+    required ValueChanged<double> onChanged,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Text(
+          '0%',
+          style: TextStyle(
+            color: cs.onSurface.withValues(alpha: 0.7),
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: SfSliderTheme(
+            data: SfSliderThemeData(
+              activeTrackHeight: 8,
+              inactiveTrackHeight: 8,
+              overlayRadius: 14,
+              activeTrackColor: cs.primary,
+              inactiveTrackColor: cs.onSurface.withValues(
+                alpha: isDark ? 0.25 : 0.20,
+              ),
+              tooltipBackgroundColor: cs.primary,
+              tooltipTextStyle: TextStyle(
+                color: cs.onPrimary,
+                fontWeight: AppFontWeights.semibold,
+              ),
+              activeTickColor: cs.onSurface.withValues(
+                alpha: isDark ? 0.45 : 0.35,
+              ),
+              inactiveTickColor: cs.onSurface.withValues(
+                alpha: isDark ? 0.30 : 0.25,
+              ),
+              activeMinorTickColor: cs.onSurface.withValues(
+                alpha: isDark ? 0.34 : 0.28,
+              ),
+              inactiveMinorTickColor: cs.onSurface.withValues(
+                alpha: isDark ? 0.24 : 0.20,
+              ),
+            ),
+            child: SfSlider(
+              value: (opacity * 100).roundToDouble(),
+              min: 0.0,
+              max: 100.0001,
+              stepSize: 5.0,
+              showTicks: true,
+              showLabels: true,
+              interval: 25,
+              minorTicksPerInterval: 1,
+              enableTooltip: true,
+              shouldAlwaysShowTooltip: false,
+              tooltipShape: const SfPaddleTooltipShape(),
+              labelFormatterCallback: (value, text) =>
+                  '${(value as double).round()}%',
+              thumbIcon: Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: cs.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: isDark
+                      ? []
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                ),
+              ),
+              onChanged: (v) => onChanged(
+                ((v as double) / 100.0).clamp(0.0, 1.0),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '${(opacity * 100).round()}%',
+          style: TextStyle(color: cs.onSurface, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
   Widget _chatInputOpacitySlider(
     BuildContext context, {
     required String label,
@@ -1114,90 +1263,13 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
           ),
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Text(
-              '0%',
-              style: TextStyle(
-                color: cs.onSurface.withValues(alpha: 0.7),
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: SfSliderTheme(
-                data: SfSliderThemeData(
-                  activeTrackHeight: 8,
-                  inactiveTrackHeight: 8,
-                  overlayRadius: 14,
-                  activeTrackColor: cs.primary,
-                  inactiveTrackColor: cs.onSurface.withValues(
-                    alpha: isDark ? 0.25 : 0.20,
-                  ),
-                  tooltipBackgroundColor: cs.primary,
-                  tooltipTextStyle: TextStyle(
-                    color: cs.onPrimary,
-                    fontWeight: AppFontWeights.semibold,
-                  ),
-                  activeTickColor: cs.onSurface.withValues(
-                    alpha: isDark ? 0.45 : 0.35,
-                  ),
-                  inactiveTickColor: cs.onSurface.withValues(
-                    alpha: isDark ? 0.30 : 0.25,
-                  ),
-                  activeMinorTickColor: cs.onSurface.withValues(
-                    alpha: isDark ? 0.34 : 0.28,
-                  ),
-                  inactiveMinorTickColor: cs.onSurface.withValues(
-                    alpha: isDark ? 0.24 : 0.20,
-                  ),
-                ),
-                child: SfSlider(
-                  value: (opacity * 100).roundToDouble(),
-                  min: 0.0,
-                  max: 100.0001,
-                  stepSize: 5.0,
-                  showTicks: true,
-                  showLabels: true,
-                  interval: 25,
-                  minorTicksPerInterval: 1,
-                  enableTooltip: true,
-                  shouldAlwaysShowTooltip: false,
-                  tooltipShape: const SfPaddleTooltipShape(),
-                  labelFormatterCallback: (value, text) =>
-                      '${(value as double).round()}%',
-                  thumbIcon: Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: cs.primary,
-                      shape: BoxShape.circle,
-                      boxShadow: isDark
-                          ? []
-                          : [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 8,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                    ),
-                  ),
-                  onChanged: (v) => context
-                      .read<SettingsProvider>()
-                      .setChatInputBackgroundOpacity(
-                        brightness,
-                        ((v as double) / 100.0).clamp(0.0, 1.0),
-                      ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '${(opacity * 100).round()}%',
-              style: TextStyle(color: cs.onSurface, fontSize: 12),
-            ),
-          ],
+        _opacitySlider(
+          context,
+          opacity: opacity,
+          isDark: isDark,
+          onChanged: (v) => context
+              .read<SettingsProvider>()
+              .setChatInputBackgroundOpacity(brightness, v),
         ),
       ],
     );
