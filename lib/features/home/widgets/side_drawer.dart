@@ -109,6 +109,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   ValueNotifier<int>? _closeTicker;
   bool _assistantsExpanded = false;
   final Set<String> _collapsedAssistantIds = <String>{};
+  final Set<String> _titleRegeneratingConversationIds = <String>{};
   final ScrollController _listController = ScrollController();
   bool _assistantHeaderHovered = false;
   double _mobileSearchSwipeDx = 0;
@@ -639,6 +640,10 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     final assistantProvider = context.read<AssistantProvider>();
     final convo = chatService.getConversation(conversationId);
     if (convo == null) return;
+    if (_titleRegeneratingConversationIds.contains(conversationId)) return;
+    setState(() {
+      _titleRegeneratingConversationIds.add(conversationId);
+    });
 
     // Get assistant for this conversation
     final assistant = convo.assistantId != null
@@ -655,7 +660,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         assistant?.chatModelId ??
         settings.currentModelId;
 
-    if (provKey == null || mdlId == null) return;
+    if (provKey == null || mdlId == null) {
+      setState(() {
+        _titleRegeneratingConversationIds.remove(conversationId);
+      });
+      return;
+    }
     final cfg = settings.getProviderConfig(provKey);
     final budget = settings.titleGenerationThinkingBudgetFor(
       assistant?.thinkingBudget,
@@ -690,6 +700,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         '[SideDrawer] Regenerate title failed: $e',
         tag: 'SideDrawer',
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _titleRegeneratingConversationIds.remove(conversationId);
+        });
+      }
     }
   }
 
@@ -3371,9 +3387,13 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           textColor: textBase,
                           selected:
                               conversation.id == chatService.currentConversationId,
-                          loading: widget.loadingConversationIds.contains(
-                            conversation.id,
-                          ),
+                          loading:
+                              widget.loadingConversationIds.contains(
+                                conversation.id,
+                              ) ||
+                              _titleRegeneratingConversationIds.contains(
+                                conversation.id,
+                              ),
                           onTap: () {
                             final closeDrawer = !context
                                 .read<SettingsProvider>()
@@ -3475,9 +3495,13 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           selected:
                               pinnedList[i].id ==
                               chatService.currentConversationId,
-                          loading: widget.loadingConversationIds.contains(
-                            pinnedList[i].id,
-                          ),
+                          loading:
+                              widget.loadingConversationIds.contains(
+                                pinnedList[i].id,
+                              ) ||
+                              _titleRegeneratingConversationIds.contains(
+                                pinnedList[i].id,
+                              ),
                           onTap: () {
                             final closeDrawer = !context
                                 .read<SettingsProvider>()
@@ -3540,9 +3564,13 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           selected:
                               group.items[j].id ==
                               chatService.currentConversationId,
-                          loading: widget.loadingConversationIds.contains(
-                            group.items[j].id,
-                          ),
+                          loading:
+                              widget.loadingConversationIds.contains(
+                                group.items[j].id,
+                              ) ||
+                              _titleRegeneratingConversationIds.contains(
+                                group.items[j].id,
+                              ),
                           onTap: () {
                             final closeDrawer = !context
                                 .read<SettingsProvider>()
