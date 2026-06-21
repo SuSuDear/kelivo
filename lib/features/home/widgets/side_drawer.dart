@@ -108,6 +108,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   OverlayEntry? _assistantPickerEntry;
   ValueNotifier<int>? _closeTicker;
   bool _assistantsExpanded = false;
+  final Set<String> _collapsedAssistantIds = <String>{};
   final ScrollController _listController = ScrollController();
   bool _assistantHeaderHovered = false;
   double _mobileSearchSwipeDx = 0;
@@ -1920,7 +1921,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           textColor: textBase,
                           controller: _tabController!,
                         )
-                      else if (!assistOnly && !topicsOnly)
+                      else if (_isDesktop && !assistOnly && !topicsOnly)
                         // 当前助手区域（固定）
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -2080,6 +2081,27 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           chatService,
                           pinnedList,
                           groups,
+                        ),
+                      ],
+                    );
+                  }
+                  if (!_isDesktop) {
+                    return ListView(
+                      controller: _listController,
+                      padding: EdgeInsets.fromLTRB(
+                        10,
+                        context.watch<SettingsProvider>().showChatListDate
+                            ? 4
+                            : 10,
+                        10,
+                        16,
+                      ),
+                      children: [
+                        _buildAssistantConversationTree(
+                          context,
+                          cs,
+                          textBase,
+                          chatService,
                         ),
                       ],
                     );
@@ -3257,6 +3279,143 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   }
 
   // Build conversations list area.
+  Widget _buildAssistantConversationTree(
+    BuildContext context,
+    ColorScheme cs,
+    Color textBase,
+    ChatService chatService,
+  ) {
+    final ap = context.watch<AssistantProvider>();
+    final query = _query.trim().toLowerCase();
+    final allConversations = chatService.getAllConversations();
+    final children = <Widget>[];
+
+    for (final assistant in ap.assistants) {
+      final isCurrentAssistant = ap.currentAssistantId == assistant.id;
+      final conversations = allConversations
+          .where(
+            (c) =>
+                c.assistantId == assistant.id ||
+                (isCurrentAssistant && c.assistantId == null),
+          )
+          .toList()
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      final visibleConversations = query.isEmpty
+          ? conversations
+          : conversations
+                .where((c) => c.title.toLowerCase().contains(query))
+                .toList();
+      final assistantMatches =
+          query.isNotEmpty && assistant.name.toLowerCase().contains(query);
+      if (query.isNotEmpty && !assistantMatches && visibleConversations.isEmpty) {
+        continue;
+      }
+
+      final collapsed = _collapsedAssistantIds.contains(assistant.id);
+      children.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: _AssistantInlineTile(
+            avatar: AssistantAvatar(assistant: assistant, size: 32),
+            name: assistant.name,
+            textColor: textBase,
+            embedded: widget.embedded,
+            selected: isCurrentAssistant,
+            trailing: AnimatedRotation(
+              turns: collapsed ? 0.0 : 0.25,
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              child: Icon(
+                Lucide.ChevronRight,
+                size: 18,
+                color: textBase.withValues(alpha: 0.7),
+              ),
+            ),
+            onTap: () async {
+              Haptics.light();
+              final wasCollapsed = _collapsedAssistantIds.contains(assistant.id);
+              setState(() {
+                if (wasCollapsed) {
+                  _collapsedAssistantIds.remove(assistant.id);
+                } else {
+                  _collapsedAssistantIds.add(assistant.id);
+                }
+              });
+              if (!isCurrentAssistant) {
+                await context
+                    .read<AssistantProvider>()
+                    .setCurrentAssistant(assistant.id);
+              }
+            },
+            onEditTap: () => _openAssistantSettings(assistant.id),
+            onLongPress: () => _showAssistantItemMenu(assistant),
+          ),
+        ),
+      );
+      children.add(
+        AnimatedSize(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeInOutCubic,
+          alignment: Alignment.topCenter,
+          child: collapsed
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(left: 18),
+                  child: Column(
+                    children: [
+                      for (final conversation in visibleConversations)
+                        _ChatTile(
+                          chat: ChatItem(
+                            id: conversation.id,
+                            title: conversation.title,
+                            created: conversation.updatedAt,
+                          ),
+                          textColor: textBase,
+                          selected:
+                              conversation.id == chatService.currentConversationId,
+                          loading: widget.loadingConversationIds.contains(
+                            conversation.id,
+                          ),
+                          onTap: () {
+                            final closeDrawer = !context
+                                .read<SettingsProvider>()
+                                .keepSidebarOpenOnTopicTap;
+                            widget.onSelectConversation?.call(
+                              conversation.id,
+                              closeDrawer: closeDrawer,
+                            );
+                          },
+                          onLongPress: () => _showChatMenu(
+                            context,
+                            ChatItem(
+                              id: conversation.id,
+                              title: conversation.title,
+                              created: conversation.updatedAt,
+                            ),
+                          ),
+                          onSecondaryTap: (pos) => _showChatMenu(
+                            context,
+                            ChatItem(
+                              id: conversation.id,
+                              title: conversation.title,
+                              created: conversation.updatedAt,
+                            ),
+                            anchor: pos,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
+    );
+  }
+
   Widget _buildConversationsList(
     BuildContext context,
     ColorScheme cs,
@@ -3954,6 +4113,7 @@ class _AssistantInlineTile extends StatefulWidget {
     required this.onEditTap,
     this.onLongPress,
     this.onSecondaryTapDown,
+    this.trailing,
     this.selected = false,
   });
 
@@ -3965,6 +4125,7 @@ class _AssistantInlineTile extends StatefulWidget {
   final VoidCallback onEditTap;
   final VoidCallback? onLongPress;
   final void Function(Offset globalPosition)? onSecondaryTapDown;
+  final Widget? trailing;
   final bool selected;
 
   @override
@@ -4027,7 +4188,10 @@ class _AssistantInlineTileState extends State<_AssistantInlineTile> {
                 ),
               ),
             ),
-            if (!_isDesktop) ...[
+            if (widget.trailing != null) ...[
+              const SizedBox(width: 8),
+              widget.trailing!,
+            ] else if (!_isDesktop) ...[
               const SizedBox(width: 8),
               IosIconButton(
                 icon: Lucide.Pencil,
