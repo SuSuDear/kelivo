@@ -965,13 +965,19 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
                 final opacity = context
                     .watch<SettingsProvider>()
                     .chatMessageFrostedOpacity;
-                return _opacitySlider(
-                  context,
-                  opacity: opacity,
-                  isDark: isDark,
-                  onChanged: (v) => context
-                      .read<SettingsProvider>()
-                      .setChatMessageFrostedOpacity(v),
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _opacitySlider(
+                      context,
+                      opacity: opacity,
+                      isDark: isDark,
+                      onChanged: (v) => context
+                          .read<SettingsProvider>()
+                          .setChatMessageFrostedOpacity(v),
+                    ),
+                  ],
                 );
               },
             ),
