@@ -54,7 +54,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPageDefaultModel => '默认模型';
 
   @override
-  String get settingsPageProviders => '供应商';
+  String get settingsPageProviders => '配置模型';
 
   @override
   String get settingsPageHotkeys => '快捷键';
@@ -3190,7 +3190,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get providerDetailPageTestSuccessMessage => '测试成功';
 
   @override
-  String get providersPageTitle => '供应商';
+  String get providersPageTitle => '配置模型';
 
   @override
   String get providersPageImportTooltip => '导入';
@@ -5216,7 +5216,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get settingsPageDefaultModel => '默认模型';
 
   @override
-  String get settingsPageProviders => '供应商';
+  String get settingsPageProviders => '配置模型';
 
   @override
   String get settingsPageHotkeys => '快捷键';
@@ -8352,7 +8352,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get providerDetailPageTestSuccessMessage => '测试成功';
 
   @override
-  String get providersPageTitle => '供应商';
+  String get providersPageTitle => '配置模型';
 
   @override
   String get providersPageImportTooltip => '导入';
@@ -10378,7 +10378,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsPageDefaultModel => '預設模型';
 
   @override
-  String get settingsPageProviders => '供應商';
+  String get settingsPageProviders => '配置模型';
 
   @override
   String get settingsPageHotkeys => '快捷鍵';
@@ -13513,7 +13513,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get providerDetailPageTestSuccessMessage => '測試成功';
 
   @override
-  String get providersPageTitle => '供應商';
+  String get providersPageTitle => '配置模型';
 
   @override
   String get providersPageImportTooltip => '匯入';
