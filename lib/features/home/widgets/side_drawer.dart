@@ -3353,16 +3353,26 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                 color: textBase.withValues(alpha: 0.7),
               ),
             ),
-            onTap: () {
+            onTap: () async {
               Haptics.light();
-              final wasCollapsed = _collapsedAssistantIds.contains(assistant.id);
+              final wasExpanded = _collapsedAssistantIds.contains(assistant.id);
               setState(() {
-                if (wasCollapsed) {
+                if (wasExpanded) {
                   _collapsedAssistantIds.remove(assistant.id);
                 } else {
                   _collapsedAssistantIds.add(assistant.id);
                 }
               });
+              if (!wasExpanded && conversations.isEmpty) {
+                final closeDrawer = !context
+                    .read<SettingsProvider>()
+                    .keepSidebarOpenOnAssistantTap;
+                await context.read<AssistantProvider>().setCurrentAssistant(
+                  assistant.id,
+                );
+                if (!context.mounted) return;
+                await widget.onNewConversation?.call(closeDrawer: closeDrawer);
+              }
             },
             onEditTap: () => _openAssistantSettings(assistant.id),
             onLongPress: () => _showAssistantItemMenu(assistant),
