@@ -188,12 +188,12 @@ class SettingsPage extends StatelessWidget {
             children: [
               _iosNavRow(
                 context,
-                icon: Lucide.Heart,
-                label: l10n.settingsPageDefaultModel,
+                icon: Lucide.Terminal,
+                label: l10n.settingsPageMcp,
                 onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const DefaultModelPage()),
-                  );
+                  Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const McpPage()));
                 },
               ),
               _iosDivider(context),
@@ -204,6 +204,17 @@ class SettingsPage extends StatelessWidget {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const ProvidersPage()),
+                  );
+                },
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Heart,
+                label: l10n.settingsPageDefaultModel,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const DefaultModelPage()),
                   );
                 },
               ),
@@ -223,12 +234,14 @@ class SettingsPage extends StatelessWidget {
               _iosDivider(context),
               _iosNavRow(
                 context,
-                icon: Lucide.Terminal,
-                label: l10n.settingsPageMcp,
+                icon: Lucide.Layers,
+                label: l10n.settingsPageInstructionInjection,
                 onTap: () {
-                  Navigator.of(
-                    context,
-                  ).push(MaterialPageRoute(builder: (_) => const McpPage()));
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const InstructionInjectionPage(),
+                    ),
+                  );
                 },
               ),
               _iosDivider(context),
@@ -239,19 +252,6 @@ class SettingsPage extends StatelessWidget {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const QuickPhrasesPage()),
-                  );
-                },
-              ),
-              _iosDivider(context),
-              _iosNavRow(
-                context,
-                icon: Lucide.Layers,
-                label: l10n.settingsPageInstructionInjection,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const InstructionInjectionPage(),
-                    ),
                   );
                 },
               ),
