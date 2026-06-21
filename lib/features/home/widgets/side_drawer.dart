@@ -1972,16 +1972,31 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                 padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
                                 child: Row(
                                   children: [
-                                    AssistantAvatar(
-                                      assistant: ap.currentAssistant,
-                                      fallbackName: widget.assistantName,
-                                      size: 32,
-                                    ),
+                                    _isDesktop
+                                        ? AssistantAvatar(
+                                            assistant: ap.currentAssistant,
+                                            fallbackName: widget.assistantName,
+                                            size: 32,
+                                          )
+                                        : CircleAvatar(
+                                            radius: 16,
+                                            backgroundColor: cs.primary
+                                                .withValues(alpha: 0.14),
+                                            child: Icon(
+                                              Lucide.Bot,
+                                              size: 18,
+                                              color: cs.primary,
+                                            ),
+                                          ),
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: Text(
-                                        (ap.currentAssistant?.name ??
-                                            widget.assistantName),
+                                        _isDesktop
+                                            ? (ap.currentAssistant?.name ??
+                                                  widget.assistantName)
+                                            : AppLocalizations.of(
+                                                context,
+                                              )!.desktopSidebarTabAssistants,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
@@ -2073,11 +2088,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                     listController: _listController,
                     isDesktop: _isDesktop,
                     assistantsExpanded: _assistantsExpanded,
-                    buildAssistants: () => _buildAssistantsList(
-                      context,
-                      inlineMode: true,
-                      hideCurrentAssistant: true,
-                    ),
+                    buildAssistants: () =>
+                        _buildAssistantsList(context, inlineMode: true),
                     buildConversations: () => _buildConversationsList(
                       context,
                       cs,
@@ -3103,21 +3115,13 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
 
   // Build assistants list (ungrouped + grouped by tags). When inlineMode=false (desktop tabs),
   // apply search filter on assistant names.
-  Widget _buildAssistantsList(
-    BuildContext context, {
-    bool inlineMode = false,
-    bool hideCurrentAssistant = false,
-  }) {
+  Widget _buildAssistantsList(BuildContext context, {bool inlineMode = false}) {
     final ap2 = context.watch<AssistantProvider>();
     final tp = context.watch<TagProvider>();
     final isDark2 = Theme.of(context).brightness == Brightness.dark;
     final textBase2 = isDark2 ? Colors.white : Colors.black;
 
     List<Assistant> assistants = ap2.assistants;
-    final currentAssistantId = ap2.currentAssistantId;
-    if (hideCurrentAssistant && currentAssistantId != null) {
-      assistants = assistants.where((a) => a.id != currentAssistantId).toList();
-    }
     // Apply search filter when:
     // - Desktop tab mode (inlineMode == false), OR
     // - Desktop assistants-only mode (left sidebar when topics are on right)
