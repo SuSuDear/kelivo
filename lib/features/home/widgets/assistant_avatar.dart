@@ -2,11 +2,13 @@ import 'dart:io' show File;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/models/assistant.dart';
 import '../../../shared/widgets/emoji_text.dart';
 import '../../../utils/avatar_cache.dart';
 import '../../../utils/sandbox_path_resolver.dart';
+import '../../../utils/brand_assets.dart';
 import '../../../theme/app_font_weights.dart';
 
 class AssistantAvatar extends StatelessWidget {
@@ -30,7 +32,14 @@ class AssistantAvatar extends StatelessWidget {
 
     Widget avatar;
     if (avatarValue.isNotEmpty) {
-      if (avatarValue.startsWith('http')) {
+      if (avatarValue.startsWith('icon:')) {
+        final asset = BrandAssets.selectableAssetOrNull(
+          avatarValue.substring(5).trim(),
+        );
+        avatar = asset == null
+            ? _AssistantInitialAvatar(cs: cs, name: name, size: size)
+            : _AssistantAssetAvatar(asset: asset, size: size);
+      } else if (avatarValue.startsWith('http')) {
         avatar = FutureBuilder<String?>(
           future: AvatarCache.getPath(avatarValue),
           builder: (context, snapshot) {
@@ -91,6 +100,49 @@ class AssistantAvatar extends StatelessWidget {
         ),
       ),
       child: avatar,
+    );
+  }
+}
+
+
+class _AssistantAssetAvatar extends StatelessWidget {
+  const _AssistantAssetAvatar({required this.asset, required this.size});
+
+  final String asset;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mono = isDark && BrandAssets.assetNeedsDarkInvert(asset);
+    final childSize = size * 0.7;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: asset.endsWith('.svg')
+          ? SvgPicture.asset(
+              asset,
+              width: childSize,
+              height: childSize,
+              fit: BoxFit.contain,
+              colorFilter: mono
+                  ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+                  : null,
+            )
+          : Image.asset(
+              asset,
+              width: childSize,
+              height: childSize,
+              fit: BoxFit.contain,
+              color: mono ? Colors.white : null,
+              colorBlendMode: mono ? BlendMode.srcIn : null,
+            ),
     );
   }
 }

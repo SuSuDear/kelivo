@@ -2520,6 +2520,175 @@ class _DesktopAssistantBasicPaneState
     } catch (_) {}
   }
 
+  Future<void> _pickAssistantBuiltInIcon(
+    BuildContext context,
+    Assistant a,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final assistantProvider = context.read<AssistantProvider>();
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final icons = BrandAssets.selectableIcons;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        String query = '';
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            final q = query.trim().toLowerCase();
+            final filtered = q.isEmpty
+                ? icons
+                : icons
+                      .where(
+                        (o) =>
+                            o.label.toLowerCase().contains(q) ||
+                            o.id.toLowerCase().contains(q),
+                      )
+                      .toList();
+            return AlertDialog(
+              backgroundColor: cs.surface,
+              title: Text(l10n.providerAvatarIconDialogTitle),
+              content: SizedBox(
+                width: MediaQuery.of(ctx).size.width * 0.8,
+                height: MediaQuery.of(ctx).size.height * 0.5,
+                child: Column(
+                  children: [
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: l10n.providerAvatarIconSearchHint,
+                        prefixIcon: const Icon(Lucide.Search, size: 18),
+                        isDense: true,
+                        filled: true,
+                        fillColor: isDark
+                            ? Colors.white10
+                            : const Color(0xFFF2F3F5),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.transparent),
+                        ),
+                        enabledBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide(color: Colors.transparent),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: cs.primary.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ),
+                      onChanged: (v) => setLocal(() => query = v),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Text(
+                                l10n.providerAvatarIconNoResults,
+                                style: TextStyle(
+                                  color: cs.onSurface.withValues(alpha: 0.6),
+                                ),
+                              ),
+                            )
+                          : GridView.builder(
+                              itemCount: filtered.length,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 4,
+                                    mainAxisSpacing: 8,
+                                    crossAxisSpacing: 8,
+                                    childAspectRatio: 1,
+                                  ),
+                              itemBuilder: (ctx, i) {
+                                final opt = filtered[i];
+                                final selected = a.avatar == 'icon:${opt.asset}';
+                                final isSvg = opt.asset.endsWith('.svg');
+                                final needsMono =
+                                    isDark &&
+                                    BrandAssets.assetNeedsDarkInvert(opt.asset);
+                                return Semantics(
+                                  label: opt.label,
+                                  child: Tooltip(
+                                    message: opt.label,
+                                    child: IosCardPress(
+                                      borderRadius: BorderRadius.circular(12),
+                                      baseColor: cs.surface,
+                                      onTap: () {
+                                        Navigator.of(ctx).pop();
+                                        Future.microtask(() async {
+                                          await assistantProvider.updateAssistant(
+                                            a.copyWith(avatar: 'icon:${opt.asset}'),
+                                          );
+                                        });
+                                      },
+                                      padding: const EdgeInsets.all(8),
+                                      child: Center(
+                                        child: AspectRatio(
+                                          aspectRatio: 1,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: isDark
+                                                  ? Colors.white10
+                                                  : cs.primary.withValues(alpha: 0.1),
+                                              shape: BoxShape.circle,
+                                              border: selected
+                                                  ? Border.all(
+                                                      color: cs.primary,
+                                                      width: 2,
+                                                    )
+                                                  : null,
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: FractionallySizedBox(
+                                              widthFactor: 0.65,
+                                              heightFactor: 0.65,
+                                              child: isSvg
+                                                  ? SvgPicture.asset(
+                                                      opt.asset,
+                                                      fit: BoxFit.contain,
+                                                      colorFilter: needsMono
+                                                          ? const ColorFilter.mode(
+                                                              Colors.white,
+                                                              BlendMode.srcIn,
+                                                            )
+                                                          : null,
+                                                    )
+                                                  : Image.asset(
+                                                      opt.asset,
+                                                      fit: BoxFit.contain,
+                                                      color: needsMono
+                                                          ? Colors.white
+                                                          : null,
+                                                      colorBlendMode: needsMono
+                                                          ? BlendMode.srcIn
+                                                          : null,
+                                                    ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(l10n.sideDrawerCancel),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _openAssistantAvatarMenu(
     BuildContext context,
     Assistant a,
@@ -2530,6 +2699,13 @@ class _DesktopAssistantBasicPaneState
       context,
       anchorKey: _avatarKey,
       items: [
+        DesktopContextMenuItem(
+          icon: Lucide.Sparkles,
+          label: l10n.providerAvatarChooseBuiltInIcon,
+          onTap: () async {
+            await _pickAssistantBuiltInIcon(context, a);
+          },
+        ),
         DesktopContextMenuItem(
           icon: Lucide.User,
           label: l10n.desktopAvatarMenuUseEmoji,
