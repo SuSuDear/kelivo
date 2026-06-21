@@ -30,7 +30,64 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    context.watch<SettingsProvider>();
+    final settings = context.watch<SettingsProvider>();
+
+    String modeLabel(ThemeMode mode) {
+      switch (mode) {
+        case ThemeMode.dark:
+          return l10n.settingsPageDarkMode;
+        case ThemeMode.light:
+          return l10n.settingsPageLightMode;
+        case ThemeMode.system:
+          return l10n.settingsPageSystemMode;
+      }
+    }
+
+    Future<void> pickThemeMode() async {
+      final settingsProvider = context.read<SettingsProvider>();
+      final selected = await showModalBottomSheet<ThemeMode>(
+        context: context,
+        backgroundColor: cs.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (ctx) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _sheetOption(
+                    ctx,
+                    icon: Lucide.Monitor,
+                    label: modeLabel(ThemeMode.system),
+                    onTap: () => Navigator.of(ctx).pop(ThemeMode.system),
+                  ),
+                  _sheetDividerNoIcon(ctx),
+                  _sheetOption(
+                    ctx,
+                    icon: Lucide.Sun,
+                    label: modeLabel(ThemeMode.light),
+                    onTap: () => Navigator.of(ctx).pop(ThemeMode.light),
+                  ),
+                  _sheetDividerNoIcon(ctx),
+                  _sheetOption(
+                    ctx,
+                    icon: Lucide.Moon,
+                    label: modeLabel(ThemeMode.dark),
+                    onTap: () => Navigator.of(ctx).pop(ThemeMode.dark),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      if (selected != null) {
+        await settingsProvider.setThemeMode(selected);
+      }
+    }
 
     String paletteName() {
       final settings = context.read<SettingsProvider>();
@@ -59,6 +116,14 @@ class _DisplaySettingsPageState extends State<DisplaySettingsPage> {
           // header(l10n.displaySettingsPageThemeSettingsTitle),
           _iosSectionCard(
             children: [
+              _iosNavRow(
+                context,
+                icon: Lucide.SunMoon,
+                label: l10n.settingsPageColorMode,
+                detailText: modeLabel(settings.themeMode),
+                onTap: pickThemeMode,
+              ),
+              _iosDivider(context),
               _iosNavRow(
                 context,
                 icon: Lucide.Palette,

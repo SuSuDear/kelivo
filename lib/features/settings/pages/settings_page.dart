@@ -28,63 +28,6 @@ class SettingsPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
 
-    String modeLabel(ThemeMode m) {
-      switch (m) {
-        case ThemeMode.dark:
-          return l10n.settingsPageDarkMode;
-        case ThemeMode.light:
-          return l10n.settingsPageLightMode;
-        case ThemeMode.system:
-          return l10n.settingsPageSystemMode;
-      }
-    }
-
-    Future<void> pickThemeMode() async {
-      final settingsProvider = context.read<SettingsProvider>();
-      final selected = await showModalBottomSheet<ThemeMode>(
-        context: context,
-        backgroundColor: cs.surface,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        builder: (ctx) {
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _sheetOption(
-                    ctx,
-                    icon: Lucide.Monitor,
-                    label: modeLabel(ThemeMode.system),
-                    onTap: () => Navigator.of(ctx).pop(ThemeMode.system),
-                  ),
-                  _sheetDivider(ctx),
-                  _sheetOption(
-                    ctx,
-                    icon: Lucide.Sun,
-                    label: modeLabel(ThemeMode.light),
-                    onTap: () => Navigator.of(ctx).pop(ThemeMode.light),
-                  ),
-                  _sheetDivider(ctx),
-                  _sheetOption(
-                    ctx,
-                    icon: Lucide.Moon,
-                    label: modeLabel(ThemeMode.dark),
-                    onTap: () => Navigator.of(ctx).pop(ThemeMode.dark),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-      if (selected != null) {
-        await settingsProvider.setThemeMode(selected);
-      }
-    }
-
     // iOS-style section header (neutral color, not theme color)
     Widget header(String text, {bool first = false}) => Padding(
       padding: EdgeInsets.fromLTRB(12, first ? 2 : 12, 12, 6),
@@ -146,14 +89,6 @@ class SettingsPage extends StatelessWidget {
           header(l10n.settingsPageGeneralSection, first: true),
           _iosSectionCard(
             children: [
-              _iosNavRow(
-                context,
-                icon: Lucide.SunMoon,
-                label: l10n.settingsPageColorMode,
-                detailText: modeLabel(settings.themeMode),
-                onTap: pickThemeMode,
-              ),
-              _iosDivider(context),
               _iosNavRow(
                 context,
                 icon: Lucide.Monitor,
@@ -601,60 +536,4 @@ class _TactileIconButtonState extends State<_TactileIconButton> {
       ),
     );
   }
-}
-
-// Bottom sheet iOS-style option with tactile feedback (no ripple)
-Widget _sheetOption(
-  BuildContext context, {
-  required IconData icon,
-  required String label,
-  required VoidCallback onTap,
-}) {
-  final cs = Theme.of(context).colorScheme;
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  return _TactileRow(
-    pressedScale: 1.00,
-    haptics: true,
-    onTap: onTap,
-    builder: (pressed) {
-      final base = cs.onSurface;
-      final bgTarget = pressed
-          ? (isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.black.withValues(alpha: 0.05))
-          : Colors.transparent;
-      return _AnimatedPressColor(
-        pressed: pressed,
-        base: base,
-        builder: (c) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            color: bgTarget,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                SizedBox(width: 24, child: Icon(icon, size: 20, color: c)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(label, style: TextStyle(fontSize: 15, color: c)),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-
-Widget _sheetDivider(BuildContext context) {
-  final cs = Theme.of(context).colorScheme;
-  return Divider(
-    height: 1,
-    thickness: 0.6,
-    indent: 52,
-    endIndent: 16,
-    color: cs.outlineVariant.withValues(alpha: 0.18),
-  );
 }

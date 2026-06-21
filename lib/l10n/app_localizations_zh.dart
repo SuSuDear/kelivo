@@ -42,7 +42,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPageDisplaySubtitle => '外观、行为与交互偏好';
 
   @override
-  String get settingsPageAssistant => '助手';
+  String get settingsPageAssistant => '助手设置';
 
   @override
   String get settingsPageAssistantSubtitle => '默认助手与对话风格';
@@ -81,7 +81,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPageBackup => '数据备份';
 
   @override
-  String get settingsPageChatStorage => '聊天记录存储';
+  String get settingsPageChatStorage => '聊天缓存';
 
   @override
   String get settingsPageCalculating => '统计中…';
@@ -253,7 +253,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPageAbout => '关于';
 
   @override
-  String get settingsPageStatistics => '统计';
+  String get settingsPageStatistics => '统计数据';
 
   @override
   String get settingsPageDocs => '使用文档';
@@ -5201,7 +5201,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get settingsPageDisplaySubtitle => '外观、行为与交互偏好';
 
   @override
-  String get settingsPageAssistant => '助手';
+  String get settingsPageAssistant => '助手设置';
 
   @override
   String get settingsPageAssistantSubtitle => '默认助手与对话风格';
@@ -5240,7 +5240,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get settingsPageBackup => '数据备份';
 
   @override
-  String get settingsPageChatStorage => '聊天记录存储';
+  String get settingsPageChatStorage => '聊天缓存';
 
   @override
   String get settingsPageCalculating => '统计中…';
@@ -5412,7 +5412,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get settingsPageAbout => '关于';
 
   @override
-  String get settingsPageStatistics => '统计';
+  String get settingsPageStatistics => '统计数据';
 
   @override
   String get settingsPageDocs => '使用文档';
@@ -10360,7 +10360,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsPageDisplaySubtitle => '外觀、行為與互動偏好';
 
   @override
-  String get settingsPageAssistant => '助理';
+  String get settingsPageAssistant => '助理設定';
 
   @override
   String get settingsPageAssistantSubtitle => '預設助理與對話風格';
@@ -10399,7 +10399,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsPageBackup => '資料備份';
 
   @override
-  String get settingsPageChatStorage => '聊天記錄儲存';
+  String get settingsPageChatStorage => '聊天快取';
 
   @override
   String get settingsPageCalculating => '統計中…';
@@ -10571,7 +10571,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsPageAbout => '關於';
 
   @override
-  String get settingsPageStatistics => '統計';
+  String get settingsPageStatistics => '統計資料';
 
   @override
   String get settingsPageDocs => '使用文件';
