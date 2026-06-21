@@ -11,7 +11,6 @@ import 'package:highlight/highlight.dart' show Node, highlight;
 import '../../icons/lucide_adapter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
-import 'dart:collection';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:convert';
@@ -43,83 +42,6 @@ import 'package:Kelivo/desktop/html_preview_dialog.dart';
 const int _maxInlineMathBodyLength = 512;
 const String _codeDollarMask = '___CODE_DOLLAR_MASK___';
 const String _fencedHtmlTagStartMask = '\uE002';
-const int _maxPreparedMarkdownCacheEntries = 40;
-const int _maxPreparedMarkdownCacheChars = 1500000;
-const int _maxHighlightSpanCacheEntries = 80;
-const int _maxHighlightSpanCacheChars = 1000000;
-
-final LinkedHashMap<_MarkdownPrepareCacheKey, _PreparedMarkdownText>
-    _preparedMarkdownCache =
-    LinkedHashMap<_MarkdownPrepareCacheKey, _PreparedMarkdownText>();
-int _preparedMarkdownCacheChars = 0;
-
-final LinkedHashMap<_HighlightSpanCacheKey, List<TextSpan>> _highlightSpanCache =
-    LinkedHashMap<_HighlightSpanCacheKey, List<TextSpan>>();
-int _highlightSpanCacheChars = 0;
-
-class _MarkdownPrepareCacheKey {
-  const _MarkdownPrepareCacheKey(
-    this.text, {
-    required this.enableMath,
-    required this.enableDollarLatex,
-  });
-
-  final String text;
-  final bool enableMath;
-  final bool enableDollarLatex;
-
-  @override
-  bool operator ==(Object other) {
-    return other is _MarkdownPrepareCacheKey &&
-        other.text == text &&
-        other.enableMath == enableMath &&
-        other.enableDollarLatex == enableDollarLatex;
-  }
-
-  @override
-  int get hashCode => Object.hash(text, enableMath, enableDollarLatex);
-}
-
-class _PreparedMarkdownText {
-  const _PreparedMarkdownText({
-    required this.imageUrls,
-    required this.normalized,
-    required this.cacheCost,
-  });
-
-  final List<String> imageUrls;
-  final String normalized;
-  final int cacheCost;
-}
-
-class _HighlightSpanCacheKey {
-  const _HighlightSpanCacheKey({
-    required this.source,
-    required this.language,
-    required this.theme,
-  });
-
-  final String source;
-  final String? language;
-  final Map<String, TextStyle> theme;
-
-  @override
-  bool operator ==(Object other) {
-    return other is _HighlightSpanCacheKey &&
-        other.source == source &&
-        other.language == language &&
-        _highlightThemeEquals(other.theme, theme);
-  }
-
-  @override
-  int get hashCode {
-    var themeHash = theme.length;
-    for (final entry in theme.entries) {
-      themeHash ^= Object.hash(entry.key, entry.value);
-    }
-    return Object.hash(source, language, themeHash);
-  }
-}
 
 /// gpt_markdown with custom code block highlight and inline code styling.
 class MarkdownWithCodeHighlight extends StatefulWidget {
@@ -202,14 +124,14 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final cs = Theme.of(context).colorScheme;
-    final preparedMarkdown = _prepareMarkdownText(
-      _renderText,
+    final sanitizedText = _sanitizeImageLinks(_renderText);
+    final imageUrls = _extractImageUrls(sanitizedText);
+    final normalized = _preprocessFences(
+      sanitizedText,
       enableMath: settings.enableMathRendering,
       enableDollarLatex: settings.enableDollarLatex,
       streaming: widget.streaming,
     );
-    final imageUrls = preparedMarkdown.imageUrls;
-    final normalized = preparedMarkdown.normalized;
     // Base text style (can be overridden by caller)
     final baseTextStyle =
         (widget.baseStyle ?? Theme.of(context).textTheme.bodyMedium)?.copyWith(
@@ -612,79 +534,6 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
       u = 'https://$u';
     }
     return Uri.parse(u);
-  }
-}
-
-_PreparedMarkdownText _prepareMarkdownText(
-  String text, {
-  required bool enableMath,
-  required bool enableDollarLatex,
-  required bool streaming,
-}) {
-  if (streaming) {
-    return _buildPreparedMarkdownText(
-      text,
-      enableMath: enableMath,
-      enableDollarLatex: enableDollarLatex,
-      streaming: true,
-    );
-  }
-
-  final key = _MarkdownPrepareCacheKey(
-    text,
-    enableMath: enableMath,
-    enableDollarLatex: enableDollarLatex,
-  );
-  final cached = _preparedMarkdownCache.remove(key);
-  if (cached != null) {
-    _preparedMarkdownCache[key] = cached;
-    return cached;
-  }
-
-  final prepared = _buildPreparedMarkdownText(
-    text,
-    enableMath: enableMath,
-    enableDollarLatex: enableDollarLatex,
-    streaming: false,
-  );
-  _rememberPreparedMarkdown(key, prepared);
-  return prepared;
-}
-
-_PreparedMarkdownText _buildPreparedMarkdownText(
-  String text, {
-  required bool enableMath,
-  required bool enableDollarLatex,
-  required bool streaming,
-}) {
-  final sanitizedText = _sanitizeImageLinks(text);
-  final imageUrls = List<String>.unmodifiable(_extractImageUrls(sanitizedText));
-  final normalized = _preprocessFences(
-    sanitizedText,
-    enableMath: enableMath,
-    enableDollarLatex: enableDollarLatex,
-    streaming: streaming,
-  );
-  return _PreparedMarkdownText(
-    imageUrls: imageUrls,
-    normalized: normalized,
-    cacheCost: text.length + sanitizedText.length + normalized.length,
-  );
-}
-
-void _rememberPreparedMarkdown(
-  _MarkdownPrepareCacheKey key,
-  _PreparedMarkdownText prepared,
-) {
-  if (prepared.cacheCost > _maxPreparedMarkdownCacheChars) return;
-  _preparedMarkdownCache[key] = prepared;
-  _preparedMarkdownCacheChars += prepared.cacheCost;
-  while (_preparedMarkdownCache.length > _maxPreparedMarkdownCacheEntries ||
-      _preparedMarkdownCacheChars > _maxPreparedMarkdownCacheChars) {
-    final oldest = _preparedMarkdownCache.keys.first;
-    final removed = _preparedMarkdownCache.remove(oldest);
-    if (removed == null) break;
-    _preparedMarkdownCacheChars -= removed.cacheCost;
   }
 }
 
@@ -2241,7 +2090,6 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
         padding: EdgeInsets.zero,
         textStyle: codeTextStyle,
         enableHighlight: highlightEnabled,
-        cacheHighlight: !widget.streaming,
       );
 
       final bool isDesktop =
@@ -5718,7 +5566,6 @@ class SelectableHighlightView extends StatefulWidget {
     this.padding,
     this.textStyle,
     this.enableHighlight = true,
-    this.cacheHighlight = false,
   });
 
   final String source;
@@ -5727,7 +5574,6 @@ class SelectableHighlightView extends StatefulWidget {
   final EdgeInsetsGeometry? padding;
   final TextStyle? textStyle;
   final bool enableHighlight;
-  final bool cacheHighlight;
 
   @override
   State<SelectableHighlightView> createState() =>
@@ -5750,7 +5596,6 @@ class _SelectableHighlightViewState extends State<SelectableHighlightView> {
         oldWidget.language == widget.language &&
         oldWidget.textStyle == widget.textStyle &&
         oldWidget.enableHighlight == widget.enableHighlight &&
-        oldWidget.cacheHighlight == widget.cacheHighlight &&
         _highlightThemeEquals(oldWidget.theme, widget.theme)) {
       return;
     }
@@ -5761,25 +5606,6 @@ class _SelectableHighlightViewState extends State<SelectableHighlightView> {
     if (!widget.enableHighlight) {
       return <TextSpan>[TextSpan(text: widget.source)];
     }
-    if (widget.cacheHighlight) {
-      final key = _HighlightSpanCacheKey(
-        source: widget.source,
-        language: widget.language,
-        theme: widget.theme,
-      );
-      final cached = _highlightSpanCache.remove(key);
-      if (cached != null) {
-        _highlightSpanCache[key] = cached;
-        return cached;
-      }
-      final spans = _parseHighlightedSpans();
-      _rememberHighlightSpans(key, spans);
-      return spans;
-    }
-    return _parseHighlightedSpans();
-  }
-
-  List<TextSpan> _parseHighlightedSpans() {
     try {
       final result = highlight.parse(widget.source, language: widget.language);
       return _convertNodes(result.nodes ?? const []);
@@ -5822,23 +5648,6 @@ class _SelectableHighlightViewState extends State<SelectableHighlightView> {
             : _codeTextSpans,
       ),
     );
-  }
-}
-
-void _rememberHighlightSpans(
-  _HighlightSpanCacheKey key,
-  List<TextSpan> spans,
-) {
-  final cacheCost = key.source.length;
-  if (cacheCost > _maxHighlightSpanCacheChars) return;
-  _highlightSpanCache[key] = spans;
-  _highlightSpanCacheChars += cacheCost;
-  while (_highlightSpanCache.length > _maxHighlightSpanCacheEntries ||
-      _highlightSpanCacheChars > _maxHighlightSpanCacheChars) {
-    final oldest = _highlightSpanCache.keys.first;
-    final removed = _highlightSpanCache.remove(oldest);
-    if (removed == null) break;
-    _highlightSpanCacheChars -= oldest.source.length;
   }
 }
 
