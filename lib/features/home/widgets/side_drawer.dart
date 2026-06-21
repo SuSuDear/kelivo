@@ -3331,7 +3331,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                 color: textBase.withValues(alpha: 0.7),
               ),
             ),
-            onTap: () async {
+            onTap: () {
               Haptics.light();
               final wasCollapsed = _collapsedAssistantIds.contains(assistant.id);
               setState(() {
@@ -3342,9 +3342,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                 }
               });
               if (!isCurrentAssistant) {
-                await context
-                    .read<AssistantProvider>()
-                    .setCurrentAssistant(assistant.id);
+                unawaited(_handleSelectAssistant(assistant));
               }
             },
             onEditTap: () => _openAssistantSettings(assistant.id),
