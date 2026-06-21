@@ -5,15 +5,12 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/models/assistant.dart';
-import 'dart:io' show File;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'assistant_settings_edit_page.dart';
-import '../../../utils/avatar_cache.dart';
-import '../../../utils/sandbox_path_resolver.dart';
 import '../../../core/services/haptics.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../theme/app_font_weights.dart';
+import '../../home/widgets/assistant_avatar.dart';
 
 class AssistantSettingsPage extends StatelessWidget {
   const AssistantSettingsPage({super.key});
@@ -150,7 +147,7 @@ class _AssistantCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _AssistantAvatar(item: item, size: 44),
+                    AssistantAvatar(assistant: item, size: 44),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -555,101 +552,6 @@ Future<bool?> _confirmDelete(
       );
     },
   );
-}
-
-class _AssistantAvatar extends StatelessWidget {
-  const _AssistantAvatar({required this.item, this.size = 40});
-  final Assistant item;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final av = (item.avatar ?? '').trim();
-    if (av.isNotEmpty) {
-      if (av.startsWith('http')) {
-        return FutureBuilder<String?>(
-          future: AvatarCache.getPath(av),
-          builder: (ctx, snap) {
-            final p = snap.data;
-            if (p != null && File(p).existsSync()) {
-              return ClipOval(
-                child: Image(
-                  image: FileImage(File(p)),
-                  width: size,
-                  height: size,
-                  fit: BoxFit.cover,
-                ),
-              );
-            }
-            return ClipOval(
-              child: Image.network(
-                av,
-                width: size,
-                height: size,
-                fit: BoxFit.cover,
-                errorBuilder: (c, e, s) => _initial(cs),
-              ),
-            );
-          },
-        );
-      } else if (!kIsWeb && (av.startsWith('/') || av.contains(':'))) {
-        final fixed = SandboxPathResolver.fix(av);
-        final f = File(fixed);
-        if (f.existsSync()) {
-          return ClipOval(
-            child: Image(
-              image: FileImage(f),
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
-            ),
-          );
-        }
-        return _initial(cs);
-      } else {
-        return _emoji(cs, av);
-      }
-    }
-    return _initial(cs);
-  }
-
-  Widget _initial(ColorScheme cs) {
-    final letter = item.name.isNotEmpty ? item.name.characters.first : '?';
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: cs.primary.withValues(alpha: 0.15),
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        letter,
-        style: TextStyle(
-          color: cs.primary,
-          fontWeight: AppFontWeights.emphasis,
-          fontSize: size * 0.42,
-        ),
-      ),
-    );
-  }
-
-  Widget _emoji(ColorScheme cs, String emoji) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: cs.primary.withValues(alpha: 0.15),
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        emoji.characters.take(1).toString(),
-        style: TextStyle(fontSize: size * 0.5),
-      ),
-    );
-  }
 }
 
 class _IosOutlineButton extends StatefulWidget {
