@@ -833,8 +833,6 @@ class ChatApiService {
             'messages': [
               {'role': 'user', 'content': safePrompt},
             ],
-            'stream': false,
-            info.completionTokensKey: 512,
             'temperature': 0.3,
             if (isReasoning && effort != 'off' && effort != 'auto')
               'reasoning_effort': effort,
@@ -874,7 +872,6 @@ class ChatApiService {
             body[k] = (v is String) ? _parseOverrideValue(v) : v;
           });
         }
-        body['stream'] = false;
         // Vendor-specific reasoning knobs for chat-completions compatible hosts (non-streaming)
         if (config.useResponseApi != true) {
           _applyVendorReasoningKnobs(
@@ -916,8 +913,6 @@ class ChatApiService {
           throw HttpException('HTTP ${resp.statusCode}: $responseText');
         }
         final responseText = _decodeUtf8Body(resp);
-        final sseText = _extractSseText(responseText);
-        if (sseText.trim().isNotEmpty) return sseText;
         final data = jsonDecode(responseText);
         if (config.useResponseApi == true) {
           return _extractResponsesText(data);
@@ -1123,41 +1118,6 @@ class ChatApiService {
     } finally {
       client.close();
     }
-  }
-
-  static String _extractSseText(String responseText) {
-    if (!responseText.trimLeft().startsWith('data:')) return '';
-    final buffer = StringBuffer();
-    for (final line in const LineSplitter().convert(responseText)) {
-      final trimmed = line.trimLeft();
-      if (!trimmed.startsWith('data:')) continue;
-      final payload = trimmed.substring(5).trim();
-      if (payload.isEmpty || payload == '[DONE]') continue;
-      try {
-        final data = jsonDecode(payload);
-        if (data is! Map) continue;
-        final responsesText = _extractResponsesText(data);
-        if (responsesText.isNotEmpty) {
-          buffer.write(responsesText);
-          continue;
-        }
-        final choices = data['choices'];
-        if (choices is List && choices.isNotEmpty) {
-          final first = choices.first;
-          if (first is! Map) continue;
-          final delta = first['delta'];
-          if (delta is Map && delta['content'] is String) {
-            buffer.write(delta['content']);
-            continue;
-          }
-          final message = first['message'];
-          if (message is Map && message['content'] is String) {
-            buffer.write(message['content']);
-          }
-        }
-      } catch (_) {}
-    }
-    return buffer.toString();
   }
 
   static String _extractResponsesText(dynamic data) {
