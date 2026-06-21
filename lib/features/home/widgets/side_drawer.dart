@@ -3332,7 +3332,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         continue;
       }
 
-      final collapsed = _collapsedAssistantIds.contains(assistant.id);
+      final collapsed =
+          query.isEmpty && !_collapsedAssistantIds.contains(assistant.id);
       children.add(
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
