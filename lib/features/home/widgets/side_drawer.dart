@@ -694,6 +694,11 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
       )).trim();
       if (title.isNotEmpty) {
         await chatService.renameConversation(conversationId, title);
+      } else {
+        FlutterLogger.log(
+          '[SideDrawer] Regenerate title returned empty text',
+          tag: 'SideDrawer',
+        );
       }
     } catch (e) {
       FlutterLogger.log(

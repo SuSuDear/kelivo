@@ -915,30 +915,7 @@ class ChatApiService {
         final responseText = _decodeUtf8Body(resp);
         final data = jsonDecode(responseText);
         if (config.useResponseApi == true) {
-          // Prefer SDK-style convenience when present
-          final ot = data['output_text'];
-          if (ot is String && ot.isNotEmpty) return ot;
-          // Aggregate text from `output` list of message blocks
-          final out = data['output'];
-          if (out is List) {
-            final buf = StringBuffer();
-            for (final item in out) {
-              if (item is! Map) continue;
-              final content = item['content'];
-              if (content is List) {
-                for (final c in content) {
-                  if (c is Map &&
-                      (c['type'] == 'output_text') &&
-                      (c['text'] is String)) {
-                    buf.write(c['text']);
-                  }
-                }
-              }
-            }
-            final s = buf.toString();
-            if (s.isNotEmpty) return s;
-          }
-          return '';
+          return _extractResponsesText(data);
         } else {
           final choices = data['choices'] as List?;
           if (choices != null && choices.isNotEmpty) {
@@ -1141,6 +1118,42 @@ class ChatApiService {
     } finally {
       client.close();
     }
+  }
+
+  static String _extractResponsesText(dynamic data) {
+    if (data is! Map) return '';
+    final outputText = data['output_text'];
+    if (outputText is String && outputText.trim().isNotEmpty) {
+      return outputText;
+    }
+
+    final buffer = StringBuffer();
+    void appendText(dynamic value) {
+      if (value is String && value.isNotEmpty) {
+        buffer.write(value);
+      }
+    }
+
+    final output = data['output'];
+    if (output is List) {
+      for (final item in output) {
+        if (item is! Map) continue;
+        appendText(item['text']);
+        final content = item['content'];
+        if (content is String) {
+          appendText(content);
+        } else if (content is List) {
+          for (final block in content) {
+            if (block is! Map) continue;
+            final type = (block['type'] ?? '').toString();
+            if (type == 'output_text' || type == 'text') {
+              appendText(block['text']);
+            }
+          }
+        }
+      }
+    }
+    return buffer.toString();
   }
 
   static List<Map<String, dynamic>> _sanitizeMessages(
