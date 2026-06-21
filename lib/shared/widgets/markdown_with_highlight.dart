@@ -2236,8 +2236,8 @@ class _CollapsibleCodeBlockState extends State<_CollapsibleCodeBlock> {
                     bottom: 0,
                     child: _CodeBlockTextAction(
                       icon: isCollapsed
-                          ? Lucide.ChevronRight
-                          : Lucide.ChevronDown,
+                          ? Lucide.ChevronDown
+                          : Lucide.ChevronUp,
                       label: isCollapsed
                           ? AppLocalizations.of(context)!.codeBlockExpandButton
                           : AppLocalizations.of(context)!.codeBlockCollapseButton,
