@@ -209,29 +209,8 @@ class StreamController {
     _toolParts.remove(messageId);
   }
 
-  void upsertSystemToolPart(
-    String messageId, {
-    required String id,
-    required String title,
-    required String content,
-    required bool loading,
-  }) {
-    final parts = List<ToolUIPart>.of(_toolParts[messageId] ?? const []);
-    final index = parts.indexWhere((p) => p.id == id);
-    final part = ToolUIPart(
-      id: id,
-      toolName: title,
-      arguments: const <String, dynamic>{},
-      content: content,
-      loading: loading,
-    );
-    if (index >= 0) {
-      parts[index] = part;
-    } else {
-      parts.add(part);
-    }
-    _toolParts[messageId] = parts;
-    streamingContentNotifier.notifyToolPartsUpdated(messageId);
+  void updateStreamStatus(String messageId, String? status) {
+    streamingContentNotifier.updateStreamStatus(messageId, status);
     onStreamTick?.call();
   }
 
