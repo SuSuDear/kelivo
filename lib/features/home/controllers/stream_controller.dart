@@ -1395,6 +1395,7 @@ class StreamingState {
   DateTime? streamStartedAt;
   bool hadThinkingBlock = false;
   bool receivedModelOutput = false;
+  bool sawTerminalChunk = false;
   int reconnectAttempt = 0;
   int resumeAttempt = 0;
   bool resumePromptInjected = false;
