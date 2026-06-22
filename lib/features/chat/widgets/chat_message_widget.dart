@@ -13,6 +13,7 @@ import 'package:open_filex/open_filex.dart';
 // import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'dart:convert';
 import '../../home/widgets/file_processing_indicator.dart';
+import '../../home/widgets/assistant_avatar.dart';
 import '../pages/image_viewer_page.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -24,6 +25,7 @@ import '../../../core/providers/assistant_provider.dart';
 import 'package:intl/intl.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/avatar_cache.dart';
+import '../../../utils/brand_assets.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../core/models/assistant.dart';
 import '../../../shared/widgets/markdown_with_highlight.dart';
@@ -2715,6 +2717,17 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
   Widget _buildAssistantAvatar(ColorScheme cs) {
     final av = (widget.assistantAvatar ?? '').trim();
     if (av.isNotEmpty) {
+      if (av.startsWith('icon:')) {
+        final asset = BrandAssets.selectableAssetOrNull(av.substring(5).trim());
+        if (asset != null) {
+          return AssistantAvatar(
+            assistant: Assistant(id: '', name: widget.assistantName ?? '', avatar: av),
+            fallbackName: widget.assistantName,
+            size: 32,
+          );
+        }
+        return _assistantInitial(cs);
+      }
       if (av.startsWith('http')) {
         return FutureBuilder<String?>(
           future: AvatarCache.getPath(av),
