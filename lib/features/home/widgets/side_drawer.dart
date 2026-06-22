@@ -3202,6 +3202,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
           selected: ap2.currentAssistantId == a.id,
           onTap: () => _handleSelectAssistant(a),
           onEditTap: () => _openAssistantSettings(a.id),
+          onAvatarTap: () => _openAssistantSettings(a.id),
           onLongPress: () => _showAssistantItemMenu(a),
           onSecondaryTapDown: (pos) => _showAssistantItemMenu(a, anchor: pos),
         ),
@@ -3375,6 +3376,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
               }
             },
             onEditTap: () => _openAssistantSettings(assistant.id),
+            onAvatarTap: () => _openAssistantSettings(assistant.id),
             onLongPress: () => _showAssistantItemMenu(assistant),
           ),
         ),
@@ -4150,6 +4152,7 @@ class _AssistantInlineTile extends StatefulWidget {
     required this.embedded,
     required this.onTap,
     required this.onEditTap,
+    this.onAvatarTap,
     this.onLongPress,
     this.onSecondaryTapDown,
     this.trailing,
@@ -4162,6 +4165,7 @@ class _AssistantInlineTile extends StatefulWidget {
   final bool embedded;
   final VoidCallback onTap;
   final VoidCallback onEditTap;
+  final VoidCallback? onAvatarTap;
   final VoidCallback? onLongPress;
   final void Function(Offset globalPosition)? onSecondaryTapDown;
   final Widget? trailing;
@@ -4213,7 +4217,11 @@ class _AssistantInlineTileState extends State<_AssistantInlineTile> {
         padding: EdgeInsets.fromLTRB(_isDesktop ? 12 : 4, 6, 12, 6),
         child: Row(
           children: [
-            widget.avatar,
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: widget.onAvatarTap,
+              child: widget.avatar,
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
