@@ -67,7 +67,6 @@ class SideDrawer extends StatefulWidget {
     this.onEnterGlobalSearch,
     this.onExitGlobalSearch,
     this.onOpenGlobalSearchResult,
-    this.initialExpandedAssistantId,
   });
 
   final String userName;
@@ -93,8 +92,6 @@ class SideDrawer extends StatefulWidget {
   final VoidCallback? onExitGlobalSearch;
   final Future<void> Function(String conversationId, String messageId)?
   onOpenGlobalSearchResult;
-  // Assistant group that should be expanded once when the drawer first builds.
-  final String? initialExpandedAssistantId;
 
   @override
   State<SideDrawer> createState() => _SideDrawerState();
@@ -132,12 +129,6 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _attachCloseTicker(widget.closePickerTicker);
-    final initialExpandedAssistantId = widget.initialExpandedAssistantId;
-    // Keep only the current conversation's assistant group expanded on app start.
-    if (initialExpandedAssistantId != null &&
-        initialExpandedAssistantId.isNotEmpty) {
-      _collapsedAssistantIds.add(initialExpandedAssistantId);
-    }
     _mobileSearchFocusNode.addListener(() {
       if (_isDesktop) return;
       final visible = _mobileSearchFocusNode.hasFocus;
