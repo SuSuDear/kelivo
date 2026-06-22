@@ -10,6 +10,7 @@ import 'dart:ui' as ui;
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/interactive_drawer.dart';
 import '../widgets/side_drawer.dart';
+import '../controllers/chat_controller.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/providers/settings_provider.dart';
@@ -103,6 +104,9 @@ class HomeMobileScaffold extends StatelessWidget {
         onGlobalSearchQueryChanged: onGlobalSearchQueryChanged,
         onEnterGlobalSearch: onEnterGlobalSearch,
         onExitGlobalSearch: onExitGlobalSearch,
+        initialExpandedAssistantId:
+            context.read<ChatController>().currentConversation?.assistantId ??
+            context.read<AssistantProvider>().currentAssistantId,
         onOpenGlobalSearchResult: (conversationId, messageId) async {
           await onOpenGlobalSearchResult(conversationId, messageId);
           drawerController.close();

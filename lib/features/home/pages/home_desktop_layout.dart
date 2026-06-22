@@ -9,6 +9,7 @@ import 'dart:ui' as ui;
 
 import '../../../l10n/app_localizations.dart';
 import '../widgets/side_drawer.dart';
+import '../controllers/chat_controller.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/providers/user_provider.dart';
@@ -185,6 +186,9 @@ class HomeDesktopScaffold extends StatelessWidget {
       globalSearchMode: globalSearchMode,
       globalSearchQuery: globalSearchQuery,
       onGlobalSearchQueryChanged: onGlobalSearchQueryChanged,
+      initialExpandedAssistantId:
+          context.read<ChatController>().currentConversation?.assistantId ??
+          context.read<AssistantProvider>().currentAssistantId,
       onEnterGlobalSearch: () {
         ChatActionBus.instance.fire(ChatAction.enterGlobalSearch);
       },
