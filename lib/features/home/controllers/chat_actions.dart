@@ -1137,16 +1137,6 @@ class ChatActions {
     );
   }
 
-  Future<void> _recoverUnexpectedStreamDone(
-    stream_ctrl.StreamingState state,
-  ) async {
-    await _handleStreamErrorOrReconnect(
-      StateError('Stream ended unexpectedly before a terminal chunk.'),
-      StackTrace.current,
-      state,
-    );
-  }
-
   Future<void> _resumeInterruptedStream(
     stream_ctrl.StreamingState state,
   ) async {
@@ -1498,7 +1488,6 @@ class ChatActions {
     stream_ctrl.StreamingState state,
     String chunkContent,
   ) async {
-    state.sawTerminalChunk = true;
     final messageId = state.messageId;
     final conversationId = state.conversationId;
     final autoCollapseThinking =
@@ -1803,15 +1792,10 @@ class ChatActions {
     if (inFlight != null) {
       await inFlight;
     } else if (_loadingConversationIds.contains(conversationId)) {
-      if (state.sawTerminalChunk) {
-        await _finishStreaming(
-          state,
-          generateTitle: state.ctx.generateTitleOnFinish,
-        );
-      } else {
-        await _recoverUnexpectedStreamDone(state);
-        return;
-      }
+      await _finishStreaming(
+        state,
+        generateTitle: state.ctx.generateTitleOnFinish,
+      );
     }
     // Idempotent: ensure notifier is removed even if _finishStreaming was skipped
     streamController.removeStreamingNotifier(messageId);
