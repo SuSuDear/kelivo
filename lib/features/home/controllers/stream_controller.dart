@@ -1368,8 +1368,6 @@ class StreamingState {
   bool titleQueued = false;
   DateTime? streamStartedAt;
   bool hadThinkingBlock = false;
-  bool receivedModelOutput = false;
-  int reconnectAttempt = 0;
   List<int> contentSplitOffsets = <int>[];
   List<int> reasoningCountAtSplit = <int>[];
   List<int> toolCountAtSplit = <int>[];

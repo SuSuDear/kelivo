@@ -57,9 +57,6 @@ class ChatActionResult {
 /// - Handle stream chunks (reasoning, tools, content)
 /// - Manage streaming state
 class ChatActions {
-  static const int _maxPreOutputReconnectAttempts = 2;
-  static const Duration _streamIdleTimeout = Duration(seconds: 120);
-
   ChatActions({
     required this.chatService,
     required this.chatController,
@@ -997,6 +994,8 @@ class ChatActions {
   /// Execute generation with the given context.
   Future<void> _executeGeneration(stream_ctrl.GenerationContext ctx) async {
     final state = stream_ctrl.StreamingState(ctx);
+    final assistant = ctx.assistant;
+    final conversationId = state.conversationId;
     final existingSplit = streamController.getContentSplitData(state.messageId);
     if (existingSplit != null) {
       state.contentSplitOffsets = List<int>.of(existingSplit.offsets);
@@ -1012,76 +1011,34 @@ class ChatActions {
 
     try {
       await _startIosBackgroundGeneration(ctx);
-      await _startStreamAttempt(state);
-    } catch (e) {
-      await _handleStreamError(e, state);
-    }
-  }
+      final stream = ChatApiService.sendMessageStream(
+        config: ctx.config,
+        modelId: ctx.modelId,
+        messages: ctx.apiMessages,
+        userImagePaths: ctx.userImagePaths,
+        thinkingBudget:
+            assistant?.thinkingBudget ?? ctx.settings.thinkingBudget,
+        temperature: assistant?.temperature,
+        topP: assistant?.topP,
+        maxTokens: assistant?.maxTokens,
+        tools: ctx.toolDefs.isEmpty ? null : ctx.toolDefs,
+        onToolCall: ctx.onToolCall,
+        extraHeaders: ctx.extraHeaders,
+        extraBody: ctx.extraBody,
+        stream: ctx.streamOutput,
+        requestId: conversationId,
+        allowImagesApiRouting: ctx.allowImagesApiRouting,
+        ocrActive: ctx.ocrActive,
+      );
 
-  Future<void> _startStreamAttempt(stream_ctrl.StreamingState state) async {
-    final ctx = state.ctx;
-    final assistant = ctx.assistant;
-    final conversationId = state.conversationId;
-
-    final stream = ChatApiService.sendMessageStream(
-      config: ctx.config,
-      modelId: ctx.modelId,
-      messages: ctx.apiMessages,
-      userImagePaths: ctx.userImagePaths,
-      thinkingBudget: assistant?.thinkingBudget ?? ctx.settings.thinkingBudget,
-      temperature: assistant?.temperature,
-      topP: assistant?.topP,
-      maxTokens: assistant?.maxTokens,
-      tools: ctx.toolDefs.isEmpty ? null : ctx.toolDefs,
-      onToolCall: ctx.onToolCall,
-      extraHeaders: ctx.extraHeaders,
-      extraBody: ctx.extraBody,
-      stream: ctx.streamOutput,
-      requestId: conversationId,
-      allowImagesApiRouting: ctx.allowImagesApiRouting,
-      ocrActive: ctx.ocrActive,
-    ).timeout(_streamIdleTimeout);
-
-    await _conversationStreams[conversationId]?.cancel();
-    final sub = listenSequentiallyToStream<ChatStreamChunk>(
-      stream: stream,
-      onData: (chunk) => _handleStreamChunk(chunk, state),
-      onError: (error, stackTrace) => _handleStreamErrorOrReconnect(
-        error,
-        stackTrace,
-        state,
-      ),
-      onDone: () => _handleStreamDone(state),
-    );
-    _conversationStreams[conversationId] = sub;
-  }
-
-  bool _canReconnectStream(stream_ctrl.StreamingState state) {
-    if (state.finishHandled || state.receivedModelOutput) return false;
-    if (state.reconnectAttempt >= _maxPreOutputReconnectAttempts) return false;
-    if (state.ctx.toolDefs.isNotEmpty || state.ctx.onToolCall != null) {
-      return false;
-    }
-    return _loadingConversationIds.contains(state.conversationId);
-  }
-
-  Future<void> _handleStreamErrorOrReconnect(
-    Object error,
-    StackTrace _stackTrace,
-    stream_ctrl.StreamingState state,
-  ) async {
-    if (!_canReconnectStream(state)) {
-      await _handleStreamError(error, state);
-      return;
-    }
-
-    state.reconnectAttempt += 1;
-    _conversationStreams.remove(state.conversationId);
-    final delay = Duration(milliseconds: 800 * state.reconnectAttempt);
-    await Future<void>.delayed(delay);
-    if (!_loadingConversationIds.contains(state.conversationId)) return;
-    try {
-      await _startStreamAttempt(state);
+      await _conversationStreams[conversationId]?.cancel();
+      final sub = listenSequentiallyToStream<ChatStreamChunk>(
+        stream: stream,
+        onData: (chunk) => _handleStreamChunk(chunk, state),
+        onError: (error, stackTrace) => _handleStreamError(error, state),
+        onDone: () => _handleStreamDone(state),
+      );
+      _conversationStreams[conversationId] = sub;
     } catch (e) {
       await _handleStreamError(e, state);
     }
@@ -1096,15 +1053,6 @@ class ChatActions {
     ChatStreamChunk chunk,
     stream_ctrl.StreamingState state,
   ) async {
-    final hasModelOutput =
-        chunk.content.isNotEmpty ||
-        (chunk.reasoning ?? '').isNotEmpty ||
-        (chunk.toolCalls ?? const []).isNotEmpty ||
-        (chunk.toolResults ?? const []).isNotEmpty;
-    if (hasModelOutput) {
-      state.receivedModelOutput = true;
-    }
-
     final chunkContent = chunk.content.isNotEmpty
         ? streamController.captureGeminiThoughtSignature(
             chunk.content,
