@@ -1492,6 +1492,7 @@
   "searchServicesPageSearchProviders": "Search Providers",
   "searchServicesPageGeneralOptions": "General Options",
   "searchServicesPageAutoTestTitle": "Auto-test connections on launch",
+  "searchServicesPageShowInInputTitle": "Show in input box",
   "searchServicesPageMaxResults": "Max Results",
   "searchServicesPageTimeoutSeconds": "Timeout (seconds)",
   "searchServicesPageAtLeastOneServiceRequired": "At least one search service is required",

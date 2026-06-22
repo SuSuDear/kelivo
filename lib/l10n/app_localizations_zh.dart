@@ -3424,6 +3424,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchServicesPageAutoTestTitle => '启动时自动测试连接';
 
   @override
+  String get searchServicesPageShowInInputTitle => '在输入框中显示';
+
+  @override
   String get searchServicesPageMaxResults => '最大结果数';
 
   @override
@@ -8586,6 +8589,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get searchServicesPageAutoTestTitle => '启动时自动测试连接';
 
   @override
+  String get searchServicesPageShowInInputTitle => '在输入框中显示';
+
+  @override
   String get searchServicesPageMaxResults => '最大结果数';
 
   @override
@@ -13744,6 +13750,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchServicesPageAutoTestTitle => '啟動時自動測試連線';
+
+  @override
+  String get searchServicesPageShowInInputTitle => '在輸入框中顯示';
 
   @override
   String get searchServicesPageMaxResults => '最大結果數';

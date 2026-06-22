@@ -3551,6 +3551,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Auto-test connections on launch';
 
   @override
+  String get searchServicesPageShowInInputTitle => 'Show in input box';
+
+  @override
   String get searchServicesPageMaxResults => 'Max Results';
 
   @override

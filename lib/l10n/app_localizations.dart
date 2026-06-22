@@ -6638,6 +6638,12 @@ abstract class AppLocalizations {
   /// **'Auto-test connections on launch'**
   String get searchServicesPageAutoTestTitle;
 
+  /// No description provided for @searchServicesPageShowInInputTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show in input box'**
+  String get searchServicesPageShowInInputTitle;
+
   /// No description provided for @searchServicesPageMaxResults.
   ///
   /// In en, this message translates to:

@@ -265,6 +265,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _searchCommonKey = 'search_common_v1';
   static const String _searchSelectedKey = 'search_selected_v1';
   static const String _searchEnabledKey = 'search_enabled_v1';
+  static const String _searchShowInInputKey = 'search_show_in_input_v1';
   static const String _searchAutoTestOnLaunchKey =
       'search_auto_test_on_launch_v1';
   static const String _webDavConfigKey = 'webdav_config_v1';
@@ -514,6 +515,8 @@ class SettingsProvider extends ChangeNotifier {
   int get searchServiceSelected => _searchServiceSelected;
   bool _searchEnabled = false;
   bool get searchEnabled => _searchEnabled;
+  bool _searchShowInInput = true;
+  bool get searchShowInInput => _searchShowInInput;
   bool _searchAutoTestOnLaunch = false;
   bool get searchAutoTestOnLaunch => _searchAutoTestOnLaunch;
   // Ephemeral connection test results: serviceId -> connected (true), failed (false), or null (not tested)
@@ -1172,6 +1175,7 @@ class SettingsProvider extends ChangeNotifier {
     }
     _searchServiceSelected = prefs.getInt(_searchSelectedKey) ?? 0;
     _searchEnabled = prefs.getBool(_searchEnabledKey) ?? false;
+    _searchShowInInput = prefs.getBool(_searchShowInInputKey) ?? true;
     _searchAutoTestOnLaunch =
         prefs.getBool(_searchAutoTestOnLaunchKey) ?? false;
 
@@ -4077,6 +4081,13 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     await prefs.setBool(_searchEnabledKey, enabled);
   }
 
+  Future<void> setSearchShowInInput(bool enabled) async {
+    _searchShowInInput = enabled;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_searchShowInInputKey, enabled);
+  }
+
   Future<void> setSearchAutoTestOnLaunch(bool enabled) async {
     _searchAutoTestOnLaunch = enabled;
     notifyListeners();
@@ -4098,6 +4109,9 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     if (_searchEnabled != newSettings._searchEnabled) {
       await setSearchEnabled(newSettings._searchEnabled);
     }
+    if (_searchShowInInput != newSettings._searchShowInInput) {
+      await setSearchShowInInput(newSettings._searchShowInInput);
+    }
     if (_searchAutoTestOnLaunch != newSettings._searchAutoTestOnLaunch) {
       await setSearchAutoTestOnLaunch(newSettings._searchAutoTestOnLaunch);
     }
@@ -4108,6 +4122,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     SearchCommonOptions? searchCommonOptions,
     int? searchServiceSelected,
     bool? searchEnabled,
+    bool? searchShowInInput,
     bool? searchAutoTestOnLaunch,
   }) {
     final copy = SettingsProvider();
@@ -4116,6 +4131,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._searchServiceSelected =
         searchServiceSelected ?? _searchServiceSelected;
     copy._searchEnabled = searchEnabled ?? _searchEnabled;
+    copy._searchShowInInput = searchShowInInput ?? _searchShowInInput;
     copy._searchAutoTestOnLaunch =
         searchAutoTestOnLaunch ?? _searchAutoTestOnLaunch;
     // Copy other fields

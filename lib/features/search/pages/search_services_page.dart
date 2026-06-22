@@ -213,6 +213,7 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
     final settings = context.watch<SettingsProvider>();
     final common = settings.searchCommonOptions;
     final autoTestOnLaunch = settings.searchAutoTestOnLaunch;
+    final showInInput = settings.searchShowInInput;
     final l10n = AppLocalizations.of(context)!;
 
     Widget stepper({
@@ -241,6 +242,54 @@ class _SearchServicesPageState extends State<SearchServicesPage> {
 
     return _iosSectionCard(
       children: [
+        _TactileRow(
+          onTap: () => context
+              .read<SettingsProvider>()
+              .setSearchShowInInput(!showInInput),
+          pressedScale: 0.995,
+          builder: (pressed) {
+            final baseColor = cs.onSurface.withValues(alpha: 0.9);
+            return _AnimatedPressColor(
+              pressed: pressed,
+              base: baseColor,
+              builder: (c) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 11,
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 36,
+                        child: Icon(Lucide.Eye, size: 18, color: c),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.searchServicesPageShowInInputTitle,
+                              style: TextStyle(fontSize: 15, color: c),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IosSwitch(
+                        value: showInInput,
+                        onChanged: (v) => context
+                            .read<SettingsProvider>()
+                            .setSearchShowInInput(v),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        _iosDivider(context),
         _TactileRow(
           onTap: () => context
               .read<SettingsProvider>()
