@@ -59,7 +59,7 @@ class ChatActionResult {
 class ChatActions {
   static const int _maxPreOutputReconnectAttempts = 2;
   static const int _maxMidStreamResumeAttempts = 2;
-  static const Duration _streamIdleTimeout = Duration(seconds: 120);
+  static const Duration _streamIdleTimeout = Duration(seconds: 40);
 
   ChatActions({
     required this.chatService,
