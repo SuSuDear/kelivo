@@ -109,6 +109,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
   ValueNotifier<int>? _closeTicker;
   bool _assistantsExpanded = false;
   final Set<String> _collapsedAssistantIds = <String>{};
+  bool _expandedInitialConversationAssistant = false;
   final Set<String> _titleRegeneratingConversationIds = <String>{};
   final ScrollController _listController = ScrollController();
   bool _assistantHeaderHovered = false;
@@ -176,6 +177,19 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         } catch (_) {}
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_expandedInitialConversationAssistant) return;
+    final conversationId = context.watch<ChatService>().currentConversationId;
+    final assistantId = conversationId == null
+        ? null
+        : context.read<ChatService>().getConversation(conversationId)?.assistantId;
+    if ((assistantId ?? '').isEmpty) return;
+    _collapsedAssistantIds.add(assistantId!);
+    _expandedInitialConversationAssistant = true;
   }
 
   void _onDesktopTabChanged() {
