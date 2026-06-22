@@ -58,7 +58,6 @@ class ChatActionResult {
 /// - Manage streaming state
 class ChatActions {
   static const int _maxPreOutputReconnectAttempts = 2;
-  static const int _maxMidStreamResumeAttempts = 2;
   static const Duration _streamIdleTimeout = Duration(seconds: 120);
 
   ChatActions({
@@ -1066,91 +1065,19 @@ class ChatActions {
     return _loadingConversationIds.contains(state.conversationId);
   }
 
-  bool _canResumeStream(stream_ctrl.StreamingState state) {
-    if (state.finishHandled || !state.receivedModelOutput) return false;
-    if (state.resumeAttempt >= _maxMidStreamResumeAttempts) return false;
-    return _loadingConversationIds.contains(state.conversationId);
-  }
-
   Future<void> _handleStreamErrorOrReconnect(
     Object error,
     StackTrace _stackTrace,
     stream_ctrl.StreamingState state,
   ) async {
-    if (_canReconnectStream(state)) {
-      state.reconnectAttempt += 1;
-      _showResumeStatus(
-        state,
-        title: 'Connection reconnect',
-        content: 'Connection interrupted. Reconnecting... '
-            '${state.reconnectAttempt}/$_maxPreOutputReconnectAttempts',
-        loading: true,
-      );
-      _conversationStreams.remove(state.conversationId);
-      final delay = Duration(milliseconds: 800 * state.reconnectAttempt);
-      await Future<void>.delayed(delay);
-      if (!_loadingConversationIds.contains(state.conversationId)) return;
-      try {
-        await _startStreamAttempt(state);
-      } catch (e) {
-        await _handleStreamError(e, state);
-      }
+    if (!_canReconnectStream(state)) {
+      await _handleStreamError(error, state);
       return;
     }
 
-    if (_canResumeStream(state)) {
-      await _resumeInterruptedStream(state);
-      return;
-    }
-
-    await _handleStreamError(error, state);
-  }
-
-  void _showResumeStatus(
-    stream_ctrl.StreamingState state, {
-    required String title,
-    required String content,
-    required bool loading,
-  }) {
-    streamController.upsertSystemToolPart(
-      state.messageId,
-      id: '__stream_resume_status__',
-      title: title,
-      content: content,
-      loading: loading,
-    );
-  }
-
-  void _completeResumeStatus(
-    stream_ctrl.StreamingState state, {
-    required bool success,
-    String? detail,
-  }) {
-    if (state.reconnectAttempt <= 0 && state.resumeAttempt <= 0) return;
-    _showResumeStatus(
-      state,
-      title: success ? 'Task resumed' : 'Task resume failed',
-      content: success
-          ? 'Connection restored. Task continued automatically.'
-          : (detail ?? 'Connection recovery failed.'),
-      loading: false,
-    );
-  }
-
-  Future<void> _resumeInterruptedStream(
-    stream_ctrl.StreamingState state,
-  ) async {
-    state.resumeAttempt += 1;
-    _showResumeStatus(
-      state,
-      title: 'Task resume',
-      content: 'Connection interrupted. Restoring the unfinished task... '
-          '${state.resumeAttempt}/$_maxMidStreamResumeAttempts',
-      loading: true,
-    );
-    _injectResumePromptIfNeeded(state);
+    state.reconnectAttempt += 1;
     _conversationStreams.remove(state.conversationId);
-    final delay = Duration(milliseconds: 1000 * state.resumeAttempt);
+    final delay = Duration(milliseconds: 800 * state.reconnectAttempt);
     await Future<void>.delayed(delay);
     if (!_loadingConversationIds.contains(state.conversationId)) return;
     try {
@@ -1158,43 +1085,6 @@ class ChatActions {
     } catch (e) {
       await _handleStreamError(e, state);
     }
-  }
-
-  void _injectResumePromptIfNeeded(stream_ctrl.StreamingState state) {
-    if (state.resumePromptInjected) return;
-    state.resumePromptInjected = true;
-    final completedTools = streamController
-        .dedupeToolEvents(chatService.getToolEvents(state.messageId))
-        .where((event) => (event['content']?.toString().trim().isNotEmpty ?? false))
-        .map((event) {
-          final id = (event['id'] ?? '').toString();
-          final name = (event['name'] ?? '').toString();
-          return '- $name${id.isNotEmpty ? ' ($id)' : ''}: already completed';
-        })
-        .join('\n');
-    final partial = state.fullContentRaw.trim();
-    final prompt = StringBuffer()
-      ..writeln('The previous assistant response was interrupted by a connection drop.')
-      ..writeln('Continue the same task from the interruption point.')
-      ..writeln('Do not repeat completed text or completed tool calls.')
-      ..writeln('If a tool result is already available, use that result instead of calling the same tool again.')
-      ..writeln('If a tool was in progress and its result is missing, inspect the current state before deciding the next action.');
-    if (partial.isNotEmpty) {
-      prompt
-        ..writeln('')
-        ..writeln('Partial assistant output before interruption:')
-        ..writeln(partial);
-    }
-    if (completedTools.isNotEmpty) {
-      prompt
-        ..writeln('')
-        ..writeln('Completed tool calls before interruption:')
-        ..writeln(completedTools);
-    }
-    state.ctx.apiMessages.add({
-      'role': 'system',
-      'content': prompt.toString(),
-    });
   }
 
   // ============================================================================
@@ -1599,7 +1489,6 @@ class ChatActions {
       return;
     }
     state.finishHandled = true;
-    _completeResumeStatus(state, success: true);
     if (shouldGenerateTitle) {
       state.titleQueued = true;
     }
@@ -1717,7 +1606,6 @@ class ChatActions {
     streamController.markStreamingEnded(messageId);
 
     streamController.cleanupTimers(messageId);
-    _completeResumeStatus(state, success: false, detail: errorText);
     final rawContent = state.fullContentRaw.isNotEmpty
         ? state.fullContentRaw
         : errorText;
