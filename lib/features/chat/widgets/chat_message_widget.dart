@@ -637,7 +637,6 @@ class ChatMessageWidget extends StatefulWidget {
   // Whether files are currently being processed
   final bool isProcessingFiles;
   final bool enableStreamingTextMotion;
-  final String? streamStatus;
   final List<String> suggestions;
   final ValueChanged<String>? onSuggestionTap;
   final Future<void> Function(ToolUIPart part, AskUserResult result)?
@@ -681,7 +680,6 @@ class ChatMessageWidget extends StatefulWidget {
     this.hideStreamingIndicator = false,
     this.isProcessingFiles = false,
     this.enableStreamingTextMotion = true,
-    this.streamStatus,
     this.suggestions = const <String>[],
     this.onSuggestionTap,
     this.onRecoveredAskUserAnswer,
@@ -2006,29 +2004,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     return blocks;
   }
 
-  Widget _buildStreamStatusRow(String status) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(width: 14, height: 14, child: LoadingIndicator()),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              status,
-              style: TextStyle(
-                fontSize: 12,
-                color: cs.onSurface.withValues(alpha: 0.55),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildAssistantMessage() {
     final cs = Theme.of(context).colorScheme;
     final fg = _chatSurfaceForegroundPalette(context);
@@ -2238,10 +2213,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
             }
             return widgets;
           }(),
-          if (widget.streamStatus?.trim().isNotEmpty == true) ...[
-            const SizedBox(height: 8),
-            _buildStreamStatusRow(widget.streamStatus!.trim()),
-          ],
           if (hasTranslation) ...[
             const SizedBox(height: 12),
             SizedBox(

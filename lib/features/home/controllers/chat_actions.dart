@@ -57,8 +57,8 @@ class ChatActionResult {
 /// - Handle stream chunks (reasoning, tools, content)
 /// - Manage streaming state
 class ChatActions {
-  static const int _maxPreOutputReconnectAttempts = 3;
-  static const int _maxMidStreamResumeAttempts = 3;
+  static const int _maxPreOutputReconnectAttempts = 2;
+  static const int _maxMidStreamResumeAttempts = 2;
   static const Duration _streamIdleTimeout = Duration(seconds: 40);
 
   ChatActions({
@@ -1057,16 +1057,6 @@ class ChatActions {
     _conversationStreams[conversationId] = sub;
   }
 
-  void _markStreamRecoveredIfNeeded(stream_ctrl.StreamingState state) {
-    if (state.reconnectAttempt <= 0 && state.resumeAttempt <= 0) return;
-    streamController.updateStreamStatus(
-      state.messageId,
-      'Connection restored. Continuing automatically.',
-    );
-    state.reconnectAttempt = 0;
-    state.resumeAttempt = 0;
-  }
-
   bool _canReconnectStream(stream_ctrl.StreamingState state) {
     if (state.finishHandled || state.receivedModelOutput) return false;
     if (state.reconnectAttempt >= _maxPreOutputReconnectAttempts) return false;
@@ -1122,7 +1112,13 @@ class ChatActions {
     required String content,
     required bool loading,
   }) {
-    streamController.updateStreamStatus(state.messageId, content);
+    streamController.upsertSystemToolPart(
+      state.messageId,
+      id: '__stream_resume_status__',
+      title: title,
+      content: content,
+      loading: loading,
+    );
   }
 
   void _completeResumeStatus(

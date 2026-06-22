@@ -59,7 +59,6 @@ class StreamingContentNotifier {
         toolCountAtSplit: toolCountAtSplit ?? current.toolCountAtSplit,
         toolPartsVersion: current.toolPartsVersion,
         uiVersion: current.uiVersion,
-        streamStatus: current.streamStatus,
         promptTokens: promptTokens ?? current.promptTokens,
         completionTokens: completionTokens ?? current.completionTokens,
         cachedTokens: cachedTokens ?? current.cachedTokens,
@@ -93,7 +92,6 @@ class StreamingContentNotifier {
         toolCountAtSplit: toolCountAtSplit ?? current.toolCountAtSplit,
         toolPartsVersion: current.toolPartsVersion,
         uiVersion: current.uiVersion,
-        streamStatus: current.streamStatus,
         promptTokens: current.promptTokens,
         completionTokens: current.completionTokens,
         cachedTokens: current.cachedTokens,
@@ -125,32 +123,6 @@ class StreamingContentNotifier {
         toolCountAtSplit: toolCountAtSplit ?? current.toolCountAtSplit,
         toolPartsVersion: current.toolPartsVersion + 1,
         uiVersion: current.uiVersion,
-        streamStatus: current.streamStatus,
-        promptTokens: current.promptTokens,
-        completionTokens: current.completionTokens,
-        cachedTokens: current.cachedTokens,
-        durationMs: current.durationMs,
-      );
-    }
-  }
-
-  /// Update transient stream status shown below the assistant message.
-  void updateStreamStatus(String messageId, String? streamStatus) {
-    final notifier = _notifiers[messageId];
-    if (notifier != null) {
-      final current = notifier.value;
-      notifier.value = StreamingContentData(
-        content: current.content,
-        totalTokens: current.totalTokens,
-        reasoningText: current.reasoningText,
-        reasoningStartAt: current.reasoningStartAt,
-        reasoningFinishedAt: current.reasoningFinishedAt,
-        contentSplitOffsets: current.contentSplitOffsets,
-        reasoningCountAtSplit: current.reasoningCountAtSplit,
-        toolCountAtSplit: current.toolCountAtSplit,
-        toolPartsVersion: current.toolPartsVersion,
-        uiVersion: current.uiVersion + 1,
-        streamStatus: streamStatus,
         promptTokens: current.promptTokens,
         completionTokens: current.completionTokens,
         cachedTokens: current.cachedTokens,
@@ -173,7 +145,6 @@ class StreamingContentNotifier {
         reasoningFinishedAt: current.reasoningFinishedAt,
         toolPartsVersion: current.toolPartsVersion,
         uiVersion: current.uiVersion + 1,
-        streamStatus: current.streamStatus,
         promptTokens: current.promptTokens,
         completionTokens: current.completionTokens,
         cachedTokens: current.cachedTokens,
@@ -216,7 +187,6 @@ class StreamingContentData {
     this.toolCountAtSplit,
     this.toolPartsVersion = 0,
     this.uiVersion = 0,
-    this.streamStatus,
     this.promptTokens,
     this.completionTokens,
     this.cachedTokens,
@@ -237,9 +207,6 @@ class StreamingContentData {
 
   /// Version counter for UI state changes (e.g., reasoning expanded toggle).
   final int uiVersion;
-
-  /// Transient reconnect/resume status displayed below the message.
-  final String? streamStatus;
 
   /// Detailed token usage fields.
   final int? promptTokens;
@@ -262,7 +229,6 @@ class StreamingContentData {
           listEquals(toolCountAtSplit, other.toolCountAtSplit) &&
           toolPartsVersion == other.toolPartsVersion &&
           uiVersion == other.uiVersion &&
-          streamStatus == other.streamStatus &&
           promptTokens == other.promptTokens &&
           completionTokens == other.completionTokens &&
           cachedTokens == other.cachedTokens &&
@@ -280,7 +246,6 @@ class StreamingContentData {
       Object.hashAll(toolCountAtSplit ?? const <int>[]) ^
       toolPartsVersion.hashCode ^
       uiVersion.hashCode ^
-      streamStatus.hashCode ^
       promptTokens.hashCode ^
       completionTokens.hashCode ^
       cachedTokens.hashCode ^

@@ -723,7 +723,6 @@ class _MessageListViewState extends State<MessageListView> {
             isProcessingFiles: isProcessingFiles,
             suggestions: suggestions,
             enableStreamingTextMotion: !deferUpdates,
-            streamStatus: data.streamStatus,
           ),
         );
       },
@@ -746,12 +745,10 @@ class _MessageListViewState extends State<MessageListView> {
     required bool isProcessingFiles,
     required List<String> suggestions,
     bool enableStreamingTextMotion = true,
-    String? streamStatus,
   }) {
     return ChatMessageWidget(
       message: message,
       enableStreamingTextMotion: enableStreamingTextMotion,
-      streamStatus: streamStatus,
       versionIndex: selectedIdx,
       versionCount: total > 0 ? total : 1,
       onPrevVersion: (selectedIdx > 0)
