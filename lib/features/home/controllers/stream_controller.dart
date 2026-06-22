@@ -209,6 +209,32 @@ class StreamController {
     _toolParts.remove(messageId);
   }
 
+  void upsertSystemToolPart(
+    String messageId, {
+    required String id,
+    required String title,
+    required String content,
+    required bool loading,
+  }) {
+    final parts = List<ToolUIPart>.of(_toolParts[messageId] ?? const []);
+    final index = parts.indexWhere((p) => p.id == id);
+    final part = ToolUIPart(
+      id: id,
+      toolName: title,
+      arguments: const <String, dynamic>{},
+      content: content,
+      loading: loading,
+    );
+    if (index >= 0) {
+      parts[index] = part;
+    } else {
+      parts.add(part);
+    }
+    _toolParts[messageId] = parts;
+    streamingContentNotifier.notifyToolPartsUpdated(messageId);
+    onStreamTick?.call();
+  }
+
   /// Clear all state for a message (reasoning, segments, tools).
   void clearMessageState(String messageId) {
     _reasoning.remove(messageId);
@@ -1370,6 +1396,8 @@ class StreamingState {
   bool hadThinkingBlock = false;
   bool receivedModelOutput = false;
   int reconnectAttempt = 0;
+  int resumeAttempt = 0;
+  bool resumePromptInjected = false;
   List<int> contentSplitOffsets = <int>[];
   List<int> reasoningCountAtSplit = <int>[];
   List<int> toolCountAtSplit = <int>[];

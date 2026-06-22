@@ -346,8 +346,18 @@ class ToolHandlerService {
     // Capture AssistantProvider reference before async gap to avoid
     // use_build_context_synchronously warning
     final assistantProvider = contextProvider.read<AssistantProvider>();
+    final completedById = <String, String>{};
+    final completedBySignature = <String, String>{};
 
-    return (name, args, {toolCallId}) async {
+    String signatureFor(String toolName, Map<String, dynamic> arguments) {
+      return '$toolName:${jsonEncode(arguments)}';
+    }
+
+    Future<String> executeToolCall(
+      String name,
+      Map<String, dynamic> args, {
+      String? toolCallId,
+    }) async {
       try {
         // Search tool
         if (name == SearchToolService.toolName &&
@@ -437,6 +447,23 @@ class ToolHandlerService {
               'The tool execution failed unexpectedly. You may try again with different parameters or inform the user about the issue.',
         );
       }
+    }
+
+    return (name, args, {toolCallId}) async {
+      final normalizedId = (toolCallId ?? '').trim();
+      final signature = signatureFor(name, args);
+      if (normalizedId.isNotEmpty && completedById.containsKey(normalizedId)) {
+        return completedById[normalizedId]!;
+      }
+      if (completedBySignature.containsKey(signature)) {
+        return completedBySignature[signature]!;
+      }
+      final result = await executeToolCall(name, args, toolCallId: toolCallId);
+      if (normalizedId.isNotEmpty) {
+        completedById[normalizedId] = result;
+      }
+      completedBySignature[signature] = result;
+      return result;
     };
   }
 
