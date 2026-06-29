@@ -6,7 +6,6 @@ class IosBackgroundGenerationStatus {
   const IosBackgroundGenerationStatus({
     required this.backgroundTaskActive,
     required this.notificationsAuthorized,
-    required this.forceBackgroundRunningActive,
   });
 
   factory IosBackgroundGenerationStatus.fromMap(Map<dynamic, dynamic>? map) {
@@ -14,13 +13,11 @@ class IosBackgroundGenerationStatus {
     return IosBackgroundGenerationStatus(
       backgroundTaskActive: readBool('backgroundTaskActive'),
       notificationsAuthorized: readBool('notificationsAuthorized'),
-      forceBackgroundRunningActive: readBool('forceBackgroundRunningActive'),
     );
   }
 
   final bool backgroundTaskActive;
   final bool notificationsAuthorized;
-  final bool forceBackgroundRunningActive;
 }
 
 class IosBackgroundGenerationService {
@@ -43,7 +40,6 @@ class IosBackgroundGenerationService {
       return const IosBackgroundGenerationStatus(
         backgroundTaskActive: false,
         notificationsAuthorized: false,
-        forceBackgroundRunningActive: false,
       );
     }
     final result = await _channel.invokeMethod<dynamic>('getStatus');
@@ -68,15 +64,6 @@ class IosBackgroundGenerationService {
   Future<bool> openNotificationSettings() async {
     if (!_isIos) return false;
     return await _channel.invokeMethod<bool>('openNotificationSettings') ??
-        false;
-  }
-
-  Future<bool> setForceBackgroundRunningEnabled(bool enabled) async {
-    if (!_isIos) return false;
-    return await _channel.invokeMethod<bool>(
-          'setForceBackgroundRunningEnabled',
-          <String, Object?>{'enabled': enabled},
-        ) ??
         false;
   }
 

@@ -2605,19 +2605,6 @@ class _IosBackgroundSettingsPageState extends State<IosBackgroundSettingsPage> {
                     .read<SettingsProvider>()
                     .setIosBackgroundGenerationEnabled(v),
               ),
-              if (sp.iosBackgroundGenerationEnabled) ...[
-                _iosDivider(context),
-                _iosSwitchRow(
-                  context,
-                  icon: Lucide.Hourglass,
-                  label: '强制后台运行(测试)',
-                  subtitle: '使用 ImmortalizerJailed 核心逻辑让 App 持续保持前台状态。',
-                  value: sp.iosForceBackgroundRunningEnabled,
-                  onChanged: (v) => context
-                      .read<SettingsProvider>()
-                      .setIosForceBackgroundRunningEnabled(v),
-                ),
-              ],
               _iosDivider(context),
               _iosSwitchRow(
                 context,

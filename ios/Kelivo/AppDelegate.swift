@@ -16,7 +16,6 @@ private let backgroundProcessingIdentifier = "com.susu.kelivo.background-generat
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
-    KelivoImmortalizerInstallHook()
     backgroundGenerationHandler.registerBackgroundTasks()
     if let controller = window?.rootViewController as? FlutterViewController {
       let clipboardChannel = FlutterMethodChannel(name: "app.clipboard", binaryMessenger: controller.binaryMessenger)
@@ -85,8 +84,6 @@ private final class IosBackgroundGenerationHandler {
       openAppSettings(result: result)
     case "openNotificationSettings":
       openNotificationSettings(result: result)
-    case "setForceBackgroundRunningEnabled":
-      setForceBackgroundRunningEnabled(arguments: call.arguments, result: result)
     case "start":
       start(arguments: call.arguments, result: result)
     case "update":
@@ -140,7 +137,6 @@ private final class IosBackgroundGenerationHandler {
         result([
           "backgroundTaskActive": self.backgroundTask != .invalid,
           "notificationsAuthorized": settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional,
-          "forceBackgroundRunningActive": KelivoImmortalizerIsEnabled(),
         ])
       }
     }
@@ -160,13 +156,6 @@ private final class IosBackgroundGenerationHandler {
     UIApplication.shared.open(url, options: [:]) { opened in
       result(opened)
     }
-  }
-
-  private func setForceBackgroundRunningEnabled(arguments: Any?, result: @escaping FlutterResult) {
-    let args = arguments as? [String: Any] ?? [:]
-    let enabled = args["enabled"] as? Bool ?? false
-    KelivoImmortalizerSetEnabled(enabled)
-    result(true)
   }
 
   private func openNotificationSettings(result: @escaping FlutterResult) {
