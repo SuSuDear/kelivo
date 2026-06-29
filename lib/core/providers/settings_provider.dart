@@ -16,6 +16,7 @@ import '../models/api_keys.dart';
 import '../models/backup.dart';
 import '../models/provider_group.dart';
 import '../services/haptics.dart';
+import '../services/ios_background_generation.dart';
 import '../../utils/app_directories.dart';
 import '../../utils/sandbox_path_resolver.dart';
 import '../../utils/avatar_cache.dart';
@@ -239,6 +240,8 @@ class SettingsProvider extends ChangeNotifier {
       'ios_background_task_refresh_enabled_v1';
   static const String _iosBackgroundNotificationsEnabledKey =
       'ios_background_notifications_enabled_v1';
+  static const String _iosForceBackgroundRunningEnabledKey =
+      'ios_force_background_running_enabled_v1';
   // Fonts
   static const String _displayAppFontFamilyKey = 'display_app_font_family_v1';
   static const String _displayCodeFontFamilyKey = 'display_code_font_family_v1';
@@ -1152,6 +1155,10 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool(_iosBackgroundTaskRefreshEnabledKey) ?? false;
     _iosBackgroundNotificationsEnabled =
         prefs.getBool(_iosBackgroundNotificationsEnabledKey) ?? false;
+    _iosForceBackgroundRunningEnabled =
+        _iosBackgroundGenerationEnabled &&
+        (prefs.getBool(_iosForceBackgroundRunningEnabledKey) ?? false);
+    unawaited(_syncIosForceBackgroundRunning());
 
     // load search settings
     final searchServicesStr = prefs.getString(_searchServicesKey);
@@ -2315,6 +2322,7 @@ class SettingsProvider extends ChangeNotifier {
     if (!v) {
       _iosBackgroundTaskRefreshEnabled = false;
       _iosBackgroundNotificationsEnabled = false;
+      _iosForceBackgroundRunningEnabled = false;
     }
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
@@ -2325,7 +2333,38 @@ class SettingsProvider extends ChangeNotifier {
     if (!v) {
       await prefs.setBool(_iosBackgroundTaskRefreshEnabledKey, false);
       await prefs.setBool(_iosBackgroundNotificationsEnabledKey, false);
+      await prefs.setBool(_iosForceBackgroundRunningEnabledKey, false);
     }
+    await _syncIosForceBackgroundRunning();
+  }
+
+  bool _iosForceBackgroundRunningEnabled = false;
+  bool get iosForceBackgroundRunningEnabled =>
+      _iosForceBackgroundRunningEnabled;
+
+  Future<void> _syncIosForceBackgroundRunning() async {
+    if (!Platform.isIOS) return;
+    await IosBackgroundGenerationService.instance
+        .setForceBackgroundRunningEnabled(
+          _iosBackgroundGenerationEnabled &&
+              _iosForceBackgroundRunningEnabled,
+        );
+  }
+
+  Future<void> setIosForceBackgroundRunningEnabled(bool v) async {
+    if (_iosForceBackgroundRunningEnabled == v) return;
+    _iosForceBackgroundRunningEnabled = v;
+    if (v) _iosBackgroundGenerationEnabled = true;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(
+      _iosForceBackgroundRunningEnabledKey,
+      _iosForceBackgroundRunningEnabled,
+    );
+    if (v) {
+      await prefs.setBool(_iosBackgroundGenerationEnabledKey, true);
+    }
+    await _syncIosForceBackgroundRunning();
   }
 
   bool _iosBackgroundTaskRefreshEnabled = false;
@@ -4204,6 +4243,8 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._newChatOnAssistantSwitch = _newChatOnAssistantSwitch;
     copy._newChatAfterDelete = _newChatAfterDelete;
     copy._iosBackgroundGenerationEnabled = _iosBackgroundGenerationEnabled;
+    copy._iosForceBackgroundRunningEnabled =
+        _iosForceBackgroundRunningEnabled;
     copy._iosBackgroundTaskRefreshEnabled = _iosBackgroundTaskRefreshEnabled;
     copy._iosBackgroundNotificationsEnabled =
         _iosBackgroundNotificationsEnabled;
