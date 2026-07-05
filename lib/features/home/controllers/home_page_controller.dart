@@ -777,6 +777,10 @@ class HomePageController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> retryStreamingNow(String messageId) async {
+    await _viewModel.retryStreamingNow(messageId);
+  }
+
   // ============================================================================
   // Public Methods - Conversation Management
   // ============================================================================

@@ -207,6 +207,9 @@ class ChatActions {
   final Map<String, Future<void>> _finishStreamingFutures =
       <String, Future<void>>{};
 
+  final Map<String, stream_ctrl.StreamingState> _activeStreamingStates =
+      <String, stream_ctrl.StreamingState>{};
+
   List<ChatMessage> get _messages => chatController.messages;
   Map<String, int> get _versionSelections => chatController.versionSelections;
   Conversation? get _currentConversation => chatController.currentConversation;
@@ -895,6 +898,14 @@ class ChatActions {
     }
   }
 
+  Future<void> retryStreamingNow(String messageId) async {
+    final state = _activeStreamingStates[messageId];
+    final completer = state?.reconnectNowCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+  }
+
   // ============================================================================
   // Cancel Streaming
   // ============================================================================
@@ -923,6 +934,16 @@ class ChatActions {
     final sub = _conversationStreams.remove(cid);
     await sub?.cancel();
     ChatApiService.cancelRequest(cid);
+
+    for (final state in _activeStreamingStates.values.toList()) {
+      if (state.conversationId == cid) {
+        state.finishHandled = true;
+        final completer = state.reconnectNowCompleter;
+        if (completer != null && !completer.isCompleted) {
+          completer.complete();
+        }
+      }
+    }
 
     // Find the latest assistant streaming message within current conversation and mark it finished
     ChatMessage? streaming;
@@ -1008,6 +1029,7 @@ class ChatActions {
 
     // Mark this message as actively streaming to suppress UI rebuilds
     streamController.markStreamingStarted(state.messageId);
+    _activeStreamingStates[state.messageId] = state;
 
     try {
       await _startIosBackgroundGeneration(ctx);
@@ -1042,6 +1064,158 @@ class ChatActions {
     } catch (e) {
       await _handleStreamError(e, state);
     }
+  }
+
+  bool _isRecoverableStreamError(dynamic error) {
+    final text = error.toString().toLowerCase();
+    if (text.contains('401') ||
+        text.contains('403') ||
+        text.contains('400') ||
+        text.contains('404') ||
+        text.contains('invalid api key') ||
+        text.contains('insufficient quota') ||
+        text.contains('context length') ||
+        text.contains('model not found')) {
+      return false;
+    }
+    return text.contains('socket') ||
+        text.contains('network') ||
+        text.contains('connection') ||
+        text.contains('timeout') ||
+        text.contains('dioexception') ||
+        text.contains('clientexception') ||
+        text.contains('failed host lookup') ||
+        text.contains('connection reset') ||
+        text.contains('connection closed') ||
+        text.contains('software caused connection abort') ||
+        text.contains('502') ||
+        text.contains('503') ||
+        text.contains('504');
+  }
+
+  bool _canAutoReconnect(
+    dynamic error,
+    stream_ctrl.StreamingState state,
+  ) {
+    if (state.finishHandled) return false;
+    if (state.retryCount >= state.maxRetryCount) return false;
+    if (!_isRecoverableStreamError(error)) return false;
+    // Avoid replaying side-effectful tool calls.
+    if (streamController.getToolPartsCount(state.messageId) > 0) return false;
+    return true;
+  }
+
+  Future<bool> _handleStreamReconnect(
+    dynamic error,
+    stream_ctrl.StreamingState state,
+  ) async {
+    if (!_canAutoReconnect(error, state)) return false;
+
+    state.retryCount += 1;
+    state.reconnecting = true;
+    final attempt = state.retryCount;
+    final maxAttempts = state.maxRetryCount;
+
+    final processed = _transformAssistantContent(state);
+    await chatService.updateMessageSilent(
+      state.messageId,
+      content: processed,
+      totalTokens: state.totalTokens,
+    );
+    streamController.streamingContentNotifier.updateContent(
+      state.messageId,
+      processed,
+      state.totalTokens,
+      contentSplitOffsets: state.contentSplitOffsets,
+      reasoningCountAtSplit: state.reasoningCountAtSplit,
+      toolCountAtSplit: state.toolCountAtSplit,
+      promptTokens: state.usage?.promptTokens,
+      completionTokens: state.usage?.completionTokens,
+      cachedTokens: state.usage?.cachedTokens,
+    );
+    streamController.streamingContentNotifier.updateReconnectStatus(
+      state.messageId,
+      reconnecting: true,
+      reconnectAttempt: attempt,
+      reconnectMaxAttempts: maxAttempts,
+    );
+
+    final delay = Duration(seconds: 1 << (attempt - 1));
+    final now = Completer<void>();
+    state.reconnectNowCompleter = now;
+    try {
+      await Future.any<void>(<Future<void>>[
+        Future<void>.delayed(delay),
+        now.future,
+      ]);
+    } finally {
+      if (identical(state.reconnectNowCompleter, now)) {
+        state.reconnectNowCompleter = null;
+      }
+    }
+
+    if (state.finishHandled || !_loadingConversationIds.contains(state.conversationId)) {
+      return true;
+    }
+
+    final resumedMessages = <Map<String, dynamic>>[
+      for (final message in state.ctx.apiMessages) Map<String, dynamic>.from(message),
+    ];
+    final partial = state.fullContentRaw.trim();
+    if (partial.isNotEmpty) {
+      resumedMessages.add(<String, dynamic>{
+        'role': 'assistant',
+        'content': partial,
+      });
+      resumedMessages.add(<String, dynamic>{
+        'role': 'user',
+        'content': '继续上一条 assistant 回复，从中断的位置继续，不要重复已经生成的内容。',
+      });
+    }
+
+    try {
+      final retryCtx = state.ctx.copyWith(apiMessages: resumedMessages);
+      final stream = ChatApiService.sendMessageStream(
+        config: retryCtx.config,
+        modelId: retryCtx.modelId,
+        messages: retryCtx.apiMessages,
+        userImagePaths: retryCtx.userImagePaths,
+        thinkingBudget:
+            retryCtx.assistant?.thinkingBudget ?? retryCtx.settings.thinkingBudget,
+        temperature: retryCtx.assistant?.temperature,
+        topP: retryCtx.assistant?.topP,
+        maxTokens: retryCtx.assistant?.maxTokens,
+        tools: retryCtx.toolDefs.isEmpty ? null : retryCtx.toolDefs,
+        onToolCall: retryCtx.onToolCall,
+        extraHeaders: retryCtx.extraHeaders,
+        extraBody: retryCtx.extraBody,
+        stream: retryCtx.streamOutput,
+        requestId: state.conversationId,
+        allowImagesApiRouting: retryCtx.allowImagesApiRouting,
+        ocrActive: retryCtx.ocrActive,
+      );
+
+      final sub = listenSequentiallyToStream<ChatStreamChunk>(
+        stream: stream,
+        onData: (chunk) async {
+          if (state.reconnecting) {
+            state.reconnecting = false;
+            state.retryCount = 0;
+            streamController.streamingContentNotifier.updateReconnectStatus(
+              state.messageId,
+              reconnecting: false,
+            );
+          }
+          await _handleStreamChunk(chunk, state);
+        },
+        onError: (error, stackTrace) => _handleStreamError(error, state),
+        onDone: () => _handleStreamDone(state),
+      );
+      _conversationStreams[state.conversationId] = sub;
+    } catch (e) {
+      await _handleStreamError(e, state);
+    }
+    return true;
   }
 
   // ============================================================================
@@ -1170,6 +1344,14 @@ class ChatActions {
   ) async {
     // Fast bail-out: if _finishStreaming already ran, don't touch state at all.
     if (state.finishHandled) return;
+
+    if (state.reconnecting) {
+      state.reconnecting = false;
+      streamController.streamingContentNotifier.updateReconnectStatus(
+        state.messageId,
+        reconnecting: false,
+      );
+    }
 
     final messageId = state.messageId;
     final conversationId = state.conversationId;
@@ -1536,6 +1718,7 @@ class ChatActions {
     onMaybeGenerateSuggestions?.call(conversationId);
 
     await _finishIosBackgroundGeneration(success: true);
+    _activeStreamingStates.remove(messageId);
   }
 
   /// Handle stream error.
@@ -1546,6 +1729,10 @@ class ChatActions {
     final messageId = state.messageId;
     final conversationId = state.conversationId;
     final errorText = e.toString();
+
+    if (await _handleStreamReconnect(e, state)) {
+      return;
+    }
 
     // Reset file processing state on error
     onFileProcessingFinished?.call();
@@ -1605,6 +1792,7 @@ class ChatActions {
     onStreamError?.call(errorText);
     onStreamFinished?.call();
     await _finishIosBackgroundGeneration(success: false, detail: errorText);
+    _activeStreamingStates.remove(messageId);
   }
 
   /// Handle stream done callback.
@@ -1637,6 +1825,7 @@ class ChatActions {
     streamController.removeStreamingNotifier(messageId);
     onStreamFinished?.call();
     await _conversationStreams.remove(conversationId)?.cancel();
+    _activeStreamingStates.remove(messageId);
   }
 
   // ============================================================================

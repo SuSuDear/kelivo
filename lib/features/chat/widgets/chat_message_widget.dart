@@ -637,6 +637,11 @@ class ChatMessageWidget extends StatefulWidget {
   // Whether files are currently being processed
   final bool isProcessingFiles;
   final bool enableStreamingTextMotion;
+  final bool reconnecting;
+  final int reconnectAttempt;
+  final int reconnectMaxAttempts;
+  final VoidCallback? onStopStreaming;
+  final VoidCallback? onRetryStreamingNow;
   final List<String> suggestions;
   final ValueChanged<String>? onSuggestionTap;
   final Future<void> Function(ToolUIPart part, AskUserResult result)?
@@ -680,6 +685,11 @@ class ChatMessageWidget extends StatefulWidget {
     this.hideStreamingIndicator = false,
     this.isProcessingFiles = false,
     this.enableStreamingTextMotion = true,
+    this.reconnecting = false,
+    this.reconnectAttempt = 0,
+    this.reconnectMaxAttempts = 0,
+    this.onStopStreaming,
+    this.onRetryStreamingNow,
     this.suggestions = const <String>[],
     this.onSuggestionTap,
     this.onRecoveredAskUserAnswer,
@@ -2004,6 +2014,66 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     return blocks;
   }
 
+  Widget _buildReconnectStatus(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final attempt = widget.reconnectAttempt;
+    final max = widget.reconnectMaxAttempts;
+    final text = max > 0
+        ? '正在重连 $attempt/$max'
+        : '正在重连';
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, top: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: cs.onSurface.withValues(alpha: 0.62),
+            ),
+          ),
+          if (widget.onStopStreaming != null) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: widget.onStopStreaming,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Text(
+                  '停止',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: AppFontWeights.medium,
+                    color: cs.primary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+          if (widget.onRetryStreamingNow != null) ...[
+            const SizedBox(width: 6),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: widget.onRetryStreamingNow,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Text(
+                  '立即重试',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: AppFontWeights.medium,
+                    color: cs.primary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildAssistantMessage() {
     final cs = Theme.of(context).colorScheme;
     final fg = _chatSurfaceForegroundPalette(context);
@@ -2171,9 +2241,16 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                       alignment: Alignment.centerLeft,
                       child: Semantics(
                         label: l10n.chatMessageWidgetThinking,
-                        child: widget.hideStreamingIndicator
-                            ? const SizedBox(height: 16)
-                            : const LoadingIndicator(),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            widget.hideStreamingIndicator
+                                ? const SizedBox(height: 16)
+                                : const LoadingIndicator(),
+                            if (widget.reconnecting)
+                              _buildReconnectStatus(context),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -2205,9 +2282,15 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               widgets.add(
                 Padding(
                   padding: const EdgeInsets.only(left: 4, top: 4),
-                  child: widget.hideStreamingIndicator
-                      ? const SizedBox(height: 16)
-                      : const LoadingIndicator(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      widget.hideStreamingIndicator
+                          ? const SizedBox(height: 16)
+                          : const LoadingIndicator(),
+                      if (widget.reconnecting) _buildReconnectStatus(context),
+                    ],
+                  ),
                 ),
               );
             }

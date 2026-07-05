@@ -120,6 +120,8 @@ class MessageListView extends StatefulWidget {
     this.suggestions = const <String>[],
     this.onSuggestionTap,
     this.onRecoveredAskUserAnswer,
+    this.onStopStreaming,
+    this.onRetryStreamingNow,
     this.onToggleSelection,
     this.onToggleReasoning,
     this.onToggleTranslation,
@@ -186,6 +188,8 @@ class MessageListView extends StatefulWidget {
   final List<String> suggestions;
   final OnSuggestionTap? onSuggestionTap;
   final OnRecoveredAskUserAnswer? onRecoveredAskUserAnswer;
+  final VoidCallback? onStopStreaming;
+  final void Function(String messageId)? onRetryStreamingNow;
   final void Function(String messageId, bool selected)? onToggleSelection;
   final void Function(String messageId)? onToggleReasoning;
   final void Function(String messageId)? onToggleTranslation;
@@ -722,6 +726,9 @@ class _MessageListViewState extends State<MessageListView> {
             total: total,
             isProcessingFiles: isProcessingFiles,
             suggestions: suggestions,
+            reconnecting: data.reconnecting,
+            reconnectAttempt: data.reconnectAttempt,
+            reconnectMaxAttempts: data.reconnectMaxAttempts,
             enableStreamingTextMotion: !deferUpdates,
           ),
         );
@@ -745,10 +752,18 @@ class _MessageListViewState extends State<MessageListView> {
     required bool isProcessingFiles,
     required List<String> suggestions,
     bool enableStreamingTextMotion = true,
+    bool reconnecting = false,
+    int reconnectAttempt = 0,
+    int reconnectMaxAttempts = 0,
   }) {
     return ChatMessageWidget(
       message: message,
       enableStreamingTextMotion: enableStreamingTextMotion,
+      reconnecting: reconnecting,
+      reconnectAttempt: reconnectAttempt,
+      reconnectMaxAttempts: reconnectMaxAttempts,
+      onStopStreaming: widget.onStopStreaming,
+      onRetryStreamingNow: () => widget.onRetryStreamingNow?.call(message.id),
       versionIndex: selectedIdx,
       versionCount: total > 0 ? total : 1,
       onPrevVersion: (selectedIdx > 0)

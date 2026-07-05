@@ -1168,6 +1168,9 @@ class _HomePageState extends State<HomePage>
               mode: ChatSelectionMode.delete,
             ),
         onSuggestionTap: (suggestion) => _controller.sendSuggestion(suggestion),
+        onStopStreaming: _controller.cancelStreaming,
+        onRetryStreamingNow: (messageId) =>
+            _controller.retryStreamingNow(messageId),
         onRecoveredAskUserAnswer: (message, part, result) =>
             _controller.submitRecoveredAskUserAnswer(message, part, result),
         onToggleSelection: (messageId, selected) {

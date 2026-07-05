@@ -1352,6 +1352,31 @@ class GenerationContext {
   final bool streamOutput;
   final bool ocrActive;
   final bool generateTitleOnFinish;
+
+  GenerationContext copyWith({
+    List<Map<String, dynamic>>? apiMessages,
+  }) {
+    return GenerationContext(
+      assistantMessage: assistantMessage,
+      apiMessages: apiMessages ?? this.apiMessages,
+      userImagePaths: userImagePaths,
+      allowImagesApiRouting: allowImagesApiRouting,
+      providerKey: providerKey,
+      modelId: modelId,
+      assistant: assistant,
+      settings: settings,
+      config: config,
+      toolDefs: toolDefs,
+      onToolCall: onToolCall,
+      extraHeaders: extraHeaders,
+      extraBody: extraBody,
+      supportsReasoning: supportsReasoning,
+      enableReasoning: enableReasoning,
+      streamOutput: streamOutput,
+      ocrActive: ocrActive,
+      generateTitleOnFinish: generateTitleOnFinish,
+    );
+  }
 }
 
 /// State object for streaming message generation.
@@ -1368,6 +1393,10 @@ class StreamingState {
   bool titleQueued = false;
   DateTime? streamStartedAt;
   bool hadThinkingBlock = false;
+  int retryCount = 0;
+  int maxRetryCount = 5;
+  bool reconnecting = false;
+  Completer<void>? reconnectNowCompleter;
   List<int> contentSplitOffsets = <int>[];
   List<int> reasoningCountAtSplit = <int>[];
   List<int> toolCountAtSplit = <int>[];

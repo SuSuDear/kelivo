@@ -536,6 +536,10 @@ class HomeViewModel extends ChangeNotifier {
     await _chatActions.cancelStreaming(currentConversation);
   }
 
+  Future<void> retryStreamingNow(String messageId) async {
+    await _chatActions.retryStreamingNow(messageId);
+  }
+
   /// Delete a message and adjust version selections.
   ///
   /// Returns the list of message IDs to clean up UI state for.

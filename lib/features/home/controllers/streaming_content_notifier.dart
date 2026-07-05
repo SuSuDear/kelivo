@@ -63,6 +63,9 @@ class StreamingContentNotifier {
         completionTokens: completionTokens ?? current.completionTokens,
         cachedTokens: cachedTokens ?? current.cachedTokens,
         durationMs: durationMs ?? current.durationMs,
+        reconnecting: current.reconnecting,
+        reconnectAttempt: current.reconnectAttempt,
+        reconnectMaxAttempts: current.reconnectMaxAttempts,
       );
     }
   }
@@ -96,6 +99,9 @@ class StreamingContentNotifier {
         completionTokens: current.completionTokens,
         cachedTokens: current.cachedTokens,
         durationMs: current.durationMs,
+        reconnecting: current.reconnecting,
+        reconnectAttempt: current.reconnectAttempt,
+        reconnectMaxAttempts: current.reconnectMaxAttempts,
       );
     }
   }
@@ -127,6 +133,41 @@ class StreamingContentNotifier {
         completionTokens: current.completionTokens,
         cachedTokens: current.cachedTokens,
         durationMs: current.durationMs,
+        reconnecting: current.reconnecting,
+        reconnectAttempt: current.reconnectAttempt,
+        reconnectMaxAttempts: current.reconnectMaxAttempts,
+      );
+    }
+  }
+
+  /// Update reconnect status for a streaming message.
+  void updateReconnectStatus(
+    String messageId, {
+    required bool reconnecting,
+    int reconnectAttempt = 0,
+    int reconnectMaxAttempts = 0,
+  }) {
+    final notifier = _notifiers[messageId];
+    if (notifier != null) {
+      final current = notifier.value;
+      notifier.value = StreamingContentData(
+        content: current.content,
+        totalTokens: current.totalTokens,
+        reasoningText: current.reasoningText,
+        reasoningStartAt: current.reasoningStartAt,
+        reasoningFinishedAt: current.reasoningFinishedAt,
+        contentSplitOffsets: current.contentSplitOffsets,
+        reasoningCountAtSplit: current.reasoningCountAtSplit,
+        toolCountAtSplit: current.toolCountAtSplit,
+        toolPartsVersion: current.toolPartsVersion,
+        uiVersion: current.uiVersion + 1,
+        promptTokens: current.promptTokens,
+        completionTokens: current.completionTokens,
+        cachedTokens: current.cachedTokens,
+        durationMs: current.durationMs,
+        reconnecting: reconnecting,
+        reconnectAttempt: reconnectAttempt,
+        reconnectMaxAttempts: reconnectMaxAttempts,
       );
     }
   }
@@ -149,6 +190,9 @@ class StreamingContentNotifier {
         completionTokens: current.completionTokens,
         cachedTokens: current.cachedTokens,
         durationMs: current.durationMs,
+        reconnecting: current.reconnecting,
+        reconnectAttempt: current.reconnectAttempt,
+        reconnectMaxAttempts: current.reconnectMaxAttempts,
       );
     }
   }
@@ -191,6 +235,9 @@ class StreamingContentData {
     this.completionTokens,
     this.cachedTokens,
     this.durationMs,
+    this.reconnecting = false,
+    this.reconnectAttempt = 0,
+    this.reconnectMaxAttempts = 0,
   });
 
   final String content;
@@ -214,6 +261,15 @@ class StreamingContentData {
   final int? cachedTokens;
   final int? durationMs;
 
+  /// True while chat generation is waiting to reconnect/retry.
+  final bool reconnecting;
+
+  /// Current reconnect attempt, 1-based.
+  final int reconnectAttempt;
+
+  /// Maximum reconnect attempts.
+  final int reconnectMaxAttempts;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -232,7 +288,10 @@ class StreamingContentData {
           promptTokens == other.promptTokens &&
           completionTokens == other.completionTokens &&
           cachedTokens == other.cachedTokens &&
-          durationMs == other.durationMs;
+          durationMs == other.durationMs &&
+          reconnecting == other.reconnecting &&
+          reconnectAttempt == other.reconnectAttempt &&
+          reconnectMaxAttempts == other.reconnectMaxAttempts;
 
   @override
   int get hashCode =>
@@ -249,5 +308,8 @@ class StreamingContentData {
       promptTokens.hashCode ^
       completionTokens.hashCode ^
       cachedTokens.hashCode ^
-      durationMs.hashCode;
+      durationMs.hashCode ^
+      reconnecting.hashCode ^
+      reconnectAttempt.hashCode ^
+      reconnectMaxAttempts.hashCode;
 }
