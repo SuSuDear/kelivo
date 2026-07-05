@@ -2022,9 +2022,10 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
         ? '正在重连 $attempt/$max'
         : '正在重连';
     return Padding(
-      padding: const EdgeInsets.only(left: 4, top: 4),
+      padding: const EdgeInsets.only(left: 8),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             text,
@@ -2243,6 +2244,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                         label: l10n.chatMessageWidgetThinking,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             widget.hideStreamingIndicator
                                 ? const SizedBox(height: 16)
@@ -2284,6 +2286,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                   padding: const EdgeInsets.only(left: 4, top: 4),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       widget.hideStreamingIndicator
                           ? const SizedBox(height: 16)

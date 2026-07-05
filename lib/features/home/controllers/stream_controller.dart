@@ -913,6 +913,7 @@ class StreamController {
     // provisional tool call with empty/partial args, then later send the final
     // args. Update the existing loading card instead of appending duplicates.
     final existing = List<ToolUIPart>.of(_toolParts[messageId] ?? const []);
+    final toolCountBefore = existing.length;
     for (final c in chunk.toolCalls!) {
       final idx = existing.indexWhere(
         (p) =>
@@ -933,14 +934,50 @@ class StreamController {
         existing.add(part);
       }
     }
+    final dedupedExisting = dedupeToolPartsList(existing);
+    final hasNewTools = dedupedExisting.length > toolCountBefore;
+    if (hasNewTools && state.fullContentRaw.isNotEmpty) {
+      final offset = state.fullContentRaw.length;
+      final alreadyAnchoredAtOffset = state.contentSplitOffsets.isNotEmpty &&
+          state.contentSplitOffsets.last == offset &&
+          state.toolCountAtSplit.isNotEmpty &&
+          state.toolCountAtSplit.last >= dedupedExisting.length;
+      if (!alreadyAnchoredAtOffset) {
+        state.contentSplitOffsets.add(offset);
+        state.reasoningCountAtSplit.add(
+          _reasoningSegments[messageId]?.length ?? 0,
+        );
+        state.toolCountAtSplit.add(dedupedExisting.length);
+        _contentSplits[messageId] = _normalizeContentSplitData(
+          ContentSplitData(
+            offsets: List<int>.of(state.contentSplitOffsets),
+            reasoningCounts: List<int>.of(state.reasoningCountAtSplit),
+            toolCounts: List<int>.of(state.toolCountAtSplit),
+          ),
+        );
+        await updateReasoningSegmentsInDb(
+          messageId,
+          serializeReasoningSegmentsWithSplits(
+            segments,
+            contentSplitOffsets: state.contentSplitOffsets,
+            reasoningCountAtSplit: state.reasoningCountAtSplit,
+            toolCountAtSplit: state.toolCountAtSplit,
+          ),
+        );
+      }
+      state.hadThinkingBlock = false;
+    }
+
     if (getCurrentConversationId() == conversationId) {
-      _toolParts[messageId] = dedupeToolPartsList(existing);
+      _toolParts[messageId] = dedupedExisting;
+      final splits = _contentSplits[messageId];
       // Notify via StreamingContentNotifier for real-time UI updates
       streamingContentNotifier.notifyToolPartsUpdated(
         messageId,
-        contentSplitOffsets: state.contentSplitOffsets,
-        reasoningCountAtSplit: state.reasoningCountAtSplit,
-        toolCountAtSplit: state.toolCountAtSplit,
+        contentSplitOffsets: splits?.offsets ?? state.contentSplitOffsets,
+        reasoningCountAtSplit:
+            splits?.reasoningCounts ?? state.reasoningCountAtSplit,
+        toolCountAtSplit: splits?.toolCounts ?? state.toolCountAtSplit,
       );
     }
 
