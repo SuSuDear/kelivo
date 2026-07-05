@@ -1100,9 +1100,38 @@ class ChatActions {
     if (state.finishHandled) return false;
     if (state.retryCount >= state.maxRetryCount) return false;
     if (!_isRecoverableStreamError(error)) return false;
-    // Avoid replaying side-effectful tool calls.
-    if (streamController.getToolPartsCount(state.messageId) > 0) return false;
+    // Avoid replaying side-effectful tool calls that have not produced results yet.
+    // If all tool calls already have results, reconnect can continue from those
+    // persisted results instead of immediately interrupting the generation.
+    if (streamController.getToolPartsCount(state.messageId) > 0 &&
+        streamController.hasUnfinishedToolParts(state.messageId)) {
+      return false;
+    }
     return true;
+  }
+
+  String _toolResultsSummaryForReconnect(String messageId) {
+    final parts = streamController.getToolParts(messageId) ?? const [];
+    if (parts.isEmpty) return '';
+
+    final buffer = StringBuffer();
+    var index = 1;
+    for (final part in parts) {
+      final content = part.content?.trim();
+      if (part.loading || content == null || content.isEmpty) continue;
+      buffer.writeln('工具 $index: ${part.toolName}');
+      if (part.arguments.isNotEmpty) {
+        buffer.writeln('参数: ${part.arguments}');
+      }
+      buffer.writeln('结果: $content');
+      buffer.writeln();
+      index += 1;
+      if (buffer.length > 12000) {
+        buffer.writeln('其余工具结果已省略。');
+        break;
+      }
+    }
+    return buffer.toString().trim();
   }
 
   Future<bool> _handleStreamReconnect(
@@ -1162,15 +1191,18 @@ class ChatActions {
       for (final message in state.ctx.apiMessages) Map<String, dynamic>.from(message),
     ];
     final partial = state.fullContentRaw.trim();
+    final completedToolResults = _toolResultsSummaryForReconnect(state.messageId);
     if (partial.isNotEmpty) {
       resumedMessages.add(<String, dynamic>{
         'role': 'assistant',
         'content': partial,
       });
-      resumedMessages.add(<String, dynamic>{
-        'role': 'user',
-        'content': '继续上一条 assistant 回复，从中断的位置继续，不要重复已经生成的内容。',
-      });
+    }
+    if (partial.isNotEmpty || completedToolResults.isNotEmpty) {
+      final prompt = completedToolResults.isEmpty
+          ? '继续上一条 assistant 回复，从中断的位置继续，不要重复已经生成的内容。'
+          : '上一条 assistant 回复因网络中断。以下工具调用已经完成，请基于这些工具结果继续回答；不要重复调用已经完成的工具；如果已有部分正文，请从中断位置继续且不要重复。\n\n已完成工具结果：\n$completedToolResults';
+      resumedMessages.add(<String, dynamic>{'role': 'user', 'content': prompt});
     }
 
     try {
@@ -1722,6 +1754,34 @@ class ChatActions {
   }
 
   /// Handle stream error.
+  Future<bool> _waitForUnfinishedToolsBeforeError(
+    stream_ctrl.StreamingState state,
+  ) async {
+    if (!streamController.hasUnfinishedToolParts(state.messageId)) {
+      return true;
+    }
+
+    // Tool execution is local/controlled by the app and is much more reliable
+    // than the upstream text stream. If the network stream errors while a tool
+    // card is still loading, do not immediately mark the assistant message as
+    // failed. Give the in-flight tool result a chance to arrive, then reconnect
+    // from the completed tool result.
+    const maxWait = Duration(minutes: 2);
+    const interval = Duration(milliseconds: 250);
+    final deadline = DateTime.now().add(maxWait);
+    while (DateTime.now().isBefore(deadline)) {
+      if (state.finishHandled ||
+          !_loadingConversationIds.contains(state.conversationId)) {
+        return false;
+      }
+      if (!streamController.hasUnfinishedToolParts(state.messageId)) {
+        return true;
+      }
+      await Future<void>.delayed(interval);
+    }
+    return !streamController.hasUnfinishedToolParts(state.messageId);
+  }
+
   Future<void> _handleStreamError(
     dynamic e,
     stream_ctrl.StreamingState state,
@@ -1729,6 +1789,12 @@ class ChatActions {
     final messageId = state.messageId;
     final conversationId = state.conversationId;
     final errorText = e.toString();
+
+    if (_isRecoverableStreamError(e) &&
+        streamController.hasUnfinishedToolParts(messageId)) {
+      final toolsCompleted = await _waitForUnfinishedToolsBeforeError(state);
+      if (!toolsCompleted) return;
+    }
 
     if (await _handleStreamReconnect(e, state)) {
       return;

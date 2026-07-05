@@ -2278,7 +2278,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               }
             }
 
-            if (widget.message.isStreaming && visualContent.isNotEmpty) {
+            if (widget.message.isStreaming) {
               widgets.add(
                 Padding(
                   padding: const EdgeInsets.only(left: 4, top: 4),

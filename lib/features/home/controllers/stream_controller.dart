@@ -196,6 +196,16 @@ class StreamController {
 
   int getToolPartsCount(String messageId) => _toolParts[messageId]?.length ?? 0;
 
+  /// Whether the message still has tool calls without a persisted result.
+  bool hasUnfinishedToolParts(String messageId) {
+    final parts = _toolParts[messageId];
+    if (parts == null || parts.isEmpty) return false;
+    return parts.any((p) {
+      final content = p.content?.trim();
+      return p.loading || content == null || content.isEmpty;
+    });
+  }
+
   /// Get tool parts for a message.
   List<ToolUIPart>? getToolParts(String messageId) => _toolParts[messageId];
 
@@ -870,15 +880,22 @@ class StreamController {
       ),
     );
 
-    // Finish any unfinished reasoning segment when tools start
+    // Finish reasoning as soon as tool generation starts. Otherwise the UI
+    // keeps counting "thinking" while the model is already streaming tool args
+    // or while the app is waiting for tool execution.
+    final autoCollapse = getSettingsProvider().autoCollapseThinking;
+    final rd = _reasoning[messageId];
+    if (rd != null && rd.finishedAt == null) {
+      rd.finishedAt = DateTime.now();
+      if (autoCollapse) rd.expanded = false;
+      _reasoning[messageId] = rd;
+    }
+
     final segments = _reasoningSegments[messageId] ?? <ReasoningSegmentData>[];
     if (segments.isNotEmpty && segments.last.finishedAt == null) {
       segments.last.finishedAt = DateTime.now();
-      final autoCollapse = getSettingsProvider().autoCollapseThinking;
       if (autoCollapse) {
         segments.last.expanded = false;
-        final rd = _reasoning[messageId];
-        if (rd != null) rd.expanded = false;
       }
       _reasoningSegments[messageId] = segments;
       await updateReasoningSegmentsInDb(
@@ -892,17 +909,29 @@ class StreamController {
       );
     }
 
-    // Add tool call placeholders
+    // Add/update tool call placeholders. Some providers first stream a
+    // provisional tool call with empty/partial args, then later send the final
+    // args. Update the existing loading card instead of appending duplicates.
     final existing = List<ToolUIPart>.of(_toolParts[messageId] ?? const []);
     for (final c in chunk.toolCalls!) {
-      existing.add(
-        ToolUIPart(
-          id: c.id,
-          toolName: c.name,
-          arguments: c.arguments,
-          loading: true,
-        ),
+      final idx = existing.indexWhere(
+        (p) =>
+            p.loading &&
+            ((p.id.isNotEmpty && p.id == c.id) ||
+                (p.id.isEmpty && p.toolName == c.name) ||
+                (c.id.isEmpty && p.toolName == c.name)),
       );
+      final part = ToolUIPart(
+        id: c.id,
+        toolName: c.name,
+        arguments: c.arguments,
+        loading: true,
+      );
+      if (idx >= 0) {
+        existing[idx] = part;
+      } else {
+        existing.add(part);
+      }
     }
     if (getCurrentConversationId() == conversationId) {
       _toolParts[messageId] = dedupeToolPartsList(existing);

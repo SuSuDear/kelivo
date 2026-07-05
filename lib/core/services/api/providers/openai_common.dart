@@ -1692,6 +1692,8 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
   // Track potential tool calls (OpenAI Chat Completions)
   final Map<int, Map<String, String>> toolAcc =
       <int, Map<String, String>>{}; // index -> {id,name,args}
+  final Set<int> emittedToolCallPlaceholders = <int>{};
+  final Set<int> emittedRespToolCallPlaceholders = <int>{};
   // Track potential tool calls (OpenAI Responses API)
   final Map<String, Map<String, String>> toolAccResp =
       <String, Map<String, String>>{}; // id/name -> {name,args}
@@ -2248,6 +2250,24 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   'name': name,
                   'args': '',
                 };
+                if (onToolCall != null &&
+                    name.isNotEmpty &&
+                    !emittedRespToolCallPlaceholders.contains(idx)) {
+                  emittedRespToolCallPlaceholders.add(idx);
+                  yield ChatStreamChunk(
+                    content: '',
+                    isDone: false,
+                    totalTokens: totalTokens,
+                    usage: usage,
+                    toolCalls: [
+                      ToolCallInfo(
+                        id: _effectiveToolCallId(callId, 'call', idx),
+                        name: name,
+                        arguments: const <String, dynamic>{},
+                      ),
+                    ],
+                  );
+                }
               } else if (item is Map &&
                   (item['type'] ?? '') == 'image_generation_call') {
                 responsesImagesByIndex.putIfAbsent(
@@ -2975,6 +2995,27 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   if (name != null && name.isNotEmpty) entry['name'] = name;
                   if (argsDelta != null && argsDelta.isNotEmpty) {
                     entry['args'] = (entry['args'] ?? '') + argsDelta;
+                  }
+                  if (onToolCall != null &&
+                      !emittedToolCallPlaceholders.contains(idx) &&
+                      ((entry['name'] ?? '').isNotEmpty ||
+                          (entry['id'] ?? '').isNotEmpty)) {
+                    emittedToolCallPlaceholders.add(idx);
+                    yield ChatStreamChunk(
+                      content: '',
+                      isDone: false,
+                      totalTokens: totalTokens,
+                      usage: usage,
+                      toolCalls: [
+                        ToolCallInfo(
+                          id: (entry['id'] ?? '').isNotEmpty
+                              ? entry['id']!
+                              : 'call_pending_$idx',
+                          name: entry['name'] ?? '',
+                          arguments: const <String, dynamic>{},
+                        ),
+                      ],
+                    );
                   }
                 }
               }
