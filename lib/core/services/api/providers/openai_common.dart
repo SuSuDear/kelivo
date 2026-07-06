@@ -698,16 +698,21 @@ Future<List<Map<String, dynamic>>> _buildOpenAIChatCompletionMessages(
   return out;
 }
 
-String _extractOpenAICompatibleDeltaText(Map? delta) {
-  if (delta == null) return '';
-  final deltaType = (delta['type'] ?? '').toString();
-  if (deltaType == 'response.audio.delta') {
-    return '';
-  }
-  final content = delta['content'];
-  if (content is String) {
-    return content;
-  }
+bool _isOpenAICompatibleReasoningDelta(Map? delta) {
+  if (delta == null) return false;
+  final channel = (delta['channel'] ?? delta['type'] ?? '')
+      .toString()
+      .toLowerCase();
+  return channel == 'analysis' ||
+      channel == 'thinking' ||
+      channel == 'reasoning' ||
+      channel.endsWith('.analysis.delta') ||
+      channel.endsWith('.thinking.delta') ||
+      channel.endsWith('.reasoning.delta');
+}
+
+String _textFromOpenAICompatibleDeltaContent(dynamic content) {
+  if (content is String) return content;
   if (content is List) {
     final buffer = StringBuffer();
     for (final item in content) {
@@ -720,6 +725,26 @@ String _extractOpenAICompatibleDeltaText(Map? delta) {
       }
     }
     return buffer.toString();
+  }
+  return '';
+}
+
+String _extractOpenAICompatibleDeltaText(Map? delta) {
+  if (delta == null) return '';
+  final deltaType = (delta['type'] ?? '').toString();
+  if (deltaType == 'response.audio.delta' ||
+      _isOpenAICompatibleReasoningDelta(delta)) {
+    return '';
+  }
+  return _textFromOpenAICompatibleDeltaContent(delta['content']);
+}
+
+String _extractOpenAICompatibleDeltaReasoning(Map? delta) {
+  if (delta == null) return '';
+  final explicit = delta['reasoning_content'] ?? delta['reasoning'];
+  if (explicit is String && explicit.isNotEmpty) return explicit;
+  if (_isOpenAICompatibleReasoningDelta(delta)) {
+    return _textFromOpenAICompatibleDeltaContent(delta['content']);
   }
   return '';
 }
@@ -1946,8 +1971,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                     final delta = c0['delta'] as Map?;
                     final message = c0['message'] as Map?;
                     final txt = _extractOpenAICompatibleDeltaText(delta);
-                    final rc =
-                        delta?['reasoning_content'] ?? delta?['reasoning'];
+                    final rc = _extractOpenAICompatibleDeltaReasoning(delta);
                     // Capture Grok citations
                     final gCitations = o['citations'];
                     if (gCitations is List && gCitations.isNotEmpty) {
@@ -1974,7 +1998,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                         );
                       }
                     }
-                    if (rc is String && rc.isNotEmpty) {
+                    if (rc.isNotEmpty) {
                       if (needsReasoningEcho) reasoningAccum += rc;
                       yield ChatStreamChunk(
                         content: '',
@@ -2927,9 +2951,8 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               }
 
               // reasoning_content handling (unchanged)
-              final rc =
-                  (delta['reasoning_content'] ?? delta['reasoning']) as String?;
-              if (rc != null && rc.isNotEmpty) {
+              final rc = _extractOpenAICompatibleDeltaReasoning(delta);
+              if (rc.isNotEmpty) {
                 reasoning = rc;
                 if (needsReasoningEcho) reasoningBuffer += rc;
               }
@@ -3373,8 +3396,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                     finishReason2 = c0['finish_reason'] as String?;
                     final delta = c0['delta'] as Map?;
                     final txt = _extractOpenAICompatibleDeltaText(delta);
-                    final rc =
-                        delta?['reasoning_content'] ?? delta?['reasoning'];
+                    final rc = _extractOpenAICompatibleDeltaReasoning(delta);
                     // Capture Grok citations
                     final gCitations = o['citations'];
                     if (gCitations is List && gCitations.isNotEmpty) {
@@ -3401,7 +3423,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                         );
                       }
                     }
-                    if (rc is String && rc.isNotEmpty) {
+                    if (rc.isNotEmpty) {
                       if (needsReasoningEcho) reasoningAccum += rc;
                       yield ChatStreamChunk(
                         content: '',
@@ -3887,9 +3909,8 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                         finishReason2 = c0['finish_reason'] as String?;
                         final delta = c0['delta'] as Map?;
                         final txt = _extractOpenAICompatibleDeltaText(delta);
-                        final rc =
-                            delta?['reasoning_content'] ?? delta?['reasoning'];
-                        if (rc is String && rc.isNotEmpty) {
+                        final rc = _extractOpenAICompatibleDeltaReasoning(delta);
+                        if (rc.isNotEmpty) {
                           if (needsReasoningEcho) reasoningAccum += rc;
                           yield ChatStreamChunk(
                             content: '',

@@ -2057,7 +2057,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               ),
             ),
           ],
-          if (widget.onRetryStreamingNow != null) ...[
+          if (remaining > 0 && widget.onRetryStreamingNow != null) ...[
             const SizedBox(width: 6),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
