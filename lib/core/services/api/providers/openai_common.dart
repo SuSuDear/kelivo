@@ -749,6 +749,20 @@ String _extractOpenAICompatibleDeltaReasoning(Map? delta) {
   return '';
 }
 
+bool _isResponsesVisibleOutputTextDelta(
+  Map json,
+  Map<int, String> outputItemTypes,
+) {
+  final outputIndexRaw = json['output_index'];
+  final outputIndex = outputIndexRaw is int
+      ? outputIndexRaw
+      : int.tryParse((outputIndexRaw ?? '').toString());
+  if (outputIndex == null) return true;
+  final itemType = outputItemTypes[outputIndex];
+  if (itemType == null || itemType.isEmpty) return true;
+  return itemType == 'message';
+}
+
 /// Appends a trailing newline to [source] so that any partial line
 /// remaining in the SSE buffer is flushed during the final split('\n').
 Stream<String> _ensureTrailingNewline(Stream<String> source) async* {
@@ -1727,6 +1741,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
       <int, Map<String, String>>{}; // index -> {call_id,name,args}
   final Map<int, _ResponsesImageGenerationResult> responsesImagesByIndex =
       <int, _ResponsesImageGenerationResult>{};
+  final Map<int, String> responsesOutputItemTypes = <int, String>{};
   List<Map<String, dynamic>> lastResponseOutputItems =
       const <Map<String, dynamic>>[];
   String? finishReason;
@@ -2255,7 +2270,11 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           final type = json['type'];
           if (type == 'response.output_text.delta') {
             final delta = json['delta'];
-            if (delta is String) {
+            if (delta is String &&
+                _isResponsesVisibleOutputTextDelta(
+                  json,
+                  responsesOutputItemTypes,
+                )) {
               content = delta;
               approxCompletionChars += content.length;
             }
@@ -2266,6 +2285,9 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             try {
               final item = json['item'];
               final idx = (json['output_index'] ?? 0) as int;
+              if (item is Map) {
+                responsesOutputItemTypes[idx] = (item['type'] ?? '').toString();
+              }
               if (item is Map && (item['type'] ?? '') == 'function_call') {
                 final name = (item['name'] ?? '').toString();
                 final callId = (item['call_id'] ?? '').toString();
@@ -2682,6 +2704,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 String buf2 = '';
                 final Map<int, Map<String, String>> respCalls2 =
                     <int, Map<String, String>>{};
+                final Map<int, String> outputItemTypes2 = <int, String>{};
                 List<Map<String, dynamic>> outItems2 =
                     const <Map<String, dynamic>>[];
                 await for (final ch in _ensureTrailingNewline(s2)) {
@@ -2698,7 +2721,11 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                       if (o is Map &&
                           (o['type'] ?? '') == 'response.output_text.delta') {
                         final delta = (o['delta'] ?? '').toString();
-                        if (delta.isNotEmpty) {
+                        if (delta.isNotEmpty &&
+                            _isResponsesVisibleOutputTextDelta(
+                              o,
+                              outputItemTypes2,
+                            )) {
                           approxCompletionChars += delta.length;
                           yield ChatStreamChunk(
                             content: delta,
@@ -2711,6 +2738,9 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                           (o['type'] ?? '') == 'response.output_item.added') {
                         final item = o['item'];
                         final idx2 = (o['output_index'] ?? 0) as int;
+                        if (item is Map) {
+                          outputItemTypes2[idx2] = (item['type'] ?? '').toString();
+                        }
                         if (item is Map &&
                             (item['type'] ?? '') == 'function_call') {
                           respCalls2[idx2] = {
