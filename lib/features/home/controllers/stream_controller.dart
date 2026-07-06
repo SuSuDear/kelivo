@@ -524,6 +524,15 @@ class StreamController {
 
   bool _hasToolContent(String? content) => content?.trim().isNotEmpty == true;
 
+  int _completedToolBoundary(String messageId) {
+    final parts = _toolParts[messageId];
+    if (parts == null || parts.isEmpty) return 0;
+    for (int i = parts.length - 1; i >= 0; i--) {
+      if (!parts[i].loading) return i + 1;
+    }
+    return 0;
+  }
+
   String _toolDedupeKey({
     required String id,
     required String name,
@@ -793,7 +802,7 @@ class StreamController {
         newSegment.text = chunk.reasoning!;
         newSegment.startAt = DateTime.now();
         newSegment.expanded = initialExpanded;
-        newSegment.toolStartIndex = (_toolParts[messageId]?.length ?? 0);
+        newSegment.toolStartIndex = _completedToolBoundary(messageId);
         segments.add(newSegment);
       } else {
         final hasToolsAfterLastSegment =
@@ -804,7 +813,7 @@ class StreamController {
           newSegment.text = chunk.reasoning!;
           newSegment.startAt = DateTime.now();
           newSegment.expanded = initialExpanded;
-          newSegment.toolStartIndex = (_toolParts[messageId]?.length ?? 0);
+          newSegment.toolStartIndex = _completedToolBoundary(messageId);
           segments.add(newSegment);
         } else {
           lastSegment.text += chunk.reasoning!;

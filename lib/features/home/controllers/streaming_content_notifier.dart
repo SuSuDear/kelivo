@@ -66,6 +66,7 @@ class StreamingContentNotifier {
         reconnecting: current.reconnecting,
         reconnectAttempt: current.reconnectAttempt,
         reconnectMaxAttempts: current.reconnectMaxAttempts,
+        reconnectRemainingSeconds: current.reconnectRemainingSeconds,
       );
     }
   }
@@ -102,6 +103,7 @@ class StreamingContentNotifier {
         reconnecting: current.reconnecting,
         reconnectAttempt: current.reconnectAttempt,
         reconnectMaxAttempts: current.reconnectMaxAttempts,
+        reconnectRemainingSeconds: current.reconnectRemainingSeconds,
       );
     }
   }
@@ -136,6 +138,7 @@ class StreamingContentNotifier {
         reconnecting: current.reconnecting,
         reconnectAttempt: current.reconnectAttempt,
         reconnectMaxAttempts: current.reconnectMaxAttempts,
+        reconnectRemainingSeconds: current.reconnectRemainingSeconds,
       );
     }
   }
@@ -146,6 +149,7 @@ class StreamingContentNotifier {
     required bool reconnecting,
     int reconnectAttempt = 0,
     int reconnectMaxAttempts = 0,
+    int reconnectRemainingSeconds = 0,
   }) {
     final notifier = _notifiers[messageId];
     if (notifier != null) {
@@ -168,6 +172,7 @@ class StreamingContentNotifier {
         reconnecting: reconnecting,
         reconnectAttempt: reconnectAttempt,
         reconnectMaxAttempts: reconnectMaxAttempts,
+        reconnectRemainingSeconds: reconnectRemainingSeconds,
       );
     }
   }
@@ -193,6 +198,7 @@ class StreamingContentNotifier {
         reconnecting: current.reconnecting,
         reconnectAttempt: current.reconnectAttempt,
         reconnectMaxAttempts: current.reconnectMaxAttempts,
+        reconnectRemainingSeconds: current.reconnectRemainingSeconds,
       );
     }
   }
@@ -238,6 +244,7 @@ class StreamingContentData {
     this.reconnecting = false,
     this.reconnectAttempt = 0,
     this.reconnectMaxAttempts = 0,
+    this.reconnectRemainingSeconds = 0,
   });
 
   final String content;
@@ -270,6 +277,10 @@ class StreamingContentData {
   /// Maximum reconnect attempts.
   final int reconnectMaxAttempts;
 
+  /// Remaining seconds before the current reconnect attempt starts.
+  /// 0 means the attempt is currently being made.
+  final int reconnectRemainingSeconds;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -291,7 +302,8 @@ class StreamingContentData {
           durationMs == other.durationMs &&
           reconnecting == other.reconnecting &&
           reconnectAttempt == other.reconnectAttempt &&
-          reconnectMaxAttempts == other.reconnectMaxAttempts;
+          reconnectMaxAttempts == other.reconnectMaxAttempts &&
+          reconnectRemainingSeconds == other.reconnectRemainingSeconds;
 
   @override
   int get hashCode =>
@@ -311,5 +323,6 @@ class StreamingContentData {
       durationMs.hashCode ^
       reconnecting.hashCode ^
       reconnectAttempt.hashCode ^
-      reconnectMaxAttempts.hashCode;
+      reconnectMaxAttempts.hashCode ^
+      reconnectRemainingSeconds.hashCode;
 }

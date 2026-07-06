@@ -640,6 +640,7 @@ class ChatMessageWidget extends StatefulWidget {
   final bool reconnecting;
   final int reconnectAttempt;
   final int reconnectMaxAttempts;
+  final int reconnectRemainingSeconds;
   final VoidCallback? onStopStreaming;
   final VoidCallback? onRetryStreamingNow;
   final List<String> suggestions;
@@ -688,6 +689,7 @@ class ChatMessageWidget extends StatefulWidget {
     this.reconnecting = false,
     this.reconnectAttempt = 0,
     this.reconnectMaxAttempts = 0,
+    this.reconnectRemainingSeconds = 0,
     this.onStopStreaming,
     this.onRetryStreamingNow,
     this.suggestions = const <String>[],
@@ -1991,12 +1993,12 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
       final blockSteps = <_TimelineStepData>[];
       while (stepIndex < steps.length) {
         final step = steps[stepIndex];
-        blockSteps.add(step);
-        stepIndex++;
-        if (step.reasoningCountAfter == targetReasoning &&
-            step.toolCountAfter == targetTool) {
+        if (step.reasoningCountAfter > targetReasoning ||
+            step.toolCountAfter > targetTool) {
           break;
         }
+        blockSteps.add(step);
+        stepIndex++;
       }
       if (blockSteps.isNotEmpty) {
         blocks.add(_RenderBlock.thinking(blockSteps));
@@ -2018,8 +2020,11 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final cs = Theme.of(context).colorScheme;
     final attempt = widget.reconnectAttempt;
     final max = widget.reconnectMaxAttempts;
+    final remaining = widget.reconnectRemainingSeconds;
     final text = max > 0
-        ? '正在重连 $attempt/$max'
+        ? (remaining > 0
+              ? '$attempt/$max 正在重连，${remaining}s 后重试'
+              : '$attempt/$max 正在重连…')
         : '正在重连';
     return Padding(
       padding: const EdgeInsets.only(left: 8),

@@ -1134,6 +1134,13 @@ class ChatActions {
     return buffer.toString().trim();
   }
 
+  int _reconnectDelaySecondsForAttempt(int attempt) {
+    const delays = <int>[2, 5, 10, 20, 30];
+    if (attempt <= 1) return delays.first;
+    if (attempt >= delays.length) return delays.last;
+    return delays[attempt - 1];
+  }
+
   Future<bool> _handleStreamReconnect(
     dynamic error,
     stream_ctrl.StreamingState state,
@@ -1162,21 +1169,38 @@ class ChatActions {
       completionTokens: state.usage?.completionTokens,
       cachedTokens: state.usage?.cachedTokens,
     );
+    final delaySeconds = _reconnectDelaySecondsForAttempt(attempt);
     streamController.streamingContentNotifier.updateReconnectStatus(
       state.messageId,
       reconnecting: true,
       reconnectAttempt: attempt,
       reconnectMaxAttempts: maxAttempts,
+      reconnectRemainingSeconds: delaySeconds,
     );
 
-    final delay = Duration(seconds: 1 << (attempt - 1));
     final now = Completer<void>();
     state.reconnectNowCompleter = now;
     try {
-      await Future.any<void>(<Future<void>>[
-        Future<void>.delayed(delay),
-        now.future,
-      ]);
+      for (var remaining = delaySeconds; remaining > 0; remaining--) {
+        streamController.streamingContentNotifier.updateReconnectStatus(
+          state.messageId,
+          reconnecting: true,
+          reconnectAttempt: attempt,
+          reconnectMaxAttempts: maxAttempts,
+          reconnectRemainingSeconds: remaining,
+        );
+        await Future.any<void>(<Future<void>>[
+          Future<void>.delayed(const Duration(seconds: 1)),
+          now.future,
+        ]);
+        if (now.isCompleted) break;
+      }
+      streamController.streamingContentNotifier.updateReconnectStatus(
+        state.messageId,
+        reconnecting: true,
+        reconnectAttempt: attempt,
+        reconnectMaxAttempts: maxAttempts,
+      );
     } finally {
       if (identical(state.reconnectNowCompleter, now)) {
         state.reconnectNowCompleter = null;
