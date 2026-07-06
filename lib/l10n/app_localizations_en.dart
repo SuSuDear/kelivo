@@ -3136,6 +3136,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageResponseApiTitle => 'Response API (/responses)';
 
   @override
+  String get providerDetailPageCodexRequestFormatTitle =>
+      'Codex request format';
+
+  @override
   String get providerDetailPageAihubmixAppCodeLabel => 'APP-Code (10% off)';
 
   @override

@@ -63,6 +63,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
   final _saJsonCtrl = TextEditingController();
   bool _enabled = true;
   bool _useResp = false; // openai
+  bool _useCodexRequestFormat = false; // openai responses
   bool _vertexAI = false; // google
   bool _showApiKey = false; // toggle visibility
   bool _multiKeyEnabled = false; // single/multi key mode
@@ -98,6 +99,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     _baseCtrl.text = _cfg.baseUrl;
     _pathCtrl.text = _cfg.chatPath ?? '/chat/completions';
     _useResp = _cfg.useResponseApi ?? false;
+    _useCodexRequestFormat = _cfg.useCodexRequestFormat ?? false;
     _vertexAI = _cfg.vertexAI ?? false;
     _locationCtrl.text = _cfg.location ?? '';
     _projectCtrl.text = _cfg.projectId ?? '';
@@ -1023,6 +1025,18 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                   value: _useResp,
                   onChanged: (v) {
                     setState(() => _useResp = v);
+                    _save();
+                  },
+                ),
+              ),
+            if (_kind == ProviderKind.openai)
+              _iosRow(
+                context,
+                label: l10n.providerDetailPageCodexRequestFormatTitle,
+                trailing: IosSwitch(
+                  value: _useCodexRequestFormat,
+                  onChanged: (v) {
+                    setState(() => _useCodexRequestFormat = v);
                     _save();
                   },
                 ),
@@ -2076,6 +2090,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       useResponseApi: _kind == ProviderKind.openai
           ? _useResp
           : old.useResponseApi,
+      useCodexRequestFormat: _kind == ProviderKind.openai
+          ? _useCodexRequestFormat
+          : old.useCodexRequestFormat,
       vertexAI: _kind == ProviderKind.google ? _vertexAI : old.vertexAI,
       location: _kind == ProviderKind.google
           ? _locationCtrl.text.trim()

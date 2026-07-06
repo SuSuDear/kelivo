@@ -1048,6 +1048,7 @@
   "providerDetailPageShowTooltip": "显示",
   "providerDetailPageApiPathLabel": "API 路径",
   "providerDetailPageResponseApiTitle": "Response API (/responses)",
+  "providerDetailPageCodexRequestFormatTitle": "Codex 请求格式",
   "providerDetailPageAihubmixAppCodeLabel": "应用 Code（享 10% 优惠）",
   "providerDetailPageAihubmixAppCodeHelp": "为请求附加 APP-Code，可享 10% 优惠，仅对 AIhubmix 生效。",
   "providerDetailPageClaudePromptCachingTitle": "Claude Prompt Caching",

@@ -117,6 +117,7 @@ void _applyCompatibleResponsesReasoning(
 }
 
 bool _useCodexResponsesRequestFormat(ProviderConfig config, String modelId) {
+  if (config.useCodexRequestFormat == true) return true;
   final ov = config.modelOverrides[modelId];
   if (ov is! Map) return false;
   final raw = ov['useCodexRequestFormat'] ??

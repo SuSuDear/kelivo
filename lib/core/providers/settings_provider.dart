@@ -4458,6 +4458,7 @@ class ProviderConfig {
   providerType; // Explicit provider type to avoid misclassification
   final String? chatPath; // openai only
   final bool? useResponseApi; // openai only
+  final bool? useCodexRequestFormat; // openai responses only
   final bool? vertexAI; // google only
   final String? location; // google vertex ai only
   final String? projectId; // google vertex ai only
@@ -4533,6 +4534,7 @@ class ProviderConfig {
     this.providerType,
     this.chatPath,
     this.useResponseApi,
+    this.useCodexRequestFormat,
     this.vertexAI,
     this.location,
     this.projectId,
@@ -4570,6 +4572,7 @@ class ProviderConfig {
     ProviderKind? providerType,
     String? chatPath,
     bool? useResponseApi,
+    bool? useCodexRequestFormat,
     bool? vertexAI,
     String? location,
     String? projectId,
@@ -4602,6 +4605,8 @@ class ProviderConfig {
     providerType: providerType ?? this.providerType,
     chatPath: chatPath ?? this.chatPath,
     useResponseApi: useResponseApi ?? this.useResponseApi,
+    useCodexRequestFormat:
+        useCodexRequestFormat ?? this.useCodexRequestFormat,
     vertexAI: vertexAI ?? this.vertexAI,
     location: location ?? this.location,
     projectId: projectId ?? this.projectId,
@@ -4643,6 +4648,7 @@ class ProviderConfig {
     'providerType': providerType?.name,
     'chatPath': chatPath,
     'useResponseApi': useResponseApi,
+    'useCodexRequestFormat': useCodexRequestFormat,
     'vertexAI': vertexAI,
     'location': location,
     'projectId': projectId,
@@ -4684,6 +4690,7 @@ class ProviderConfig {
         : null,
     chatPath: json['chatPath'] as String?,
     useResponseApi: json['useResponseApi'] as bool?,
+    useCodexRequestFormat: json['useCodexRequestFormat'] as bool?,
     vertexAI: json['vertexAI'] as bool?,
     location: json['location'] as String?,
     projectId: json['projectId'] as String?,

@@ -5852,6 +5852,12 @@ abstract class AppLocalizations {
   /// **'Response API (/responses)'**
   String get providerDetailPageResponseApiTitle;
 
+  /// No description provided for @providerDetailPageCodexRequestFormatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Codex request format'**
+  String get providerDetailPageCodexRequestFormatTitle;
+
   /// No description provided for @providerDetailPageAihubmixAppCodeLabel.
   ///
   /// In en, this message translates to:

@@ -3017,6 +3017,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get providerDetailPageResponseApiTitle => 'Response API (/responses)';
 
   @override
+  String get providerDetailPageCodexRequestFormatTitle => 'Codex 请求格式';
+
+  @override
   String get providerDetailPageAihubmixAppCodeLabel => '应用 Code（享 10% 优惠）';
 
   @override
@@ -8182,6 +8185,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get providerDetailPageResponseApiTitle => 'Response API (/responses)';
 
   @override
+  String get providerDetailPageCodexRequestFormatTitle => 'Codex 请求格式';
+
+  @override
   String get providerDetailPageAihubmixAppCodeLabel => '应用 Code（享 10% 优惠）';
 
   @override
@@ -13344,6 +13350,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get providerDetailPageResponseApiTitle => 'Response API (/responses)';
+
+  @override
+  String get providerDetailPageCodexRequestFormatTitle => 'Codex 請求格式';
 
   @override
   String get providerDetailPageAihubmixAppCodeLabel => '應用 Code（享 10% 優惠）';
