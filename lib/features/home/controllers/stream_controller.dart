@@ -947,33 +947,40 @@ class StreamController {
     final hasNewTools = dedupedExisting.length > toolCountBefore;
     if (hasNewTools) {
       final offset = state.fullContentRaw.length;
-      final alreadyAnchoredAtOffset = state.contentSplitOffsets.isNotEmpty &&
-          state.contentSplitOffsets.last == offset &&
-          state.toolCountAtSplit.isNotEmpty &&
-          state.toolCountAtSplit.last >= dedupedExisting.length;
-      if (!alreadyAnchoredAtOffset) {
+      final sameOffsetAsLast = state.contentSplitOffsets.isNotEmpty &&
+          state.contentSplitOffsets.last == offset;
+      if (sameOffsetAsLast) {
+        if (state.reasoningCountAtSplit.isNotEmpty) {
+          state.reasoningCountAtSplit[state.reasoningCountAtSplit.length - 1] =
+              _reasoningSegments[messageId]?.length ?? 0;
+        }
+        if (state.toolCountAtSplit.isNotEmpty) {
+          state.toolCountAtSplit[state.toolCountAtSplit.length - 1] =
+              dedupedExisting.length;
+        }
+      } else {
         state.contentSplitOffsets.add(offset);
         state.reasoningCountAtSplit.add(
           _reasoningSegments[messageId]?.length ?? 0,
         );
         state.toolCountAtSplit.add(dedupedExisting.length);
-        _contentSplits[messageId] = _normalizeContentSplitData(
-          ContentSplitData(
-            offsets: List<int>.of(state.contentSplitOffsets),
-            reasoningCounts: List<int>.of(state.reasoningCountAtSplit),
-            toolCounts: List<int>.of(state.toolCountAtSplit),
-          ),
-        );
-        await updateReasoningSegmentsInDb(
-          messageId,
-          serializeReasoningSegmentsWithSplits(
-            segments,
-            contentSplitOffsets: state.contentSplitOffsets,
-            reasoningCountAtSplit: state.reasoningCountAtSplit,
-            toolCountAtSplit: state.toolCountAtSplit,
-          ),
-        );
       }
+      _contentSplits[messageId] = _normalizeContentSplitData(
+        ContentSplitData(
+          offsets: List<int>.of(state.contentSplitOffsets),
+          reasoningCounts: List<int>.of(state.reasoningCountAtSplit),
+          toolCounts: List<int>.of(state.toolCountAtSplit),
+        ),
+      );
+      await updateReasoningSegmentsInDb(
+        messageId,
+        serializeReasoningSegmentsWithSplits(
+          segments,
+          contentSplitOffsets: state.contentSplitOffsets,
+          reasoningCountAtSplit: state.reasoningCountAtSplit,
+          toolCountAtSplit: state.toolCountAtSplit,
+        ),
+      );
       state.hadThinkingBlock = false;
     }
 
