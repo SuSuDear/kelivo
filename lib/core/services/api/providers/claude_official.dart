@@ -29,19 +29,6 @@ String _claudeCodeStableId(String prefix, String seed) {
   return '$prefix-${hash.toRadixString(16).padLeft(8, '0')}';
 }
 
-void _mergeClaudeBetaHeader(Map<String, String> headers, String beta) {
-  final existingKey = headers.keys.firstWhere(
-    (key) => key.toLowerCase() == 'anthropic-beta',
-    orElse: () => 'anthropic-beta',
-  );
-  final values = <String>{
-    for (final item in (headers[existingKey] ?? '').split(','))
-      if (item.trim().isNotEmpty) item.trim(),
-  };
-  values.add(beta);
-  headers[existingKey] = values.join(',');
-}
-
 void _applyClaudeCodeRequestFormat(
   Map<String, dynamic> body,
   Map<String, String> headers, {
@@ -54,7 +41,6 @@ void _applyClaudeCodeRequestFormat(
   final seed = '${config.id}|${config.baseUrl}|$modelId|$upstreamModelId';
   final sessionId = _claudeCodeStableId('session', seed);
   headers.putIfAbsent('x-claude-code-session-id', () => sessionId);
-  _mergeClaudeBetaHeader(headers, 'context-1m-2025-08-07');
 
   final metadata = <String, dynamic>{
     'user_id': _claudeCodeStableId('user', config.id),
