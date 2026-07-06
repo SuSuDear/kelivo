@@ -945,7 +945,7 @@ class StreamController {
     }
     final dedupedExisting = dedupeToolPartsList(existing);
     final hasNewTools = dedupedExisting.length > toolCountBefore;
-    if (hasNewTools && state.fullContentRaw.isNotEmpty) {
+    if (hasNewTools) {
       final offset = state.fullContentRaw.length;
       final alreadyAnchoredAtOffset = state.contentSplitOffsets.isNotEmpty &&
           state.contentSplitOffsets.last == offset &&
