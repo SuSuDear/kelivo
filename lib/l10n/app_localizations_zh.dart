@@ -3027,14 +3027,6 @@ class AppLocalizationsZh extends AppLocalizations {
       '为请求附加 APP-Code，可享 10% 优惠，仅对 AIhubmix 生效。';
 
   @override
-  String get providerDetailPageClaudeCodeRequestFormatTitle =>
-      'Claude Code 请求格式';
-
-  @override
-  String get providerDetailPageClaudeCodeRequestFormatHelp =>
-      '为 Anthropic Messages 请求补齐 Claude Code 网关归因 header 和请求 metadata。';
-
-  @override
   String get providerDetailPageClaudePromptCachingTitle =>
       'Claude Prompt Caching';
 
@@ -8203,14 +8195,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       '为请求附加 APP-Code，可享 10% 优惠，仅对 AIhubmix 生效。';
 
   @override
-  String get providerDetailPageClaudeCodeRequestFormatTitle =>
-      'Claude Code 请求格式';
-
-  @override
-  String get providerDetailPageClaudeCodeRequestFormatHelp =>
-      '为 Anthropic Messages 请求补齐 Claude Code 网关归因 header 和请求 metadata。';
-
-  @override
   String get providerDetailPageClaudePromptCachingTitle =>
       'Claude Prompt Caching';
 
@@ -13376,14 +13360,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get providerDetailPageAihubmixAppCodeHelp =>
       '為請求附加 APP-Code，可享 10% 優惠，僅對 AIhubmix 生效。';
-
-  @override
-  String get providerDetailPageClaudeCodeRequestFormatTitle =>
-      'Claude Code 請求格式';
-
-  @override
-  String get providerDetailPageClaudeCodeRequestFormatHelp =>
-      '為 Anthropic Messages 請求補齊 Claude Code 閘道歸因 header 和請求 metadata。';
 
   @override
   String get providerDetailPageClaudePromptCachingTitle =>

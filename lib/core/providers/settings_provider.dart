@@ -4459,7 +4459,6 @@ class ProviderConfig {
   final String? chatPath; // openai only
   final bool? useResponseApi; // openai only
   final bool? useCodexRequestFormat; // openai responses only
-  final bool? useClaudeCodeRequestFormat; // claude only
   final bool? vertexAI; // google only
   final String? location; // google vertex ai only
   final String? projectId; // google vertex ai only
@@ -4536,7 +4535,6 @@ class ProviderConfig {
     this.chatPath,
     this.useResponseApi,
     this.useCodexRequestFormat,
-    this.useClaudeCodeRequestFormat,
     this.vertexAI,
     this.location,
     this.projectId,
@@ -4575,7 +4573,6 @@ class ProviderConfig {
     String? chatPath,
     bool? useResponseApi,
     bool? useCodexRequestFormat,
-    bool? useClaudeCodeRequestFormat,
     bool? vertexAI,
     String? location,
     String? projectId,
@@ -4610,8 +4607,6 @@ class ProviderConfig {
     useResponseApi: useResponseApi ?? this.useResponseApi,
     useCodexRequestFormat:
         useCodexRequestFormat ?? this.useCodexRequestFormat,
-    useClaudeCodeRequestFormat:
-        useClaudeCodeRequestFormat ?? this.useClaudeCodeRequestFormat,
     vertexAI: vertexAI ?? this.vertexAI,
     location: location ?? this.location,
     projectId: projectId ?? this.projectId,
@@ -4654,7 +4649,6 @@ class ProviderConfig {
     'chatPath': chatPath,
     'useResponseApi': useResponseApi,
     'useCodexRequestFormat': useCodexRequestFormat,
-    'useClaudeCodeRequestFormat': useClaudeCodeRequestFormat,
     'vertexAI': vertexAI,
     'location': location,
     'projectId': projectId,
@@ -4697,8 +4691,6 @@ class ProviderConfig {
     chatPath: json['chatPath'] as String?,
     useResponseApi: json['useResponseApi'] as bool?,
     useCodexRequestFormat: json['useCodexRequestFormat'] as bool?,
-    useClaudeCodeRequestFormat:
-        json['useClaudeCodeRequestFormat'] as bool?,
     vertexAI: json['vertexAI'] as bool?,
     location: json['location'] as String?,
     projectId: json['projectId'] as String?,

@@ -1009,8 +1009,6 @@
   "providerDetailPageCodexRequestFormatTitle": "Codex 請求格式",
   "providerDetailPageAihubmixAppCodeLabel": "應用 Code（享 10% 優惠）",
   "providerDetailPageAihubmixAppCodeHelp": "為請求附加 APP-Code，可享 10% 優惠，僅對 AIhubmix 生效。",
-  "providerDetailPageClaudeCodeRequestFormatTitle": "Claude Code 請求格式",
-  "providerDetailPageClaudeCodeRequestFormatHelp": "為 Anthropic Messages 請求補齊 Claude Code 閘道歸因 header 和請求 metadata。",
   "providerDetailPageClaudePromptCachingTitle": "Claude Prompt Caching",
   "providerDetailPageClaudePromptCachingHelp": "透過 Claude 官方或 OpenRouter 呼叫 Claude 時附加 cache_control。",
   "providerDetailPageClaudePromptCachingTtlTitle": "快取 TTL",

@@ -3147,14 +3147,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Adds header APP-Code requests to get a 10% discount. Only affects AIhubmix.';
 
   @override
-  String get providerDetailPageClaudeCodeRequestFormatTitle =>
-      'Claude Code request format';
-
-  @override
-  String get providerDetailPageClaudeCodeRequestFormatHelp =>
-      'Adds Claude Code gateway attribution headers and request metadata for Anthropic Messages requests.';
-
-  @override
   String get providerDetailPageClaudePromptCachingTitle =>
       'Claude Prompt Caching';
 
