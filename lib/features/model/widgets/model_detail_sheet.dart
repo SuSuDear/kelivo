@@ -116,6 +116,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
   bool _googleYoutubeTool = false;
   bool _openaiCodeInterpreterTool = false;
   bool _openaiImageGenerationTool = false;
+  bool _openaiCodexRequestFormat = false;
 
   @override
   void initState() {
@@ -228,6 +229,14 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
       _openaiImageGenerationTool = builtInSet.contains(
         BuiltInToolNames.imageGeneration,
       );
+      final rawCodexRequestFormat = ov['useCodexRequestFormat'] ??
+          ov['codexRequestFormat'] ??
+          ov['responsesCompatibility'];
+      _openaiCodexRequestFormat = rawCodexRequestFormat is bool
+          ? rawCodexRequestFormat
+          : rawCodexRequestFormat?.toString().trim().toLowerCase() == 'codex' ||
+                rawCodexRequestFormat?.toString().trim().toLowerCase() == 'true' ||
+                rawCodexRequestFormat?.toString().trim() == '1';
 
       final rawTools = ov['tools'];
       final tools = rawTools is Map ? rawTools : const <dynamic, dynamic>{};
@@ -625,6 +634,15 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
                 onTap: () {},
               ),
             ),
+            if (_providerKind == ProviderKind.openai) ...[
+              const SizedBox(height: 12),
+              _ToolTile(
+                title: 'Codex 请求格式',
+                desc: 'Responses API 请求按 Codex 客户端格式补齐 include、metadata 和 headers。',
+                value: _openaiCodexRequestFormat,
+                onChanged: (v) => setState(() => _openaiCodexRequestFormat = v),
+              ),
+            ],
           ],
         ),
       ),
@@ -911,6 +929,8 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
       'headers': headers,
       'body': bodies,
       if (!isEmbedding && builtInTools.isNotEmpty) 'builtInTools': builtInTools,
+      if (_providerKind == ProviderKind.openai && _openaiCodexRequestFormat)
+        'useCodexRequestFormat': true,
     };
 
     // Apply updates to provider config

@@ -116,6 +116,91 @@ void _applyCompatibleResponsesReasoning(
   body['enable_thinking'] = forceThinkingForQwen3Max || !_isOff(thinkingBudget);
 }
 
+bool _useCodexResponsesRequestFormat(ProviderConfig config, String modelId) {
+  final ov = config.modelOverrides[modelId];
+  if (ov is! Map) return false;
+  final raw = ov['useCodexRequestFormat'] ??
+      ov['codexRequestFormat'] ??
+      ov['responsesCompatibility'];
+  if (raw is bool) return raw;
+  final value = raw?.toString().trim().toLowerCase();
+  return value == 'codex' || value == 'true' || value == '1';
+}
+
+String _codexStableId(String prefix, String seed) {
+  var hash = 0x811c9dc5;
+  for (final unit in seed.codeUnits) {
+    hash ^= unit;
+    hash = (hash * 0x01000193) & 0xffffffff;
+  }
+  return '$prefix-${hash.toRadixString(16).padLeft(8, '0')}';
+}
+
+void _mergeResponsesInclude(
+  Map<String, dynamic> body,
+  Iterable<String> values,
+) {
+  final merged = <String>[];
+  void addValue(dynamic value) {
+    final text = value?.toString() ?? '';
+    if (text.isNotEmpty && !merged.contains(text)) merged.add(text);
+  }
+
+  final existing = body['include'];
+  if (existing is List) {
+    for (final value in existing) {
+      addValue(value);
+    }
+  } else if (existing != null) {
+    addValue(existing);
+  }
+  for (final value in values) {
+    addValue(value);
+  }
+  if (merged.isNotEmpty) body['include'] = merged;
+}
+
+void _applyCodexResponsesRequestFormat(
+  Map<String, dynamic> body,
+  Map<String, String> headers, {
+  required ProviderConfig config,
+  required String modelId,
+  required String upstreamModelId,
+  required bool isReasoning,
+}) {
+  if (config.useResponseApi != true) return;
+  if (!_useCodexResponsesRequestFormat(config, modelId)) return;
+
+  if (isReasoning && body['reasoning'] is Map) {
+    _mergeResponsesInclude(body, const ['reasoning.encrypted_content']);
+  }
+
+  final seed = '${config.id}|${config.baseUrl}|$modelId|$upstreamModelId';
+  final sessionId = _codexStableId('session', seed);
+  final threadId = _codexStableId('thread', seed);
+  final installationId = _codexStableId('installation', config.id);
+  final windowId = _codexStableId('window', seed);
+
+  body['prompt_cache_key'] ??= threadId;
+  final clientMetadata = <String, String>{
+    'x-codex-installation-id': installationId,
+    'session_id': sessionId,
+    'thread_id': threadId,
+    'x-codex-window-id': windowId,
+  };
+  final existingMetadata = body['client_metadata'];
+  if (existingMetadata is Map) {
+    existingMetadata.forEach((key, value) {
+      if (value != null) clientMetadata[key.toString()] = value.toString();
+    });
+  }
+  body['client_metadata'] = clientMetadata;
+
+  headers.putIfAbsent('originator', () => 'codex_cli_rs');
+  headers.putIfAbsent('x-codex-installation-id', () => installationId);
+  headers.putIfAbsent('x-codex-window-id', () => windowId);
+}
+
 bool _isKimiK25Model(String upstreamModelId) {
   return upstreamModelId.toLowerCase().contains('kimi-k2.5');
 }
@@ -1264,7 +1349,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
         final ov = config.modelOverrides[modelId];
         final ws = (ov is Map ? ov['webSearch'] : null);
         if (ws is Map && ws['include_sources'] == true) {
-          body['include'] = ['web_search_call.action.sources'];
+          _mergeResponsesInclude(body, const ['web_search_call.action.sources']);
         }
       } catch (_) {}
     }
@@ -1291,11 +1376,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
       responsesInstructions = (body['instructions'] ?? '').toString();
     } catch (_) {
       responsesInstructions = '';
-    }
-    try {
-      responsesIncludeParam = body['include'] as List?;
-    } catch (_) {
-      responsesIncludeParam = null;
     }
   } else {
     if (useLongCatOmniPayload) {
@@ -1366,7 +1446,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
   if (extraHeaders != null && extraHeaders.isNotEmpty) {
     headers.addAll(extraHeaders);
   }
-  request.headers.addAll(headers);
   _maybeAddStreamingUsageOptions(
     body,
     stream: stream,
@@ -1407,6 +1486,22 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
     isReasoning: isReasoning,
     thinkingBudget: thinkingBudget,
   );
+  _applyCodexResponsesRequestFormat(
+    body,
+    headers,
+    config: config,
+    modelId: modelId,
+    upstreamModelId: upstreamModelId,
+    isReasoning: isReasoning,
+  );
+  if (config.useResponseApi == true) {
+    try {
+      responsesIncludeParam = body['include'] as List?;
+    } catch (_) {
+      responsesIncludeParam = null;
+    }
+  }
+  request.headers.addAll(headers);
   request.body = jsonEncode(body);
 
   final response = await client.send(request);
@@ -2693,6 +2788,14 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 if (extraHeaders != null && extraHeaders.isNotEmpty) {
                   headers2.addAll(extraHeaders);
                 }
+                _applyCodexResponsesRequestFormat(
+                  body2,
+                  headers2,
+                  config: config,
+                  modelId: modelId,
+                  upstreamModelId: upstreamModelId,
+                  isReasoning: isReasoning,
+                );
                 req2.headers.addAll(headers2);
                 req2.body = jsonEncode(body2);
                 final resp2 = await client.send(req2);
