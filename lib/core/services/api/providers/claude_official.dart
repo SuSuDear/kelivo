@@ -20,6 +20,40 @@ TokenUsage _claudeUsageFromMap(Map<String, dynamic> usage) {
   );
 }
 
+String _claudeCodeStableId(String prefix, String seed) {
+  var hash = 0x811c9dc5;
+  for (final unit in seed.codeUnits) {
+    hash ^= unit;
+    hash = (hash * 0x01000193) & 0xffffffff;
+  }
+  return '$prefix-${hash.toRadixString(16).padLeft(8, '0')}';
+}
+
+void _applyClaudeCodeRequestFormat(
+  Map<String, dynamic> body,
+  Map<String, String> headers, {
+  required ProviderConfig config,
+  required String modelId,
+  required String upstreamModelId,
+}) {
+  if (config.useClaudeCodeRequestFormat != true) return;
+
+  final seed = '${config.id}|${config.baseUrl}|$modelId|$upstreamModelId';
+  final sessionId = _claudeCodeStableId('session', seed);
+  headers.putIfAbsent('x-claude-code-session-id', () => sessionId);
+
+  final metadata = <String, dynamic>{
+    'user_id': _claudeCodeStableId('user', config.id),
+  };
+  final existingMetadata = body['metadata'];
+  if (existingMetadata is Map) {
+    existingMetadata.forEach((key, value) {
+      metadata[key.toString()] = value;
+    });
+  }
+  body['metadata'] = metadata;
+}
+
 Stream<ChatStreamChunk> _sendClaudeStream(
   http.Client client,
   ProviderConfig config,
@@ -383,6 +417,14 @@ Stream<ChatStreamChunk> _sendClaudeStream(
         body[k] = (v is String) ? _parseOverrideValue(v) : v;
       });
     }
+
+    _applyClaudeCodeRequestFormat(
+      body,
+      baseHeaders,
+      config: config,
+      modelId: modelId,
+      upstreamModelId: upstreamModelId,
+    );
 
     final request = http.Request('POST', url);
     request.headers.addAll(baseHeaders);

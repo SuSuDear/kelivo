@@ -78,6 +78,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
   String? _currentDetectingModel;
   final Set<String> _pendingModels = {};
   bool _aihubmixAppCodeEnabled = false;
+  bool _claudeCodeRequestFormat = false;
   bool _claudePromptCachingEnabled = false;
   String _claudePromptCachingTtl = ProviderConfig.claudePromptCachingTtl5m;
 
@@ -106,6 +107,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     _saJsonCtrl.text = _cfg.serviceAccountJson ?? '';
     _multiKeyEnabled = _cfg.multiKeyEnabled ?? false;
     _aihubmixAppCodeEnabled = _cfg.aihubmixAppCodeEnabled ?? false;
+    _claudeCodeRequestFormat = _cfg.useClaudeCodeRequestFormat ?? false;
     _claudePromptCachingEnabled = _cfg.claudePromptCachingEnabled ?? false;
     _claudePromptCachingTtl = ProviderConfig.resolveClaudePromptCachingTtl(
       _cfg.claudePromptCachingTtl,
@@ -1050,6 +1052,19 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                   value: _vertexAI,
                   onChanged: (v) {
                     setState(() => _vertexAI = v);
+                    _save();
+                  },
+                ),
+              ),
+            if (_kind == ProviderKind.claude)
+              _iosRowWithHelp(
+                context,
+                label: l10n.providerDetailPageClaudeCodeRequestFormatTitle,
+                helpText: l10n.providerDetailPageClaudeCodeRequestFormatHelp,
+                trailing: IosSwitch(
+                  value: _claudeCodeRequestFormat,
+                  onChanged: (v) {
+                    setState(() => _claudeCodeRequestFormat = v);
                     _save();
                   },
                 ),
@@ -2093,6 +2108,9 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       useCodexRequestFormat: _kind == ProviderKind.openai
           ? _useCodexRequestFormat
           : old.useCodexRequestFormat,
+      useClaudeCodeRequestFormat: _kind == ProviderKind.claude
+          ? _claudeCodeRequestFormat
+          : old.useClaudeCodeRequestFormat,
       vertexAI: _kind == ProviderKind.google ? _vertexAI : old.vertexAI,
       location: _kind == ProviderKind.google
           ? _locationCtrl.text.trim()

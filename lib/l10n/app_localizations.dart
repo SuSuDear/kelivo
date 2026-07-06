@@ -5870,6 +5870,18 @@ abstract class AppLocalizations {
   /// **'Adds header APP-Code requests to get a 10% discount. Only affects AIhubmix.'**
   String get providerDetailPageAihubmixAppCodeHelp;
 
+  /// No description provided for @providerDetailPageClaudeCodeRequestFormatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Claude Code request format'**
+  String get providerDetailPageClaudeCodeRequestFormatTitle;
+
+  /// No description provided for @providerDetailPageClaudeCodeRequestFormatHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds Claude Code gateway attribution headers and request metadata for Anthropic Messages requests.'**
+  String get providerDetailPageClaudeCodeRequestFormatHelp;
+
   /// No description provided for @providerDetailPageClaudePromptCachingTitle.
   ///
   /// In en, this message translates to:

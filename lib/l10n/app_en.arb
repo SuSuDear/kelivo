@@ -1336,6 +1336,8 @@
   "providerDetailPageCodexRequestFormatTitle": "Codex request format",
   "providerDetailPageAihubmixAppCodeLabel": "APP-Code (10% off)",
   "providerDetailPageAihubmixAppCodeHelp": "Adds header APP-Code requests to get a 10% discount. Only affects AIhubmix.",
+  "providerDetailPageClaudeCodeRequestFormatTitle": "Claude Code request format",
+  "providerDetailPageClaudeCodeRequestFormatHelp": "Adds Claude Code gateway attribution headers and request metadata for Anthropic Messages requests.",
   "providerDetailPageClaudePromptCachingTitle": "Claude Prompt Caching",
   "providerDetailPageClaudePromptCachingHelp": "Adds cache_control to Claude requests through Anthropic or OpenRouter.",
   "providerDetailPageClaudePromptCachingTtlTitle": "Cache TTL",
