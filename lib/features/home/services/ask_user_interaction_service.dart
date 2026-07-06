@@ -116,11 +116,15 @@ class AskUserRequest {
   AskUserRequest({
     required this.toolCallId,
     required this.questions,
+    this.conversationId,
+    this.messageId,
     required this._completer,
   });
 
   final String toolCallId;
   final List<AskUserQuestion> questions;
+  final String? conversationId;
+  final String? messageId;
   final Completer<AskUserResult> _completer;
 }
 
@@ -134,6 +138,8 @@ class AskUserInteractionService extends ChangeNotifier {
   Future<AskUserResult> requestAnswer({
     required String toolCallId,
     required Map<String, dynamic> arguments,
+    String? conversationId,
+    String? messageId,
   }) {
     final questions = normalizeQuestions(arguments);
     if (questions.isEmpty) {
@@ -149,6 +155,8 @@ class AskUserInteractionService extends ChangeNotifier {
     _pending[key] = AskUserRequest(
       toolCallId: key,
       questions: questions,
+      conversationId: conversationId,
+      messageId: messageId,
       completer: completer,
     );
     notifyListeners();
@@ -161,6 +169,25 @@ class AskUserInteractionService extends ChangeNotifier {
       request._completer.complete(AskUserResult.answer(answers));
     }
     notifyListeners();
+  }
+
+  void cancelForConversation(String conversationId) {
+    final ids = _pending.entries
+        .where((entry) => entry.value.conversationId == conversationId)
+        .map((entry) => entry.key)
+        .toList();
+    for (final id in ids) {
+      final request = _pending.remove(id);
+      if (request != null && !request._completer.isCompleted) {
+        request._completer.complete(
+          const AskUserResult.error(
+            error: 'cancelled',
+            message: 'Ask user request was cancelled.',
+          ),
+        );
+      }
+    }
+    if (ids.isNotEmpty) notifyListeners();
   }
 
   void cancelAll() {

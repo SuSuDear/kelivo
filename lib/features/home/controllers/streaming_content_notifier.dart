@@ -209,6 +209,16 @@ class StreamingContentNotifier {
     notifier?.dispose();
   }
 
+  /// Clear all notifiers except the given message IDs.
+  void clearExcept(Set<String> keepMessageIds) {
+    final ids = _notifiers.keys.toList();
+    for (final id in ids) {
+      if (keepMessageIds.contains(id)) continue;
+      final notifier = _notifiers.remove(id);
+      notifier?.dispose();
+    }
+  }
+
   /// Clear all notifiers (e.g., when switching conversations).
   void clear() {
     for (final notifier in _notifiers.values) {

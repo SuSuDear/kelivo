@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
+import '../../../core/models/assistant.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/conversation.dart';
@@ -213,6 +214,17 @@ class ChatActions {
   List<ChatMessage> get _messages => chatController.messages;
   Map<String, int> get _versionSelections => chatController.versionSelections;
   Conversation? get _currentConversation => chatController.currentConversation;
+
+  Assistant? _assistantForConversation(Conversation conversation) {
+    final assistantProvider = contextProvider.read<AssistantProvider>();
+    final assistantId = (conversation.assistantId ?? '').trim();
+    if (assistantId.isNotEmpty) {
+      final assistant = assistantProvider.getById(assistantId);
+      if (assistant != null) return assistant;
+    }
+    return assistantProvider.currentAssistant;
+  }
+
   Set<String> get _loadingConversationIds =>
       chatController.loadingConversationIds;
   Map<String, StreamSubscription<dynamic>> get _conversationStreams =>
@@ -451,9 +463,7 @@ class ChatActions {
     }
 
     final settings = contextProvider.read<SettingsProvider>();
-    final assistant = contextProvider
-        .read<AssistantProvider>()
-        .currentAssistant;
+    final assistant = _assistantForConversation(conversation);
     final assistantId = assistant?.id;
     // Capture approval service reference before async gap
     ToolApprovalService? approvalService;
@@ -559,6 +569,7 @@ class ChatActions {
             assistantId: assistantId,
             providerKey: providerKey,
             modelId: modelId,
+            generationMessageId: assistantMessage.id,
             approvalService: approvalService,
             askUserService: askUserService,
           );
@@ -615,9 +626,7 @@ class ChatActions {
   }) async {
     // Avoid using BuildContext across async gaps (this class holds a BuildContext).
     final settings = contextProvider.read<SettingsProvider>();
-    final assistant = contextProvider
-        .read<AssistantProvider>()
-        .currentAssistant;
+    final assistant = _assistantForConversation(conversation);
     // Capture approval service reference before async gap
     ToolApprovalService? regenApprovalService;
     AskUserInteractionService? regenAskUserService;
@@ -754,6 +763,7 @@ class ChatActions {
           assistantId: assistantId,
           providerKey: providerKey,
           modelId: modelId,
+          generationMessageId: assistantMessage.id,
           approvalService: regenApprovalService,
           askUserService: regenAskUserService,
         );
@@ -792,9 +802,7 @@ class ChatActions {
     bool allowImagesApiRouting = true,
   }) async {
     final settings = contextProvider.read<SettingsProvider>();
-    final assistant = contextProvider
-        .read<AssistantProvider>()
-        .currentAssistant;
+    final assistant = _assistantForConversation(conversation);
     ToolApprovalService? approvalService;
     AskUserInteractionService? askUserService;
     try {
@@ -861,6 +869,7 @@ class ChatActions {
             assistantId: assistant?.id,
             providerKey: providerKey,
             modelId: modelId,
+            generationMessageId: streamingMessage.id,
             approvalService: approvalService,
             askUserService: askUserService,
           );
@@ -917,12 +926,12 @@ class ChatActions {
 
     // Cancel any pending tool approval requests to prevent deadlock
     try {
-      contextProvider.read<ToolApprovalService>().cancelAll();
+      contextProvider.read<ToolApprovalService>().cancelForConversation(cid);
     } catch (_) {
       // ToolApprovalService may not be registered yet
     }
     try {
-      contextProvider.read<AskUserInteractionService>().cancelAll();
+      contextProvider.read<AskUserInteractionService>().cancelForConversation(cid);
     } catch (_) {
       // AskUserInteractionService may not be registered yet
     }
@@ -949,7 +958,7 @@ class ChatActions {
     ChatMessage? streaming;
     for (var i = _messages.length - 1; i >= 0; i--) {
       final m = _messages[i];
-      if (m.role == 'assistant' && m.isStreaming) {
+      if (m.conversationId == cid && m.role == 'assistant' && m.isStreaming) {
         streaming = m;
         break;
       }

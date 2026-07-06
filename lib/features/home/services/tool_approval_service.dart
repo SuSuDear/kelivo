@@ -19,12 +19,16 @@ class ToolApprovalRequest {
   final String toolCallId;
   final String toolName;
   final Map<String, dynamic> arguments;
+  final String? conversationId;
+  final String? messageId;
   final Completer<ToolApprovalResult> _completer;
 
   ToolApprovalRequest({
     required this.toolCallId,
     required this.toolName,
     required this.arguments,
+    this.conversationId,
+    this.messageId,
     required this._completer,
   });
 }
@@ -57,12 +61,16 @@ class ToolApprovalService extends ChangeNotifier {
     required String toolCallId,
     required String toolName,
     required Map<String, dynamic> arguments,
+    String? conversationId,
+    String? messageId,
   }) {
     final completer = Completer<ToolApprovalResult>();
     _pending[toolCallId] = ToolApprovalRequest(
       toolCallId: toolCallId,
       toolName: toolName,
       arguments: arguments,
+      conversationId: conversationId,
+      messageId: messageId,
       completer: completer,
     );
     notifyListeners();
@@ -87,7 +95,22 @@ class ToolApprovalService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Cancel all pending approvals (e.g., when streaming is cancelled).
+  /// Cancel pending approvals for a conversation.
+  void cancelForConversation(String conversationId) {
+    final ids = _pending.entries
+        .where((entry) => entry.value.conversationId == conversationId)
+        .map((entry) => entry.key)
+        .toList();
+    for (final id in ids) {
+      final req = _pending.remove(id);
+      if (req != null && !req._completer.isCompleted) {
+        req._completer.complete(ToolApprovalResult.denied('cancelled'));
+      }
+    }
+    if (ids.isNotEmpty) notifyListeners();
+  }
+
+  /// Cancel all pending approvals (e.g., when shutting down all streams).
   void cancelAll() {
     for (final req in _pending.values) {
       if (!req._completer.isCompleted) {

@@ -1103,7 +1103,12 @@ class HomePageController extends ChangeNotifier {
   ) async {
     final conversation = currentConversation;
     if (conversation == null) return null;
-    final assistant = _context.read<AssistantProvider>().currentAssistant;
+    final assistantProvider = _context.read<AssistantProvider>();
+    final assistantId = (conversation.assistantId ?? '').trim();
+    final assistant = assistantId.isNotEmpty
+        ? assistantProvider.getById(assistantId) ??
+              assistantProvider.currentAssistant
+        : assistantProvider.currentAssistant;
     final content = MessageGenerationService.buildPersistedUserMessageContent(
       input,
       assistant: assistant,

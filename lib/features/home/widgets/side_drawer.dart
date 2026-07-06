@@ -303,7 +303,14 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
               if (!confirmed) return;
               final deletingCurrent =
                   chatService.currentConversationId == chat.id;
-              final nextId = _nextRecentConversation(chatService, chat.id);
+              final deletingAssistantId = chatService
+                  .getConversation(chat.id)
+                  ?.assistantId;
+              final nextId = _nextRecentConversation(
+                chatService,
+                chat.id,
+                assistantId: deletingAssistantId,
+              );
               await chatService.deleteConversation(chat.id);
               if (!context.mounted) return;
               showAppSnackBar(
@@ -499,9 +506,13 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         if (!confirmed) return;
                         final deletingCurrent =
                             chatService.currentConversationId == chat.id;
+                        final deletingAssistantId = chatService
+                            .getConversation(chat.id)
+                            ?.assistantId;
                         final nextId = _nextRecentConversation(
                           chatService,
                           chat.id,
+                          assistantId: deletingAssistantId,
                         );
                         await chatService.deleteConversation(chat.id);
                         if (!context.mounted) return;
@@ -560,15 +571,16 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     return confirmed == true;
   }
 
-  String? _nextRecentConversation(ChatService chatService, String excludeId) {
+  String? _nextRecentConversation(
+    ChatService chatService,
+    String excludeId, {
+    String? assistantId,
+  }) {
     try {
-      final ap = context.read<AssistantProvider>();
-      final currentAid = ap.currentAssistantId;
-      if (currentAid == null) return null;
       final candidates =
           chatService
               .getAllConversations()
-              .where((c) => c.assistantId == currentAid && c.id != excludeId)
+              .where((c) => c.assistantId == assistantId && c.id != excludeId)
               .toList()
             ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
       if (candidates.isEmpty) return null;

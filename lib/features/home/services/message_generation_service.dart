@@ -119,6 +119,7 @@ class MessageGenerationService {
     required String? assistantId,
     required String providerKey,
     required String modelId,
+    required String generationMessageId,
     ToolApprovalService? approvalService,
     AskUserInteractionService? askUserService,
   }) async {
@@ -206,6 +207,8 @@ class MessageGenerationService {
             assistant,
             approvalService: approvalService,
             askUserService: askUserService,
+            conversationId: currentConversation?.id,
+            messageId: generationMessageId,
           )
         : null;
 

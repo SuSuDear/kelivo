@@ -340,6 +340,8 @@ class ToolHandlerService {
     Assistant? assistant, {
     ToolApprovalService? approvalService,
     AskUserInteractionService? askUserService,
+    String? conversationId,
+    String? messageId,
   }) {
     final mcp = contextProvider.read<McpProvider>();
     final toolSvc = contextProvider.read<McpToolService>();
@@ -383,11 +385,16 @@ class ToolHandlerService {
             );
           }
           try {
+            final baseToolCallId = (toolCallId?.trim().isNotEmpty == true)
+                ? toolCallId!.trim()
+                : '${name}_${DateTime.now().microsecondsSinceEpoch}';
             final result = await askUserService.requestAnswer(
-              toolCallId: (toolCallId?.trim().isNotEmpty == true)
-                  ? toolCallId!.trim()
-                  : '${name}_${DateTime.now().microsecondsSinceEpoch}',
+              toolCallId: messageId == null
+                  ? baseToolCallId
+                  : '${messageId}_$baseToolCallId',
               arguments: args,
+              conversationId: conversationId,
+              messageId: messageId,
             );
             return result.toJsonString();
           } on AskUserInvalidRequestException catch (e) {
@@ -401,12 +408,16 @@ class ToolHandlerService {
 
         // Approval gate for MCP tools
         if (approvalService != null && mcp.toolNeedsApproval(name)) {
-          // Generate a unique id for this tool call approval request
-          final toolCallId = '${name}_${DateTime.now().microsecondsSinceEpoch}';
+          // Generate a unique id for this tool call approval request.
+          final approvalToolCallId = messageId == null
+              ? '${name}_${DateTime.now().microsecondsSinceEpoch}'
+              : '${messageId}_${name}_${DateTime.now().microsecondsSinceEpoch}';
           final result = await approvalService.requestApproval(
-            toolCallId: toolCallId,
+            toolCallId: approvalToolCallId,
             toolName: name,
             arguments: args,
+            conversationId: conversationId,
+            messageId: messageId,
           );
           if (!result.approved) {
             return _toolError(

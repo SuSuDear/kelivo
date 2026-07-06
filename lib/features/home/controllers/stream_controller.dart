@@ -229,6 +229,23 @@ class StreamController {
     _cleanupStreamTimers(messageId);
   }
 
+  /// Clear inactive state maps while preserving active streaming messages.
+  void clearInactiveState() {
+    final activeIds = Set<String>.of(_activeStreamingIds);
+    if (activeIds.isEmpty) {
+      clearAllState();
+      return;
+    }
+
+    _reasoning.removeWhere((id, _) => !activeIds.contains(id));
+    _reasoningSegments.removeWhere((id, _) => !activeIds.contains(id));
+    _contentSplits.removeWhere((id, _) => !activeIds.contains(id));
+    _toolParts.removeWhere((id, _) => !activeIds.contains(id));
+    _geminiThoughtSigs.removeWhere((id, _) => !activeIds.contains(id));
+    _cancelTimersExcept(activeIds);
+    streamingContentNotifier.clearExcept(activeIds);
+  }
+
   /// Clear all state maps (for new conversation).
   void clearAllState() {
     _reasoning.clear();
@@ -685,6 +702,23 @@ class StreamController {
   /// Idempotent: safe to call multiple times.
   void removeStreamingNotifier(String messageId) {
     streamingContentNotifier.removeNotifier(messageId);
+  }
+
+  /// Cancel throttle timers except for active streaming messages.
+  void _cancelTimersExcept(Set<String> keepMessageIds) {
+    for (final id in _streamThrottleTimers.keys.toList()) {
+      if (keepMessageIds.contains(id)) continue;
+      _flushPendingStreamUpdate(id);
+      _streamThrottleTimers[id]?.cancel();
+      _streamThrottleTimers.remove(id);
+    }
+    _streamSmoothStates.removeWhere((id, _) => !keepMessageIds.contains(id));
+    for (final id in _inlineImageSanitizeTimers.keys.toList()) {
+      if (keepMessageIds.contains(id)) continue;
+      _inlineImageSanitizeTimers[id]?.cancel();
+      _inlineImageSanitizeTimers.remove(id);
+    }
+    _inlineImageSanitizing.removeWhere((id) => !keepMessageIds.contains(id));
   }
 
   /// Cancel all throttle timers.

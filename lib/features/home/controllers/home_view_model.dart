@@ -839,7 +839,7 @@ class HomeViewModel extends ChangeNotifier {
     );
 
     _chatController.setCurrentConversation(conversation);
-    _streamController.clearAllState();
+    _streamController.clearInactiveState();
     notifyListeners();
 
     // Inject assistant preset messages into new conversation (ordered)
@@ -886,7 +886,7 @@ class HomeViewModel extends ChangeNotifier {
     );
 
     _chatController.setCurrentConversation(conversation);
-    _streamController.clearAllState();
+    _streamController.clearInactiveState();
     notifyListeners();
     onScrollToBottom?.call();
   }
@@ -1008,7 +1008,7 @@ class HomeViewModel extends ChangeNotifier {
       _chatController.setCurrentConversation(
         _chatService.getConversation(newConvo.id) ?? newConvo,
       );
-      _streamController.clearAllState();
+      _streamController.clearInactiveState();
       notifyListeners();
       onConversationSwitched?.call();
       onScrollToBottom?.call();
