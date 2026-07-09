@@ -819,6 +819,28 @@ Stream<String> _ensureTrailingNewline(Stream<String> source) async* {
   yield '\n';
 }
 
+String _extractResponsesOutputItemText(dynamic item) {
+  if (item is! Map) return '';
+  final type = (item['type'] ?? '').toString();
+  if (type == 'output_text') {
+    return (item['text'] ?? item['content'] ?? '').toString();
+  }
+  if (type != 'message') return '';
+  final content = item['content'];
+  if (content is String) return content;
+  if (content is! List) return '';
+  final buffer = StringBuffer();
+  for (final part in content) {
+    if (part is! Map) continue;
+    final partType = (part['type'] ?? '').toString();
+    if (partType == 'output_text' || partType == 'text') {
+      final text = (part['text'] ?? part['content'] ?? '').toString();
+      if (text.isNotEmpty) buffer.write(text);
+    }
+  }
+  return buffer.toString();
+}
+
 class _OpenAIProviderInfo {
   final String host;
   final String providerId;
@@ -1816,6 +1838,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
       const <Map<String, dynamic>>[];
   String? lastResponsesResponseId;
   bool sawResponsesCompleted = false;
+  bool sawResponsesTextDelta = false;
   String? finishReason;
 
   await for (final chunk in _ensureTrailingNewline(sse)) {
@@ -2344,10 +2367,12 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           if (type == 'response.output_text.delta') {
             final delta = json['delta'];
             if (delta is String) {
+              sawResponsesTextDelta = true;
               content = delta;
               approxCompletionChars += content.length;
             }
-          } else if (type == 'response.reasoning_summary_text.delta') {
+          } else if (type == 'response.reasoning_summary_text.delta' ||
+              type == 'response.reasoning_text.delta') {
             final delta = json['delta'];
             if (delta is String) reasoning = delta;
           } else if (type == 'response.output_item.added') {
@@ -2415,6 +2440,13 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             try {
               final item = json['item'];
               final idx = (json['output_index'] ?? 0) as int;
+              if (!sawResponsesTextDelta) {
+                final itemText = _extractResponsesOutputItemText(item);
+                if (itemText.isNotEmpty) {
+                  content += itemText;
+                  approxCompletionChars += itemText.length;
+                }
+              }
               if (item is Map && (item['type'] ?? '') == 'function_call') {
                 final args = (item['arguments'] ?? '').toString();
                 final entry = respToolCallsByIndex.putIfAbsent(
@@ -2463,6 +2495,15 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             sawResponsesCompleted = true;
             final responseId = (json['response']?['id'] ?? '').toString();
             if (responseId.isNotEmpty) lastResponsesResponseId = responseId;
+            if (!sawResponsesTextDelta && assistantContentBuffer.isEmpty) {
+              final completedText = ChatApiService._extractResponsesText(
+                json['response'],
+              );
+              if (completedText.isNotEmpty) {
+                content += completedText;
+                approxCompletionChars += completedText.length;
+              }
+            }
             final u = json['response']?['usage'];
             if (u != null) {
               final inTok = (u['input_tokens'] ?? 0) as int;
@@ -2793,6 +2834,8 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                     <int, Map<String, String>>{};
                 List<Map<String, dynamic>> outItems2 =
                     const <Map<String, dynamic>>[];
+                var sawTextDelta2 = false;
+                var contentAccum2 = '';
                 await for (final ch in _ensureTrailingNewline(s2)) {
                   buf2 += ch;
                   final lines2 = buf2.split('\n');
@@ -2808,9 +2851,26 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                           (o['type'] ?? '') == 'response.output_text.delta') {
                         final delta = (o['delta'] ?? '').toString();
                         if (delta.isNotEmpty) {
+                          sawTextDelta2 = true;
+                          contentAccum2 += delta;
                           approxCompletionChars += delta.length;
                           yield ChatStreamChunk(
                             content: delta,
+                            isDone: false,
+                            totalTokens: 0,
+                            usage: usage,
+                          );
+                        }
+                      } else if (o is Map &&
+                          ((o['type'] ?? '') ==
+                                  'response.reasoning_summary_text.delta' ||
+                              (o['type'] ?? '') ==
+                                  'response.reasoning_text.delta')) {
+                        final delta = (o['delta'] ?? '').toString();
+                        if (delta.isNotEmpty) {
+                          yield ChatStreamChunk(
+                            content: '',
+                            reasoning: delta,
                             isDone: false,
                             totalTokens: 0,
                             usage: usage,
@@ -2844,6 +2904,19 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                           (o['type'] ?? '') == 'response.output_item.done') {
                         final item = o['item'];
                         final idx2 = (o['output_index'] ?? 0) as int;
+                        if (!sawTextDelta2) {
+                          final itemText = _extractResponsesOutputItemText(item);
+                          if (itemText.isNotEmpty) {
+                            contentAccum2 += itemText;
+                            approxCompletionChars += itemText.length;
+                            yield ChatStreamChunk(
+                              content: itemText,
+                              isDone: false,
+                              totalTokens: 0,
+                              usage: usage,
+                            );
+                          }
+                        }
                         if (item is Map &&
                             (item['type'] ?? '') == 'function_call') {
                           final args = (item['arguments'] ?? '').toString();
@@ -2862,6 +2935,21 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                         final responseId2 = (o['response']?['id'] ?? '').toString();
                         if (responseId2.isNotEmpty) {
                           lastResponsesResponseId = responseId2;
+                        }
+                        if (!sawTextDelta2 && contentAccum2.isEmpty) {
+                          final completedText = ChatApiService._extractResponsesText(
+                            o['response'],
+                          );
+                          if (completedText.isNotEmpty) {
+                            contentAccum2 += completedText;
+                            approxCompletionChars += completedText.length;
+                            yield ChatStreamChunk(
+                              content: completedText,
+                              isDone: false,
+                              totalTokens: 0,
+                              usage: usage,
+                            );
+                          }
                         }
                         // usage
                         final u2 = o['response']?['usage'];
