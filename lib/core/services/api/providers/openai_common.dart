@@ -2859,12 +2859,38 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   body2,
                   isReasoning: isReasoning,
                 );
-                req2.headers.addAll(headers2);
-                req2.body = jsonEncode(body2);
-                final resp2 = await client.send(req2);
-                if (resp2.statusCode < 200 || resp2.statusCode >= 300) {
-                  final errorBody = await resp2.stream.bytesToString();
-                  throw HttpException('HTTP ${resp2.statusCode}: $errorBody');
+                Future<http.StreamedResponse> sendResponsesFollowUp(
+                  Map<String, dynamic> requestBody,
+                ) async {
+                  final req = http.Request('POST', url);
+                  req.headers.addAll(headers2);
+                  req.body = jsonEncode(requestBody);
+                  final resp = await client.send(req);
+                  if (resp.statusCode < 200 || resp.statusCode >= 300) {
+                    final errorBody = await resp.stream.bytesToString();
+                    throw HttpException('HTTP ${resp.statusCode}: $errorBody');
+                  }
+                  return resp;
+                }
+
+                http.StreamedResponse resp2;
+                try {
+                  resp2 = await sendResponsesFollowUp(body2);
+                  ChatFlowDiagnostics.log(
+                    'RESP_FOLLOWUP_STATUS status=${resp2.statusCode} previous=$usePreviousResponseId',
+                  );
+                } catch (e) {
+                  if (!usePreviousResponseId) rethrow;
+                  ChatFlowDiagnostics.log(
+                    'RESP_FOLLOWUP_PREVIOUS_FAILED fallbackReplay=true error=${ChatFlowDiagnostics.escape(e.toString())}',
+                  );
+                  final fallbackBody2 = Map<String, dynamic>.from(body2)
+                    ..remove('previous_response_id')
+                    ..['input'] = currentInput;
+                  resp2 = await sendResponsesFollowUp(fallbackBody2);
+                  ChatFlowDiagnostics.log(
+                    'RESP_FOLLOWUP_STATUS status=${resp2.statusCode} previous=false fallback=true',
+                  );
                 }
                 final s2 = resp2.stream.transform(utf8.decoder);
                 String buf2 = '';
@@ -3038,7 +3064,12 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                           ];
                         }
                       }
-                    } catch (_) {}
+                    } catch (e) {
+                      ChatFlowDiagnostics.log(
+                        'RESP2_PARSE_ERROR type=${e.runtimeType} error=${ChatFlowDiagnostics.escape(e.toString())}',
+                      );
+                      if (e is! FormatException) rethrow;
+                    }
                   }
                 }
 
@@ -4461,7 +4492,13 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           }
         }
       } catch (e) {
-        // Skip malformed JSON
+        ChatFlowDiagnostics.log(
+          'SSE_PARSE_OR_FLOW_ERROR type=${e.runtimeType} error=${ChatFlowDiagnostics.escape(e.toString())}',
+        );
+        // Only skip malformed JSON chunks. Network/follow-up/control-flow errors
+        // must propagate so the UI can retry or show an error instead of
+        // silently finalizing a partial answer.
+        if (e is! FormatException) rethrow;
       }
     }
   }
