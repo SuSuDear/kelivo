@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:socks5_proxy/socks_client.dart' as socks;
 
 import 'request_logger.dart';
+import '../chat_flow_diagnostics.dart';
 
 Future<InternetAddress?> _resolveProxyAddress(String host) async {
   final parsed = InternetAddress.tryParse(host);

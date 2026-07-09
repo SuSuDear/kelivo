@@ -23,6 +23,7 @@ import '../model_override_resolver.dart';
 import '../model_override_payload_parser.dart';
 import 'provider_request_headers.dart';
 import '../../utils/multimodal_input_utils.dart';
+import '../chat_flow_diagnostics.dart';
 
 part 'chat_api_service_shims.dart';
 part 'providers/openai_common.dart';
