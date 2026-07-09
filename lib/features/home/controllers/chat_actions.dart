@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/assistant.dart';
@@ -1573,6 +1574,7 @@ class ChatActions {
     stream_ctrl.StreamingState state,
     String chunkContent,
   ) async {
+    state.receivedDoneChunk = true;
     final messageId = state.messageId;
     final conversationId = state.conversationId;
     final autoCollapseThinking =
@@ -1915,6 +1917,13 @@ class ChatActions {
     if (inFlight != null) {
       await inFlight;
     } else if (_loadingConversationIds.contains(conversationId)) {
+      if (!state.receivedDoneChunk) {
+        await _handleStreamError(
+          const HttpException('Connection closed before stream completion'),
+          state,
+        );
+        return;
+      }
       await _finishStreaming(
         state,
         generateTitle: state.ctx.generateTitleOnFinish,

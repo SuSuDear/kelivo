@@ -1506,6 +1506,7 @@ class StreamingState {
   String bufferedReasoning = '';
   DateTime? reasoningStartAt;
   bool finishHandled = false;
+  bool receivedDoneChunk = false;
   bool titleQueued = false;
   DateTime? streamStartedAt;
   bool hadThinkingBlock = false;

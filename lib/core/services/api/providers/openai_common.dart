@@ -1815,6 +1815,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
   List<Map<String, dynamic>> lastResponseOutputItems =
       const <Map<String, dynamic>>[];
   String? lastResponsesResponseId;
+  bool sawResponsesCompleted = false;
   String? finishReason;
 
   await for (final chunk in _ensureTrailingNewline(sse)) {
@@ -2459,6 +2460,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               }
             }
           } else if (type == 'response.completed') {
+            sawResponsesCompleted = true;
             final responseId = (json['response']?['id'] ?? '').toString();
             if (responseId.isNotEmpty) lastResponsesResponseId = responseId;
             final u = json['response']?['usage'];
@@ -4304,7 +4306,18 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
     }
   }
 
-  // Fallback: provider closed SSE without sending [DONE]
+  // If the upstream closes the SSE connection without an explicit terminal
+  // signal, treat it as an interrupted stream instead of silently finalizing a
+  // partial answer. This lets the UI reconnect or surface an error.
+  final hasTerminalSignal = config.useResponseApi == true
+      ? sawResponsesCompleted
+      : finishReason != null;
+  if (!hasTerminalSignal) {
+    throw const HttpException(
+      'Connection closed before stream completion',
+    );
+  }
+
   final approxTotal =
       usage?.totalTokens ??
       (approxPromptTokens + approxTokensFromChars(approxCompletionChars));
