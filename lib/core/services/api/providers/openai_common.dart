@@ -1839,6 +1839,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
   String? lastResponsesResponseId;
   bool sawResponsesCompleted = false;
   bool sawResponsesTextDelta = false;
+  String? currentSseEvent;
   String? finishReason;
 
   await for (final chunk in _ensureTrailingNewline(sse)) {
@@ -1848,10 +1849,23 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
 
     for (int i = 0; i < lines.length - 1; i++) {
       final line = lines[i].trim();
-      if (line.isEmpty || !line.startsWith('data:')) continue;
+      if (line.isEmpty) {
+        currentSseEvent = null;
+        continue;
+      }
+      if (line.startsWith('event:')) {
+        currentSseEvent = line.substring(6).trimLeft();
+        continue;
+      }
+      if (!line.startsWith('data:')) continue;
 
       final data = line.substring(5).trimLeft();
       if (data == '[DONE]') {
+        if (config.useResponseApi == true && !sawResponsesCompleted) {
+          throw const HttpException(
+            'Connection closed before Responses completion',
+          );
+        }
         // If model streamed tool_calls but didn't include finish_reason on prior chunks,
         // execute tool flow now and start follow-up request.
         if (onToolCall != null && toolAcc.isNotEmpty) {
@@ -2362,8 +2376,10 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
         String? reasoning;
 
         if (config.useResponseApi == true) {
-          // OpenAI /responses SSE types
-          final type = json['type'];
+          // OpenAI /responses SSE types. Some compatible endpoints put the
+          // event name in the SSE `event:` field and omit JSON `type`.
+          final type = json['type'] ?? currentSseEvent;
+          currentSseEvent = null;
           if (type == 'response.output_text.delta') {
             final delta = json['delta'];
             if (delta is String) {
@@ -2835,20 +2851,41 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 List<Map<String, dynamic>> outItems2 =
                     const <Map<String, dynamic>>[];
                 var sawTextDelta2 = false;
+                var sawCompleted2 = false;
                 var contentAccum2 = '';
+                String? currentSseEvent2;
                 await for (final ch in _ensureTrailingNewline(s2)) {
                   buf2 += ch;
                   final lines2 = buf2.split('\n');
                   buf2 = lines2.last;
                   for (int j = 0; j < lines2.length - 1; j++) {
                     final l = lines2[j].trim();
-                    if (l.isEmpty || !l.startsWith('data:')) continue;
+                    if (l.isEmpty) {
+                      currentSseEvent2 = null;
+                      continue;
+                    }
+                    if (l.startsWith('event:')) {
+                      currentSseEvent2 = l.substring(6).trimLeft();
+                      continue;
+                    }
+                    if (!l.startsWith('data:')) continue;
                     final d = l.substring(5).trimLeft();
-                    if (d == '[DONE]') continue;
+                    if (d == '[DONE]') {
+                      if (!sawCompleted2) {
+                        throw const HttpException(
+                          'Connection closed before Responses completion',
+                        );
+                      }
+                      continue;
+                    }
                     try {
                       final o = jsonDecode(d);
+                      final eventType = o is Map
+                          ? (o['type'] ?? currentSseEvent2).toString()
+                          : (currentSseEvent2 ?? '');
+                      currentSseEvent2 = null;
                       if (o is Map &&
-                          (o['type'] ?? '') == 'response.output_text.delta') {
+                          eventType == 'response.output_text.delta') {
                         final delta = (o['delta'] ?? '').toString();
                         if (delta.isNotEmpty) {
                           sawTextDelta2 = true;
@@ -2862,10 +2899,9 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                           );
                         }
                       } else if (o is Map &&
-                          ((o['type'] ?? '') ==
+                          (eventType ==
                                   'response.reasoning_summary_text.delta' ||
-                              (o['type'] ?? '') ==
-                                  'response.reasoning_text.delta')) {
+                              eventType == 'response.reasoning_text.delta')) {
                         final delta = (o['delta'] ?? '').toString();
                         if (delta.isNotEmpty) {
                           yield ChatStreamChunk(
@@ -2877,7 +2913,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                           );
                         }
                       } else if (o is Map &&
-                          (o['type'] ?? '') == 'response.output_item.added') {
+                          eventType == 'response.output_item.added') {
                         final item = o['item'];
                         final idx2 = (o['output_index'] ?? 0) as int;
                         if (item is Map &&
@@ -2889,7 +2925,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                           };
                         }
                       } else if (o is Map &&
-                          (o['type'] ?? '') ==
+                          eventType ==
                               'response.function_call_arguments.delta') {
                         final idx2 = (o['output_index'] ?? 0) as int;
                         final delta = (o['delta'] ?? '').toString();
@@ -2901,7 +2937,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                           entry['args'] = (entry['args'] ?? '') + delta;
                         }
                       } else if (o is Map &&
-                          (o['type'] ?? '') == 'response.output_item.done') {
+                          eventType == 'response.output_item.done') {
                         final item = o['item'];
                         final idx2 = (o['output_index'] ?? 0) as int;
                         if (!sawTextDelta2) {
@@ -2931,7 +2967,8 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                           if (args.isNotEmpty) entry['args'] = args;
                         }
                       } else if (o is Map &&
-                          (o['type'] ?? '') == 'response.completed') {
+                          eventType == 'response.completed') {
+                        sawCompleted2 = true;
                         final responseId2 = (o['response']?['id'] ?? '').toString();
                         if (responseId2.isNotEmpty) {
                           lastResponsesResponseId = responseId2;
@@ -2975,6 +3012,12 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                       }
                     } catch (_) {}
                   }
+                }
+
+                if (!sawCompleted2) {
+                  throw const HttpException(
+                    'Connection closed before Responses completion',
+                  );
                 }
 
                 if (respCalls2.isEmpty) {
