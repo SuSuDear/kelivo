@@ -868,6 +868,16 @@ class _OpenAIProviderInfo {
       (isAzureOpenAI || isMimo) ? 'max_completion_tokens' : 'max_tokens';
 }
 
+
+void _ensureResponsesReasoningEncryptedContent(
+  Map<String, dynamic> body, {
+  required bool isReasoning,
+}) {
+  if (!isReasoning) return;
+  if (body['reasoning'] is! Map) return;
+  _mergeResponsesInclude(body, const ['reasoning.encrypted_content']);
+}
+
 void _applyVendorReasoningKnobs(
   Map<String, dynamic> body, {
   required _OpenAIProviderInfo info,
@@ -1456,6 +1466,10 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
     upstreamModelId: upstreamModelId,
     isReasoning: isReasoning,
   );
+  _ensureResponsesReasoningEncryptedContent(
+    body,
+    isReasoning: isReasoning,
+  );
   if (config.useResponseApi == true) {
     try {
       responsesIncludeParam = body['include'] as List?;
@@ -1800,6 +1814,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
       <int, _ResponsesImageGenerationResult>{};
   List<Map<String, dynamic>> lastResponseOutputItems =
       const <Map<String, dynamic>>[];
+  String? lastResponsesResponseId;
   String? finishReason;
 
   await for (final chunk in _ensureTrailingNewline(sse)) {
@@ -2444,6 +2459,8 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               }
             }
           } else if (type == 'response.completed') {
+            final responseId = (json['response']?['id'] ?? '').toString();
+            if (responseId.isNotEmpty) lastResponsesResponseId = responseId;
             final u = json['response']?['usage'];
             if (u != null) {
               final inTok = (u['input_tokens'] ?? 0) as int;
@@ -2667,6 +2684,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 currentInput.addAll(responseOutputItems);
               }
               currentInput.addAll(followUpOutputs);
+              var incrementalInput = followUpOutputs;
 
               // Iteratively request until the model stops issuing tool calls,
               // consistent with how Claude, Gemini and OpenAI Chat Completions
@@ -2677,9 +2695,14 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               String? lastToolSignature;
               int consecutiveDupeCount = 0;
               while (true) {
+                final previousResponseId = lastResponsesResponseId;
+                final usePreviousResponseId =
+                    previousResponseId != null && previousResponseId.isNotEmpty;
                 final body2 = <String, dynamic>{
                   'model': upstreamModelId,
-                  'input': currentInput,
+                  if (usePreviousResponseId)
+                    'previous_response_id': previousResponseId,
+                  'input': usePreviousResponseId ? incrementalInput : currentInput,
                   'stream': true,
                   if (responsesToolsSpec.isNotEmpty)
                     'tools': responsesToolsSpec,
@@ -2749,6 +2772,10 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   config: config,
                   modelId: modelId,
                   upstreamModelId: upstreamModelId,
+                  isReasoning: isReasoning,
+                );
+                _ensureResponsesReasoningEncryptedContent(
+                  body2,
                   isReasoning: isReasoning,
                 );
                 req2.headers.addAll(headers2);
@@ -2830,6 +2857,10 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                         }
                       } else if (o is Map &&
                           (o['type'] ?? '') == 'response.completed') {
+                        final responseId2 = (o['response']?['id'] ?? '').toString();
+                        if (responseId2.isNotEmpty) {
+                          lastResponsesResponseId = responseId2;
+                        }
                         // usage
                         final u2 = o['response']?['usage'];
                         if (u2 != null) {
@@ -2961,6 +2992,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   currentInput.addAll(responseOutputItems2);
                 }
                 currentInput.addAll(followUpOutputs2);
+                incrementalInput = followUpOutputs2;
               }
 
               // Safety
