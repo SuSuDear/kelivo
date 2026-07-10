@@ -184,6 +184,7 @@ class MessageGenerationService {
       assistant,
       hasBuiltInSearch,
     );
+    await messageBuilderService.injectBuiltInSkillPrompts(apiMessages);
     await messageBuilderService.injectInstructionPrompts(
       apiMessages,
       assistantId,

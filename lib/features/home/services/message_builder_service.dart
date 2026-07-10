@@ -14,6 +14,7 @@ import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/chat/document_text_extractor.dart';
 import '../../../core/services/chat/prompt_transformer.dart';
 import '../../../core/services/instruction_injection_store.dart';
+import '../../../core/services/skills/builtin_skill_service.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import '../../../core/providers/instruction_injection_provider.dart';
 import '../../../core/services/api/builtin_tools.dart';
@@ -624,6 +625,42 @@ class MessageBuilderService {
       final prompt = SearchToolService.getSystemPrompt();
       _appendToSystemMessage(apiMessages, prompt);
     }
+  }
+
+  /// Inject Codex-style built-in skill metadata and explicitly invoked SKILL.md content.
+  Future<void> injectBuiltInSkillPrompts(
+    List<Map<String, dynamic>> apiMessages,
+  ) async {
+    try {
+      final userMessage = _lastUserMessageText(apiMessages);
+      final prompt = await BuiltInSkillService.buildPromptForUserMessage(
+        userMessage,
+      );
+      if (prompt.trim().isNotEmpty) {
+        _appendToSystemMessage(apiMessages, prompt);
+      }
+    } catch (_) {}
+  }
+
+  String _lastUserMessageText(List<Map<String, dynamic>> apiMessages) {
+    for (int i = apiMessages.length - 1; i >= 0; i--) {
+      if ((apiMessages[i]['role'] ?? '').toString() != 'user') continue;
+      return _messageContentText(apiMessages[i]['content']);
+    }
+    return '';
+  }
+
+  String _messageContentText(dynamic content) {
+    if (content == null) return '';
+    if (content is String) return content;
+    if (content is List) {
+      return content.map(_messageContentText).where((e) => e.isNotEmpty).join('\n');
+    }
+    if (content is Map) {
+      final text = content['text'] ?? content['content'];
+      if (text != null) return _messageContentText(text);
+    }
+    return content.toString();
   }
 
   /// Inject instruction injection prompts into apiMessages.

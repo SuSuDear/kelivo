@@ -134,6 +134,8 @@ flutter:
     - assets/icon_mac.png
     - assets/mermaid.min.js
     - assets/html/mark.html
+    - assets/skills/.system/skill-creator/SKILL.md
+    - assets/skills/.system/skill-installer/SKILL.md
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
