@@ -19,7 +19,6 @@ import '../../../utils/markdown_media_sanitizer.dart';
 import '../services/ask_user_interaction_service.dart';
 import '../services/message_generation_service.dart';
 import '../services/tool_approval_service.dart';
-import '../../../core/services/chat_flow_diagnostics.dart';
 import 'chat_controller.dart';
 import 'generation_controller.dart';
 import 'home_view_model.dart';
@@ -1043,14 +1042,6 @@ class ChatActions {
     _activeStreamingStates[state.messageId] = state;
 
     try {
-      ChatFlowDiagnostics.start(
-        conversationId: conversationId,
-        messageId: state.messageId,
-        providerId: ctx.config.id,
-        modelId: ctx.modelId,
-        stream: ctx.streamOutput,
-        useResponsesApi: ctx.config.useResponseApi == true,
-      );
       await _startIosBackgroundGeneration(ctx);
       final stream = ChatApiService.sendMessageStream(
         config: ctx.config,
@@ -1302,12 +1293,6 @@ class ChatActions {
     ChatStreamChunk chunk,
     stream_ctrl.StreamingState state,
   ) async {
-    ChatFlowDiagnostics.log(
-      'UI_CHUNK done=${chunk.isDone} contentLen=${chunk.content.length} '
-      'reasoningLen=${chunk.reasoning?.length ?? 0} '
-      'toolCalls=${chunk.toolCalls?.length ?? 0} '
-      'toolResults=${chunk.toolResults?.length ?? 0} total=${chunk.totalTokens}',
-    );
     final chunkContent = chunk.content.isNotEmpty
         ? streamController.captureGeminiThoughtSignature(
             chunk.content,
@@ -1464,9 +1449,6 @@ class ChatActions {
       );
     }
 
-    ChatFlowDiagnostics.trace(
-      'UI_APPLY contentLen=${chunkContent.length} reasoningLen=${chunk.reasoning?.length ?? 0} done=${chunk.isDone} fullBefore=${state.fullContentRaw.length}',
-    );
     state.fullContentRaw += chunkContent;
     state.streamStartedAt ??= DateTime.now();
     if (chunk.totalTokens > 0) {
@@ -1772,10 +1754,6 @@ class ChatActions {
 
     _setConversationLoading(conversationId, false);
     onAssistantMessageFinished?.call(finalizedMessage);
-    ChatFlowDiagnostics.log(
-      'UI_FINISH message=$messageId contentLen=${sanitizedContent.length} '
-      'tokens=${state.totalTokens}',
-    );
 
     // Use unified reasoning completion method
     await streamController.finishReasoningAndPersist(
@@ -1807,7 +1785,6 @@ class ChatActions {
     onMaybeGenerateSuggestions?.call(conversationId);
 
     await _finishIosBackgroundGeneration(success: true);
-    ChatFlowDiagnostics.end('success');
     _activeStreamingStates.remove(messageId);
   }
 
@@ -1847,7 +1824,6 @@ class ChatActions {
     final messageId = state.messageId;
     final conversationId = state.conversationId;
     final errorText = e.toString();
-    ChatFlowDiagnostics.log('UI_ERROR ${ChatFlowDiagnostics.escape(errorText)}');
 
     if (_isRecoverableStreamError(e) &&
         streamController.hasUnfinishedToolParts(messageId)) {
@@ -1917,16 +1893,11 @@ class ChatActions {
     onStreamError?.call(errorText);
     onStreamFinished?.call();
     await _finishIosBackgroundGeneration(success: false, detail: errorText);
-    ChatFlowDiagnostics.end('error ${ChatFlowDiagnostics.escape(errorText)}');
     _activeStreamingStates.remove(messageId);
   }
 
   /// Handle stream done callback.
   Future<void> _handleStreamDone(stream_ctrl.StreamingState state) async {
-    ChatFlowDiagnostics.log(
-      'UI_ON_DONE receivedDone=${state.receivedDoneChunk} '
-      'finishHandled=${state.finishHandled} loading=${_loadingConversationIds.contains(state.conversationId)}',
-    );
     // Reset file processing state on done (just in case)
     onFileProcessingFinished?.call();
 

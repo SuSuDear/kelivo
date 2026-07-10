@@ -1502,15 +1502,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
   request.headers.addAll(headers);
   request.body = jsonEncode(body);
 
-  ChatFlowDiagnostics.log(
-    'API_SEND provider=${config.id} model=$upstreamModelId '
-    'responses=${config.useResponseApi == true} stream=$stream '
-    'bodyKeys=${body.keys.toList()} include=${body['include']} '
-    'inputLen=${body['input'] is List ? (body['input'] as List).length : -1} '
-    'messagesLen=${body['messages'] is List ? (body['messages'] as List).length : -1}',
-  );
   final response = await client.send(request);
-  ChatFlowDiagnostics.log('API_STATUS status=${response.statusCode}');
   if (response.statusCode < 200 || response.statusCode >= 300) {
     final errorBody = await response.stream.bytesToString();
     throw HttpException('HTTP ${response.statusCode}: $errorBody');
@@ -1850,18 +1842,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
   String? currentSseEvent;
   String? finishReason;
 
-  var apiChunkIndex = 0;
-  DateTime? lastApiChunkAt;
   await for (final chunk in _ensureTrailingNewline(sse)) {
-    apiChunkIndex += 1;
-    final apiNow = DateTime.now();
-    final apiGapMs = lastApiChunkAt == null
-        ? -1
-        : apiNow.difference(lastApiChunkAt!).inMilliseconds;
-    lastApiChunkAt = apiNow;
-    ChatFlowDiagnostics.trace(
-      'API_UTF8_CHUNK idx=$apiChunkIndex chars=${chunk.length} gapMs=$apiGapMs preview=${ChatFlowDiagnostics.summarizeChunk(chunk, max: 240)}',
-    );
     buffer += chunk;
     final lines = buffer.split('\n');
     buffer = lines.last;
@@ -1874,13 +1855,11 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
       }
       if (line.startsWith('event:')) {
         currentSseEvent = line.substring(6).trimLeft();
-        ChatFlowDiagnostics.log('SSE_EVENT event=$currentSseEvent');
         continue;
       }
       if (!line.startsWith('data:')) continue;
 
       final data = line.substring(5).trimLeft();
-      ChatFlowDiagnostics.log('SSE_DATA ${ChatFlowDiagnostics.summarizeChunk(data, max: 500)}');
       if (data == '[DONE]') {
         if (config.useResponseApi == true && !sawResponsesCompleted) {
           throw const HttpException(
@@ -2400,10 +2379,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           // OpenAI /responses SSE types. Some compatible endpoints put the
           // event name in the SSE `event:` field and omit JSON `type`.
           final type = json['type'] ?? currentSseEvent;
-          ChatFlowDiagnostics.log(
-            'RESP_EVENT type=$type keys=${json.keys.toList()} '
-            'deltaLen=${json['delta'] is String ? (json['delta'] as String).length : -1}',
-          );
           currentSseEvent = null;
           if (type == 'response.output_text.delta') {
             final delta = json['delta'];
@@ -2668,9 +2643,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               // Prefer the indexed calls (with call_id); fallback to toolAccResp
               final callInfos = <ToolCallInfo>[];
               final msgs = <Map<String, dynamic>>[]; // for executing tools
-              ChatFlowDiagnostics.log(
-                'RESP_TOOL_DETECTED indexed=${respToolCallsByIndex.length} fallback=${toolAccResp.length}',
-              );
               if (respToolCallsByIndex.isNotEmpty) {
                 final sorted = respToolCallsByIndex.keys.toList()..sort();
                 for (final idx in sorted) {
@@ -2785,11 +2757,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 final previousResponseId = lastResponsesResponseId;
                 final usePreviousResponseId =
                     previousResponseId != null && previousResponseId.isNotEmpty;
-                ChatFlowDiagnostics.log(
-                  'RESP_FOLLOWUP previous=$usePreviousResponseId '
-                  'prevId=$previousResponseId incrementalLen=${incrementalInput.length} '
-                  'currentLen=${currentInput.length}',
-                );
                 final body2 = <String, dynamic>{
                   'model': upstreamModelId,
                   if (usePreviousResponseId)
@@ -2913,18 +2880,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 var sawCompleted2 = false;
                 var contentAccum2 = '';
                 String? currentSseEvent2;
-                var apiChunkIndex2 = 0;
-                DateTime? lastApiChunkAt2;
                 await for (final ch in _ensureTrailingNewline(s2)) {
-                  apiChunkIndex2 += 1;
-                  final apiNow2 = DateTime.now();
-                  final apiGapMs2 = lastApiChunkAt2 == null
-                      ? -1
-                      : apiNow2.difference(lastApiChunkAt2!).inMilliseconds;
-                  lastApiChunkAt2 = apiNow2;
-                  ChatFlowDiagnostics.trace(
-                    'API2_UTF8_CHUNK idx=$apiChunkIndex2 chars=${ch.length} gapMs=$apiGapMs2 preview=${ChatFlowDiagnostics.summarizeChunk(ch, max: 240)}',
-                  );
                   buf2 += ch;
                   final lines2 = buf2.split('\n');
                   buf2 = lines2.last;
@@ -2936,12 +2892,10 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                     }
                     if (l.startsWith('event:')) {
                       currentSseEvent2 = l.substring(6).trimLeft();
-                      ChatFlowDiagnostics.log('SSE2_EVENT event=$currentSseEvent2');
                       continue;
                     }
                     if (!l.startsWith('data:')) continue;
                     final d = l.substring(5).trimLeft();
-                    ChatFlowDiagnostics.log('SSE2_DATA ${ChatFlowDiagnostics.summarizeChunk(d, max: 500)}');
                     if (d == '[DONE]') {
                       if (!sawCompleted2) {
                         throw const HttpException(
@@ -2955,10 +2909,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                       final eventType = o is Map
                           ? (o['type'] ?? currentSseEvent2).toString()
                           : (currentSseEvent2 ?? '');
-                      ChatFlowDiagnostics.log(
-                        'RESP2_EVENT type=$eventType keys=${o is Map ? o.keys.toList() : const []} '
-                        'deltaLen=${o is Map && o['delta'] is String ? (o['delta'] as String).length : -1}',
-                      );
                       currentSseEvent2 = null;
                       if (o is Map &&
                           eventType == 'response.output_text.delta') {
@@ -2967,7 +2917,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                           sawTextDelta2 = true;
                           contentAccum2 += delta;
                           approxCompletionChars += delta.length;
-                          ChatFlowDiagnostics.trace('YIELD2_TEXT len=${delta.length}');
                           yield ChatStreamChunk(
                             content: delta,
                             isDone: false,
@@ -3492,9 +3441,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           if (content.isNotEmpty) {
             assistantContentBuffer += content;
           }
-          ChatFlowDiagnostics.trace(
-            'YIELD_MAIN contentLen=${content.length} reasoningLen=${reasoning?.length ?? 0} totalTokens=$totalTokens',
-          );
           yield ChatStreamChunk(
             content: content,
             reasoning: reasoning,
@@ -4225,7 +4171,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                     final l = lines2[j].trim();
                     if (l.isEmpty || !l.startsWith('data:')) continue;
                     final d = l.substring(5).trimLeft();
-                    ChatFlowDiagnostics.log('SSE2_DATA ${ChatFlowDiagnostics.summarizeChunk(d, max: 500)}');
                     if (d == '[DONE]') {
                       continue;
                     }
