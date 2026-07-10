@@ -225,6 +225,40 @@ void main() {
       },
     );
 
+    test('OpenAI GPT-5.6 exposes xhigh and max reasoning', () async {
+      SharedPreferences.setMockInitialValues({});
+      final settings = SettingsProvider();
+
+      await _waitForSettingsLoad();
+      await settings.setProviderConfig(
+        'OpenAI',
+        ProviderConfig(
+          id: 'OpenAI',
+          enabled: true,
+          name: 'OpenAI',
+          apiKey: 'test-key',
+          baseUrl: 'https://api.openai.com/v1',
+          providerType: ProviderKind.openai,
+          models: const [
+            'gpt-5.6',
+            'gpt-5.6-sol',
+            'gpt-5.6-terra',
+            'gpt-5.6-luna',
+          ],
+        ),
+      );
+
+      for (final model in const [
+        'gpt-5.6',
+        'gpt-5.6-sol',
+        'gpt-5.6-terra',
+        'gpt-5.6-luna',
+      ]) {
+        expect(settings.supportsXhighReasoning('OpenAI', model), isTrue);
+        expect(settings.supportsMaxReasoning('OpenAI', model), isTrue);
+      }
+    });
+
     test('OpenRouter Anthropic format exposes Claude max reasoning', () async {
       SharedPreferences.setMockInitialValues({});
       final settings = SettingsProvider();

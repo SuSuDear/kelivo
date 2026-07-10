@@ -299,10 +299,14 @@ Map<String, dynamic> _buildAssistantToolCallMessage({
 
 String _openAIEffortForBudget(int? budget, String upstreamModelId) {
   final baseEffort = _effortForBudget(budget);
-  final requestedEffort =
-      baseEffort == 'high' && budget != null && budget >= 64000
-      ? 'xhigh'
-      : baseEffort;
+  var requestedEffort = baseEffort;
+  if (baseEffort == 'high' && budget != null) {
+    if (budget >= 128000) {
+      requestedEffort = 'max';
+    } else if (budget >= 64000) {
+      requestedEffort = 'xhigh';
+    }
+  }
   return openAINormalizeReasoningEffort(requestedEffort, upstreamModelId);
 }
 
@@ -2247,6 +2251,29 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                         }
                         if (argsDelta != null && argsDelta.isNotEmpty) {
                           entry['args'] = (entry['args'] ?? '') + argsDelta;
+                          if (onToolCall != null &&
+                              ((entry['name'] ?? '').isNotEmpty ||
+                                  (entry['id'] ?? '').isNotEmpty)) {
+                            yield ChatStreamChunk(
+                              content: '',
+                              isDone: false,
+                              totalTokens: usage?.totalTokens ?? 0,
+                              usage: usage,
+                              toolCalls: [
+                                ToolCallInfo(
+                                  id: _effectiveToolCallId(
+                                    entry['id'],
+                                    'call',
+                                    idx,
+                                  ),
+                                  name: entry['name'] ?? '',
+                                  arguments: {
+                                    '_partialArguments': entry['args'] ?? '',
+                                  },
+                                ),
+                              ],
+                            );
+                          }
                         }
                       }
                     }
@@ -2450,6 +2477,29 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
               );
               if (delta.isNotEmpty) {
                 entry['args'] = (entry['args'] ?? '') + delta;
+                if (onToolCall != null &&
+                    ((entry['name'] ?? '').isNotEmpty ||
+                        (entry['call_id'] ?? '').isNotEmpty)) {
+                  yield ChatStreamChunk(
+                    content: '',
+                    isDone: false,
+                    totalTokens: totalTokens,
+                    usage: usage,
+                    toolCalls: [
+                      ToolCallInfo(
+                        id: _effectiveToolCallId(
+                          entry['call_id'],
+                          'call',
+                          idx,
+                        ),
+                        name: entry['name'] ?? '',
+                        arguments: {
+                          '_partialArguments': entry['args'] ?? '',
+                        },
+                      ),
+                    ],
+                  );
+                }
               }
             } catch (_) {}
           } else if (type == 'response.output_item.done') {
@@ -2952,6 +3002,29 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                         );
                         if (delta.isNotEmpty) {
                           entry['args'] = (entry['args'] ?? '') + delta;
+                          if (onToolCall != null &&
+                              ((entry['name'] ?? '').isNotEmpty ||
+                                  (entry['call_id'] ?? '').isNotEmpty)) {
+                            yield ChatStreamChunk(
+                              content: '',
+                              isDone: false,
+                              totalTokens: totalTokens,
+                              usage: usage,
+                              toolCalls: [
+                                ToolCallInfo(
+                                  id: _effectiveToolCallId(
+                                    entry['call_id'],
+                                    'call',
+                                    idx2,
+                                  ),
+                                  name: entry['name'] ?? '',
+                                  arguments: {
+                                    '_partialArguments': entry['args'] ?? '',
+                                  },
+                                ),
+                              ],
+                            );
+                          }
                         }
                       } else if (o is Map &&
                           eventType == 'response.output_item.done') {
@@ -3283,6 +3356,25 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                   if (name != null && name.isNotEmpty) entry['name'] = name;
                   if (argsDelta != null && argsDelta.isNotEmpty) {
                     entry['args'] = (entry['args'] ?? '') + argsDelta;
+                    if (onToolCall != null &&
+                        ((entry['name'] ?? '').isNotEmpty ||
+                            (entry['id'] ?? '').isNotEmpty)) {
+                      yield ChatStreamChunk(
+                        content: '',
+                        isDone: false,
+                        totalTokens: totalTokens,
+                        usage: usage,
+                        toolCalls: [
+                          ToolCallInfo(
+                            id: _effectiveToolCallId(entry['id'], 'call', idx),
+                            name: entry['name'] ?? '',
+                            arguments: {
+                              '_partialArguments': entry['args'] ?? '',
+                            },
+                          ),
+                        ],
+                      );
+                    }
                   }
                   if (onToolCall != null &&
                       !emittedToolCallPlaceholders.contains(idx) &&
@@ -3776,6 +3868,29 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                         }
                         if (argsDelta != null && argsDelta.isNotEmpty) {
                           entry['args'] = (entry['args'] ?? '') + argsDelta;
+                          if (onToolCall != null &&
+                              ((entry['name'] ?? '').isNotEmpty ||
+                                  (entry['id'] ?? '').isNotEmpty)) {
+                            yield ChatStreamChunk(
+                              content: '',
+                              isDone: false,
+                              totalTokens: usage?.totalTokens ?? 0,
+                              usage: usage,
+                              toolCalls: [
+                                ToolCallInfo(
+                                  id: _effectiveToolCallId(
+                                    entry['id'],
+                                    'call',
+                                    idx,
+                                  ),
+                                  name: entry['name'] ?? '',
+                                  arguments: {
+                                    '_partialArguments': entry['args'] ?? '',
+                                  },
+                                ),
+                              ],
+                            );
+                          }
                         }
                       }
                     }

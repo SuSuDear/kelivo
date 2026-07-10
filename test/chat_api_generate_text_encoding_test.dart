@@ -196,6 +196,19 @@ void main() {
     );
 
     test(
+      'maps GPT-5.6 max reasoning for non-streaming text generation',
+      () async {
+        final body = await _captureGenerateTextBody(
+          providerId: 'OpenAI',
+          modelId: 'gpt-5.6-sol',
+          thinkingBudget: 128000,
+        );
+
+        expect(body['reasoning_effort'], 'max');
+      },
+    );
+
+    test(
       'maps DeepSeek reasoning knobs for non-streaming text generation',
       () async {
         final enabledBody = await _captureGenerateTextBody(

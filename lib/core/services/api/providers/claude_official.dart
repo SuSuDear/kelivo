@@ -773,6 +773,28 @@ Stream<ChatStreamChunk> _sendClaudeStream(
                   );
                   if (argsDelta.isNotEmpty) {
                     entry['args'] = (entry['args'] ?? '') + argsDelta;
+                    if (onToolCall != null &&
+                        ((entry['name'] ?? '').toString().isNotEmpty ||
+                            id.isNotEmpty)) {
+                      yield ChatStreamChunk(
+                        content: '',
+                        isDone: false,
+                        totalTokens: roundTokens,
+                        usage: usage,
+                        toolCalls: [
+                          ToolCallInfo(
+                            id: id,
+                            name: (entry['name'] ?? '').toString(),
+                            arguments: {
+                              '_partialArguments': entry['args'] ?? '',
+                            },
+                            metadata: {
+                              'anthropic': {'assistant_blocks': assistantBlocks},
+                            },
+                          ),
+                        ],
+                      );
+                    }
                   }
                 }
               } else if (delta['type'] == 'input_json_delta') {
@@ -789,6 +811,28 @@ Stream<ChatStreamChunk> _sendClaudeStream(
                       () => {'name': '', 'args': ''},
                     );
                     entry['args'] = (entry['args'] ?? '') + part;
+                    if (onToolCall != null &&
+                        ((entry['name'] ?? '').toString().isNotEmpty ||
+                            id.isNotEmpty)) {
+                      yield ChatStreamChunk(
+                        content: '',
+                        isDone: false,
+                        totalTokens: roundTokens,
+                        usage: usage,
+                        toolCalls: [
+                          ToolCallInfo(
+                            id: id,
+                            name: (entry['name'] ?? '').toString(),
+                            arguments: {
+                              '_partialArguments': entry['args'] ?? '',
+                            },
+                            metadata: {
+                              'anthropic': {'assistant_blocks': assistantBlocks},
+                            },
+                          ),
+                        ],
+                      );
+                    }
                   } else if (srvIndexToId.containsKey(index)) {
                     final id = srvIndexToId[index]!;
                     srvArgsStr[id] = (srvArgsStr[id] ?? '') + part;

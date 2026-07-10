@@ -9,6 +9,7 @@ class OpenAIReasoningSupport {
 
   bool get supportsNone => supportedEfforts.contains('none');
   bool get supportsXhigh => supportedEfforts.contains('xhigh');
+  bool get supportsMax => supportedEfforts.contains('max');
 }
 
 const OpenAIReasoningSupport _gpt5Support = OpenAIReasoningSupport(
@@ -56,6 +57,17 @@ const OpenAIReasoningSupport _gpt55Support = OpenAIReasoningSupport(
 const OpenAIReasoningSupport _gpt55ProSupport = OpenAIReasoningSupport(
   supportedEfforts: <String>['medium', 'high', 'xhigh'],
 );
+const OpenAIReasoningSupport _gpt56Support = OpenAIReasoningSupport(
+  supportedEfforts: <String>[
+    'none',
+    'low',
+    'medium',
+    'high',
+    'xhigh',
+    'max',
+  ],
+  samplingRequiresNone: true,
+);
 const OpenAIReasoningSupport _deepSeekSupport = OpenAIReasoningSupport(
   supportedEfforts: <String>['low', 'medium', 'high', 'xhigh'],
 );
@@ -83,6 +95,10 @@ bool openAISupportsNoneReasoning(String modelId) {
   return openAIReasoningSupport(modelId)?.supportsNone ?? false;
 }
 
+bool openAISupportsMaxReasoning(String modelId) {
+  return openAIReasoningSupport(modelId)?.supportsMax ?? false;
+}
+
 String openAINormalizeReasoningEffort(String effort, String modelId) {
   final normalizedEffort = effort.trim().toLowerCase();
   if (normalizedEffort.isEmpty) return effort;
@@ -92,7 +108,8 @@ String openAINormalizeReasoningEffort(String effort, String modelId) {
   if (normalizedEffort == 'off') {
     return support?.supportsNone == true ? 'none' : 'off';
   }
-  if (normalizedEffort == 'xhigh' && support == null) {
+  if ((normalizedEffort == 'xhigh' || normalizedEffort == 'max') &&
+      support == null) {
     return 'high';
   }
   if (support == null) return normalizedEffort;
@@ -134,6 +151,16 @@ String openAINormalizeReasoningEffort(String effort, String modelId) {
     case 'xhigh':
       return _pickSupportedEffort(support, const <String>[
         'xhigh',
+        'max',
+        'high',
+        'medium',
+        'low',
+        'none',
+      ]);
+    case 'max':
+      return _pickSupportedEffort(support, const <String>[
+        'max',
+        'xhigh',
         'high',
         'medium',
         'low',
@@ -158,6 +185,12 @@ OpenAIReasoningSupport? openAIReasoningSupport(String modelId) {
   if (normalized.contains('deepseek')) return _deepSeekSupport;
   if (!isOpenAIGpt5FamilyModel(normalized)) return null;
 
+  if (_matchesModel(
+    normalized,
+    r'^gpt-5\.6(?:-(?:sol|terra|luna))?(?:$|[-.])',
+  )) {
+    return _gpt56Support;
+  }
   if (_matchesModel(normalized, r'^gpt-5\.5-pro(?:$|[-.])')) {
     return _gpt55ProSupport;
   }

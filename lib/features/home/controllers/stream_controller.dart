@@ -543,6 +543,15 @@ class StreamController {
     return 'name:$name|args:${_encodeJson(arguments)}';
   }
 
+  Map<String, dynamic> _stripTransientToolArguments(
+    Map<String, dynamic> arguments,
+  ) {
+    if (!arguments.containsKey('_partialArguments')) return arguments;
+    final clean = Map<String, dynamic>.from(arguments);
+    clean.remove('_partialArguments');
+    return clean;
+  }
+
   Map<String, dynamic> _toolDisplayMetadata(String name, Map<String, dynamic> args, {String? content}) {
     String pick(List<String> keys) {
       for (final key in keys) {
@@ -1029,13 +1038,19 @@ class StreamController {
                 (p.id.isEmpty && p.toolName == c.name) ||
                 (c.id.isEmpty && p.toolName == c.name)),
       );
+      final metadata = _toolDisplayMetadata(c.name, c.arguments);
       final part = ToolUIPart(
         id: c.id,
         toolName: c.name,
         arguments: c.arguments,
         loading: true,
-        displayTitle: (c.metadata?['displayTitle'] ?? _toolDisplayMetadata(c.name, c.arguments)['displayTitle'])?.toString(),
-        resultTitle: (c.metadata?['resultTitle'] ?? _toolDisplayMetadata(c.name, c.arguments)['resultTitle'])?.toString(),
+        displayTitle:
+            (c.metadata?['displayTitle'] ?? metadata['displayTitle'])
+                ?.toString(),
+        resultTitle:
+            (c.metadata?['resultTitle'] ?? metadata['resultTitle'])
+                ?.toString(),
+        finalTitle: c.metadata?['finalTitle']?.toString(),
       );
       if (idx >= 0) {
         existing[idx] = part;
@@ -1148,33 +1163,50 @@ class StreamController {
           break;
         }
       }
+      final argsForTitle = _stripTransientToolArguments(
+        r.arguments.isNotEmpty
+            ? Map<String, dynamic>.from(r.arguments)
+            : (idx >= 0 ? parts[idx].arguments : r.arguments),
+      );
+      final resultMetadata = _toolDisplayMetadata(
+        r.name,
+        argsForTitle,
+        content: r.content,
+      );
+      final resultTitle =
+          (r.metadata?['resultTitle'] ?? resultMetadata['resultTitle'])
+              ?.toString();
+      final finalTitle =
+          (r.metadata?['finalTitle'] ?? resultTitle)?.toString();
       if (idx >= 0) {
         parts[idx] = ToolUIPart(
           id: parts[idx].id,
           toolName: parts[idx].toolName,
-          arguments: r.arguments.isNotEmpty
-              ? Map<String, dynamic>.from(r.arguments)
-              : parts[idx].arguments,
+          arguments: argsForTitle,
           content: r.content,
           loading: false,
           displayTitle: parts[idx].displayTitle,
-          resultTitle: (r.metadata?['resultTitle'] ?? parts[idx].resultTitle ?? _toolDisplayMetadata(r.name, r.arguments, content: r.content)['resultTitle'])?.toString(),
+          resultTitle: resultTitle ?? parts[idx].resultTitle,
+          finalTitle: finalTitle ?? parts[idx].finalTitle,
         );
       } else {
         parts.add(
           ToolUIPart(
             id: r.id,
             toolName: r.name,
-            arguments: r.arguments,
+            arguments: argsForTitle,
             content: r.content,
             loading: false,
-            displayTitle: (r.metadata?['displayTitle'] ?? _toolDisplayMetadata(r.name, r.arguments)['displayTitle'])?.toString(),
-            resultTitle: (r.metadata?['resultTitle'] ?? _toolDisplayMetadata(r.name, r.arguments, content: r.content)['resultTitle'])?.toString(),
+            displayTitle:
+                (r.metadata?['displayTitle'] ?? resultMetadata['displayTitle'])
+                    ?.toString(),
+            resultTitle: resultTitle,
+            finalTitle: finalTitle,
           ),
         );
       }
       try {
-        final args = Map<String, dynamic>.from(r.arguments);
+        final args = Map<String, dynamic>.from(argsForTitle);
         await upsertToolEventInDb(
           messageId,
           id: r.id,
@@ -1182,7 +1214,8 @@ class StreamController {
           arguments: args,
           content: r.content,
           metadata: {
-            ..._toolDisplayMetadata(r.name, args, content: r.content),
+            ...resultMetadata,
+            'finalTitle': finalTitle,
             if (r.metadata != null && r.metadata!.isNotEmpty) ...r.metadata!,
           },
         );
@@ -1466,8 +1499,12 @@ class StreamController {
                     ? e['content'].toString()
                     : null,
                 loading: !(e['content']?.toString().isNotEmpty == true),
-                displayTitle: ((e['metadata'] as Map?)?['displayTitle'])?.toString(),
-                resultTitle: ((e['metadata'] as Map?)?['resultTitle'])?.toString(),
+                displayTitle:
+                    ((e['metadata'] as Map?)?['displayTitle'])?.toString(),
+                resultTitle:
+                    ((e['metadata'] as Map?)?['resultTitle'])?.toString(),
+                finalTitle:
+                    ((e['metadata'] as Map?)?['finalTitle'])?.toString(),
               ),
             )
             .toList();

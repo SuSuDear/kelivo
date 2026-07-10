@@ -166,9 +166,14 @@ String _toolTitleFor(
   required bool isResult,
   String? displayTitle,
   String? resultTitle,
+  String? finalTitle,
 }) {
   final explicitTitle = isResult
-      ? ((resultTitle?.trim().isNotEmpty == true) ? resultTitle!.trim() : displayTitle?.trim())
+      ? ((finalTitle?.trim().isNotEmpty == true)
+            ? finalTitle!.trim()
+            : (resultTitle?.trim().isNotEmpty == true)
+            ? resultTitle!.trim()
+            : displayTitle?.trim())
       : displayTitle?.trim();
   if (explicitTitle != null && explicitTitle.isNotEmpty) return explicitTitle;
   final l10n = AppLocalizations.of(context)!;
@@ -196,6 +201,21 @@ String _toolTitleFor(
           ? l10n.chatMessageWidgetToolResult(name)
           : l10n.chatMessageWidgetToolCall(name);
   }
+}
+
+const String _partialToolArgumentsKey = '_partialArguments';
+
+String? _partialToolArguments(Map<String, dynamic> args) {
+  final value = args[_partialToolArgumentsKey];
+  final text = value?.toString() ?? '';
+  return text.trim().isEmpty ? null : text;
+}
+
+Map<String, dynamic> _visibleToolArguments(Map<String, dynamic> args) {
+  if (!args.containsKey(_partialToolArgumentsKey)) return args;
+  final visible = Map<String, dynamic>.from(args);
+  visible.remove(_partialToolArgumentsKey);
+  return visible;
 }
 
 String? _semanticToolTitleFor(
@@ -361,7 +381,9 @@ void _showToolFullImage(BuildContext context, String path) {
 void _showToolDetail(BuildContext context, ToolUIPart part) {
   final cs = Theme.of(context).colorScheme;
   final l10n = AppLocalizations.of(context)!;
-  final argsPretty = const JsonEncoder.withIndent('  ').convert(part.arguments);
+  final partialArgs = _partialToolArguments(part.arguments);
+  final argsPretty = partialArgs ??
+      const JsonEncoder.withIndent('  ').convert(_visibleToolArguments(part.arguments));
   final (cleanText, images) = _parseMcpImagePaths(part.content);
   final resultText = cleanText.isNotEmpty
       ? _prettyToolJson(cleanText)
@@ -418,6 +440,7 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
                                 isResult: !part.loading,
                                 displayTitle: part.displayTitle,
                                 resultTitle: part.resultTitle,
+                                finalTitle: part.finalTitle,
                               ),
                               style: TextStyle(
                                 fontSize: 16,
@@ -586,6 +609,9 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
                             part.toolName,
                             part.arguments,
                             isResult: !part.loading,
+                            displayTitle: part.displayTitle,
+                            resultTitle: part.resultTitle,
+                            finalTitle: part.finalTitle,
                           ),
                           style: TextStyle(
                             fontSize: 16,
@@ -3444,6 +3470,7 @@ class ToolUIPart {
   final bool loading;
   final String? displayTitle;
   final String? resultTitle;
+  final String? finalTitle;
   const ToolUIPart({
     required this.id,
     required this.toolName,
@@ -3452,6 +3479,7 @@ class ToolUIPart {
     this.loading = false,
     this.displayTitle,
     this.resultTitle,
+    this.finalTitle,
   });
 }
 
@@ -4083,19 +4111,23 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
       isResult: isResult,
       displayTitle: widget.part.displayTitle,
       resultTitle: widget.part.resultTitle,
+      finalTitle: widget.part.finalTitle,
     );
   }
 
   String _argsSummary(Map<String, dynamic> args) {
-    if (args.isEmpty) return '';
-    final entries = args.entries.take(2).map((entry) {
+    final partialArgs = _partialToolArguments(args);
+    if (partialArgs != null) return partialArgs;
+    final visibleArgs = _visibleToolArguments(args);
+    if (visibleArgs.isEmpty) return '';
+    final entries = visibleArgs.entries.take(2).map((entry) {
       final value = entry.value?.toString() ?? '';
       final truncated = value.length > 40
           ? '${value.substring(0, 40)}...'
           : value;
       return '${entry.key}: $truncated';
     });
-    final suffix = args.length > 2 ? ' ...' : '';
+    final suffix = visibleArgs.length > 2 ? ' ...' : '';
     return entries.join(', ') + suffix;
   }
 
@@ -4372,19 +4404,23 @@ class _ToolCallItemState extends State<_ToolCallItem> {
       isResult: isResult,
       displayTitle: widget.part.displayTitle,
       resultTitle: widget.part.resultTitle,
+      finalTitle: widget.part.finalTitle,
     );
   }
 
   /// Build a short argument summary for display in the approval card.
   String _argsSummary(Map<String, dynamic> args) {
-    if (args.isEmpty) return '';
+    final partialArgs = _partialToolArguments(args);
+    if (partialArgs != null) return partialArgs;
+    final visibleArgs = _visibleToolArguments(args);
+    if (visibleArgs.isEmpty) return '';
     // Show first 1-2 key=value pairs, truncated
-    final entries = args.entries.take(2).map((e) {
+    final entries = visibleArgs.entries.take(2).map((e) {
       final v = e.value?.toString() ?? '';
       final truncated = v.length > 40 ? '${v.substring(0, 40)}...' : v;
       return '${e.key}: $truncated';
     });
-    final suffix = args.length > 2 ? ' ...' : '';
+    final suffix = visibleArgs.length > 2 ? ' ...' : '';
     return entries.join(', ') + suffix;
   }
 
@@ -4507,8 +4543,9 @@ class _ToolCallItemState extends State<_ToolCallItem> {
                 ),
               ],
             ),
-            // Argument summary so users know what the tool is about to do
-            if (isPendingApproval && widget.part.arguments.isNotEmpty) ...[
+            // Argument summary so users can see parameters while they stream in.
+            if ((isPendingApproval || widget.part.loading) &&
+                widget.part.arguments.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
@@ -4527,7 +4564,7 @@ class _ToolCallItemState extends State<_ToolCallItem> {
                     fontFamily: 'monospace',
                     color: fg.body,
                   ),
-                  maxLines: 2,
+                  maxLines: widget.part.loading ? 3 : 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
