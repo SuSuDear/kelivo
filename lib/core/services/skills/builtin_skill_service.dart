@@ -94,7 +94,7 @@ class BuiltInSkillService {
       buffer
         ..writeln()
         ..writeln(
-          'To load a skill, the user can explicitly invoke it with `$skill-name`, `/skill-name`, `/skill skill-name`, or `/skills skill-name`.',
+          'To load a skill, the user can explicitly invoke it with `\$skill-name`, `/skill-name`, `/skill skill-name`, or `/skills skill-name`.',
         );
       return buffer.toString().trim();
     }
