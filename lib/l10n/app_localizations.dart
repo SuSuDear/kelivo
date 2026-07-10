@@ -4829,6 +4829,37 @@ abstract class AppLocalizations {
   /// **'Collapse'**
   String get chatInputBarCollapse;
 
+
+  /// No description provided for @chatReconnectWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'{attempt}/{max} Reconnecting, retrying in {seconds}s'**
+  String chatReconnectWaiting(int attempt, int max, int seconds);
+
+  /// No description provided for @chatReconnectRetrying.
+  ///
+  /// In en, this message translates to:
+  /// **'{attempt}/{max} Reconnecting…'**
+  String chatReconnectRetrying(int attempt, int max);
+
+  /// No description provided for @chatReconnectGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting'**
+  String get chatReconnectGeneric;
+
+  /// No description provided for @chatReconnectStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get chatReconnectStop;
+
+  /// No description provided for @chatReconnectRetryNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry now'**
+  String get chatReconnectRetryNow;
+
   /// No description provided for @mcpPageBackTooltip.
   ///
   /// In en, this message translates to:

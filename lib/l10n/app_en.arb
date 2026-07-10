@@ -1079,6 +1079,34 @@
   "chatInputBarInsertNewline": "Newline",
   "chatInputBarExpand": "Expand",
   "chatInputBarCollapse": "Collapse",
+  "chatReconnectWaiting": "{attempt}/{max} Reconnecting, retrying in {seconds}s",
+  "@chatReconnectWaiting": {
+    "placeholders": {
+      "attempt": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReconnectRetrying": "{attempt}/{max} Reconnecting…",
+  "@chatReconnectRetrying": {
+    "placeholders": {
+      "attempt": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReconnectGeneric": "Reconnecting",
+  "chatReconnectStop": "Stop",
+  "chatReconnectRetryNow": "Retry now",
   "mcpPageBackTooltip": "Back",
   "mcpPageAddMcpTooltip": "Add MCP",
   "mcpPageNoServers": "No MCP servers",

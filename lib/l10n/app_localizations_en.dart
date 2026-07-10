@@ -2568,6 +2568,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chatInputBarCollapse => 'Collapse';
 
+
+  @override
+  String chatReconnectWaiting(int attempt, int max, int seconds) {
+    return '$attempt/$max Reconnecting, retrying in ${seconds}s';
+  }
+
+  @override
+  String chatReconnectRetrying(int attempt, int max) {
+    return '$attempt/$max Reconnecting…';
+  }
+
+  @override
+  String get chatReconnectGeneric => 'Reconnecting';
+
+  @override
+  String get chatReconnectStop => 'Stop';
+
+  @override
+  String get chatReconnectRetryNow => 'Retry now';
+
   @override
   String get mcpPageBackTooltip => 'Back';
 

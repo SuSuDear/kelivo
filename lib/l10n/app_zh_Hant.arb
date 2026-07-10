@@ -831,6 +831,34 @@
   "chatInputBarInsertNewline": "換行",
   "chatInputBarExpand": "展開",
   "chatInputBarCollapse": "收起",
+  "chatReconnectWaiting": "{attempt}/{max} 正在重新連線，{seconds}s 後重試",
+  "@chatReconnectWaiting": {
+    "placeholders": {
+      "attempt": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReconnectRetrying": "{attempt}/{max} 正在重新連線…",
+  "@chatReconnectRetrying": {
+    "placeholders": {
+      "attempt": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReconnectGeneric": "正在重新連線",
+  "chatReconnectStop": "停止",
+  "chatReconnectRetryNow": "立即重試",
   "mcpPageBackTooltip": "返回",
   "mcpPageAddMcpTooltip": "新增 MCP",
   "mcpPageNoServers": "暫無 MCP 伺服器",

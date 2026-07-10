@@ -2474,6 +2474,26 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get chatInputBarCollapse => '收起';
 
+
+  @override
+  String chatReconnectWaiting(int attempt, int max, int seconds) {
+    return '$attempt/$max 正在重连，${seconds}s 后重试';
+  }
+
+  @override
+  String chatReconnectRetrying(int attempt, int max) {
+    return '$attempt/$max 正在重连…';
+  }
+
+  @override
+  String get chatReconnectGeneric => '正在重连';
+
+  @override
+  String get chatReconnectStop => '停止';
+
+  @override
+  String get chatReconnectRetryNow => '立即重试';
+
   @override
   String get mcpPageBackTooltip => '返回';
 
@@ -7642,6 +7662,26 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get chatInputBarCollapse => '收起';
 
+
+  @override
+  String chatReconnectWaiting(int attempt, int max, int seconds) {
+    return '$attempt/$max 正在重连，${seconds}s 后重试';
+  }
+
+  @override
+  String chatReconnectRetrying(int attempt, int max) {
+    return '$attempt/$max 正在重连…';
+  }
+
+  @override
+  String get chatReconnectGeneric => '正在重连';
+
+  @override
+  String get chatReconnectStop => '停止';
+
+  @override
+  String get chatReconnectRetryNow => '立即重试';
+
   @override
   String get mcpPageBackTooltip => '返回';
 
@@ -12808,6 +12848,26 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatInputBarCollapse => '收起';
+
+
+  @override
+  String chatReconnectWaiting(int attempt, int max, int seconds) {
+    return '$attempt/$max 正在重新連線，${seconds}s 後重試';
+  }
+
+  @override
+  String chatReconnectRetrying(int attempt, int max) {
+    return '$attempt/$max 正在重新連線…';
+  }
+
+  @override
+  String get chatReconnectGeneric => '正在重新連線';
+
+  @override
+  String get chatReconnectStop => '停止';
+
+  @override
+  String get chatReconnectRetryNow => '立即重試';
 
   @override
   String get mcpPageBackTooltip => '返回';

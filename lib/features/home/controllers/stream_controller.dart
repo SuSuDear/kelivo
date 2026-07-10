@@ -1590,6 +1590,9 @@ class StreamingState {
   int retryCount = 0;
   int maxRetryCount = 5;
   bool reconnecting = false;
+  bool reconnectDedupePending = false;
+  String reconnectDedupeSource = '';
+  String reconnectDedupeBuffer = '';
   Completer<void>? reconnectNowCompleter;
   List<int> contentSplitOffsets = <int>[];
   List<int> reasoningCountAtSplit = <int>[];

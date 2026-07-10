@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/assistant.dart';
@@ -1120,6 +1122,126 @@ class ChatActions {
     return true;
   }
 
+  String _canonicalToolArgsJson(dynamic value) {
+    dynamic normalize(dynamic input) {
+      if (input is Map) {
+        final keys = input.keys.map((e) => e.toString()).toList()..sort();
+        return <String, dynamic>{
+          for (final key in keys) key: normalize(input[key]),
+        };
+      }
+      if (input is List) {
+        return input.map(normalize).toList();
+      }
+      return input;
+    }
+
+    return jsonEncode(normalize(value));
+  }
+
+  String _toolReplayKey(String name, Map<String, dynamic> args) {
+    return '$name:${_canonicalToolArgsJson(args)}';
+  }
+
+  String? _completedToolResultForReplay(
+    String messageId,
+    String name,
+    Map<String, dynamic> args,
+  ) {
+    final key = _toolReplayKey(name, args);
+    final parts = streamController.getToolParts(messageId) ?? const [];
+    for (final part in parts.reversed) {
+      final content = part.content?.trim();
+      if (!part.loading &&
+          content != null &&
+          content.isNotEmpty &&
+          _toolReplayKey(part.toolName, part.arguments) == key) {
+        return content;
+      }
+    }
+
+    final events = chatService.getToolEvents(messageId);
+    for (final event in events.reversed) {
+      final content = event['content']?.toString().trim();
+      final arguments = (event['arguments'] as Map?)?.cast<String, dynamic>() ??
+          const <String, dynamic>{};
+      if (content != null &&
+          content.isNotEmpty &&
+          _toolReplayKey(event['name']?.toString() ?? '', arguments) == key) {
+        return content;
+      }
+    }
+    return null;
+  }
+
+  ToolCallHandler? _replayGuardedToolCallHandler(
+    stream_ctrl.StreamingState state,
+    ToolCallHandler? base,
+  ) {
+    if (base == null) return null;
+    return (name, args, {toolCallId}) async {
+      final cached = _completedToolResultForReplay(
+        state.messageId,
+        name,
+        args,
+      );
+      if (cached != null) return cached;
+      return base(name, args, toolCallId: toolCallId);
+    };
+  }
+
+  int _longestSuffixPrefixOverlap(String source, String text) {
+    final max = math.min(
+      2000,
+      math.min(source.length, text.length),
+    );
+    for (var length = max; length > 0; length--) {
+      if (source.endsWith(text.substring(0, length))) return length;
+    }
+    return 0;
+  }
+
+  String _dedupeReconnectContent(
+    stream_ctrl.StreamingState state,
+    String chunkContent,
+  ) {
+    if (chunkContent.isEmpty || !state.reconnectDedupePending) {
+      return chunkContent;
+    }
+
+    state.reconnectDedupeBuffer += chunkContent;
+    final source = state.reconnectDedupeSource;
+    final buffer = state.reconnectDedupeBuffer;
+
+    if (source.isEmpty) {
+      state.reconnectDedupePending = false;
+      state.reconnectDedupeBuffer = '';
+      return buffer;
+    }
+
+    // If the model restarted the interrupted assistant message from the
+    // beginning, withhold the duplicated prefix until it diverges or reaches
+    // content that was not previously generated.
+    if (source.startsWith(buffer)) {
+      return '';
+    }
+    if (buffer.startsWith(source)) {
+      state.reconnectDedupePending = false;
+      state.reconnectDedupeBuffer = '';
+      return buffer.substring(source.length);
+    }
+
+    // If the model repeated the tail of the previous partial answer, strip
+    // that overlapping prefix from the resumed stream.
+    final overlap = _longestSuffixPrefixOverlap(source, buffer);
+    if (overlap == buffer.length) {
+      return '';
+    }
+    state.reconnectDedupePending = false;
+    state.reconnectDedupeBuffer = '';
+    return overlap > 0 ? buffer.substring(overlap) : buffer;
+  }
+
   String _toolResultsSummaryForReconnect(String messageId) {
     final parts = streamController.getToolParts(messageId) ?? const [];
     if (parts.isEmpty) return '';
@@ -1159,6 +1281,9 @@ class ChatActions {
 
     state.retryCount += 1;
     state.reconnecting = true;
+    state.reconnectDedupeSource = state.fullContentRaw;
+    state.reconnectDedupeBuffer = '';
+    state.reconnectDedupePending = state.fullContentRaw.isNotEmpty;
     final attempt = state.retryCount;
     final maxAttempts = state.maxRetryCount;
 
@@ -1252,7 +1377,7 @@ class ChatActions {
         topP: retryCtx.assistant?.topP,
         maxTokens: retryCtx.assistant?.maxTokens,
         tools: retryCtx.toolDefs.isEmpty ? null : retryCtx.toolDefs,
-        onToolCall: retryCtx.onToolCall,
+        onToolCall: _replayGuardedToolCallHandler(state, retryCtx.onToolCall),
         extraHeaders: retryCtx.extraHeaders,
         extraBody: retryCtx.extraBody,
         stream: retryCtx.streamOutput,
@@ -1266,7 +1391,6 @@ class ChatActions {
         onData: (chunk) async {
           if (state.reconnecting) {
             state.reconnecting = false;
-            state.retryCount = 0;
             streamController.streamingContentNotifier.updateReconnectStatus(
               state.messageId,
               reconnecting: false,
@@ -1418,6 +1542,8 @@ class ChatActions {
         reconnecting: false,
       );
     }
+
+    chunkContent = _dedupeReconnectContent(state, chunkContent);
 
     final messageId = state.messageId;
     final conversationId = state.conversationId;

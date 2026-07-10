@@ -232,8 +232,8 @@ class McpProvider extends ChangeNotifier {
   final Map<String, McpStatus> _status = {}; // id -> status
   final Map<String, String> _errors = {}; // id -> last error
   List<McpServerConfig> _servers = [];
-  // Reconnect bookkeeping to avoid duplicate concurrent retries
-  final Set<String> _reconnecting = <String>{};
+  // Reconnect bookkeeping to let concurrent callers await the same retry.
+  final Map<String, Future<void>> _reconnectFutures = <String, Future<void>>{};
   // Heartbeat timers for live-connection health checks
   final Map<String, Timer> _heartbeats = <String, Timer>{};
   Duration _requestTimeout = const Duration(seconds: 30);
@@ -821,19 +821,31 @@ class McpProvider extends ChangeNotifier {
     await connect(id);
   }
 
-  Future<void> _reconnectWithBackoff(String id, {int maxAttempts = 3}) async {
-    if (_reconnecting.contains(id)) return;
-    _reconnecting.add(id);
-    try {
-      for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-        await reconnect(id);
-        if (isConnected(id)) return;
-        // progressive backoff: 600ms, 1200ms, 2400ms
-        final delayMs = 600 * (1 << (attempt - 1));
-        await Future.delayed(Duration(milliseconds: delayMs));
-      }
-    } finally {
-      _reconnecting.remove(id);
+  Future<void> _reconnectWithBackoff(String id, {int maxAttempts = 3}) {
+    final existing = _reconnectFutures[id];
+    if (existing != null) return existing;
+
+    late final Future<void> future;
+    future = _runReconnectWithBackoff(id, maxAttempts: maxAttempts)
+        .whenComplete(() {
+          if (identical(_reconnectFutures[id], future)) {
+            _reconnectFutures.remove(id);
+          }
+        });
+    _reconnectFutures[id] = future;
+    return future;
+  }
+
+  Future<void> _runReconnectWithBackoff(
+    String id, {
+    required int maxAttempts,
+  }) async {
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      await reconnect(id);
+      if (isConnected(id)) return;
+      // progressive backoff: 600ms, 1200ms, 2400ms
+      final delayMs = 600 * (1 << (attempt - 1));
+      await Future.delayed(Duration(milliseconds: delayMs));
     }
   }
 

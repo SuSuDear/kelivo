@@ -2116,14 +2116,15 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
 
   Widget _buildReconnectStatus(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final attempt = widget.reconnectAttempt;
     final max = widget.reconnectMaxAttempts;
     final remaining = widget.reconnectRemainingSeconds;
     final text = max > 0
         ? (remaining > 0
-              ? '$attempt/$max 正在重连，${remaining}s 后重试'
-              : '$attempt/$max 正在重连…')
-        : '正在重连';
+              ? l10n.chatReconnectWaiting(attempt, max, remaining)
+              : l10n.chatReconnectRetrying(attempt, max))
+        : l10n.chatReconnectGeneric;
     return Padding(
       padding: const EdgeInsets.only(left: 8),
       child: Row(
@@ -2145,7 +2146,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 child: Text(
-                  '停止',
+                  l10n.chatReconnectStop,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: AppFontWeights.medium,
@@ -2163,7 +2164,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 child: Text(
-                  '立即重试',
+                  l10n.chatReconnectRetryNow,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: AppFontWeights.medium,
