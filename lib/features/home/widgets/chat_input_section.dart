@@ -43,6 +43,7 @@ class ChatInputSection extends StatelessWidget {
     this.onLongPressSelectModel,
     this.onOpenMcp,
     this.onLongPressMcp,
+    this.onOpenSkills,
     this.onOpenSearch,
     this.onConfigureReasoning,
     this.onSend,
@@ -84,6 +85,7 @@ class ChatInputSection extends StatelessWidget {
   final VoidCallback? onLongPressSelectModel;
   final VoidCallback? onOpenMcp;
   final VoidCallback? onLongPressMcp;
+  final VoidCallback? onOpenSkills;
   final VoidCallback? onOpenSearch;
   final VoidCallback? onConfigureReasoning;
   final Future<ChatInputSubmissionResult> Function(ChatInputData)? onSend;
@@ -130,6 +132,7 @@ class ChatInputSection extends StatelessWidget {
       conversationId: conversationId,
       onOpenMcp: onOpenMcp,
       onLongPressMcp: onLongPressMcp,
+      onOpenSkills: onOpenSkills,
       onStop: onStop,
       modelIcon: (pk != null && mid != null)
           ? CurrentModelIcon(

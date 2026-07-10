@@ -58,6 +58,7 @@ class ChatInputBar extends StatefulWidget {
     this.onLongPressSelectModel,
     this.onOpenMcp,
     this.onLongPressMcp,
+    this.onOpenSkills,
     this.onOpenSearch,
     this.onMore,
     this.onConfigureReasoning,
@@ -107,6 +108,7 @@ class ChatInputBar extends StatefulWidget {
   final VoidCallback? onLongPressSelectModel;
   final VoidCallback? onOpenMcp;
   final VoidCallback? onLongPressMcp;
+  final VoidCallback? onOpenSkills;
   final VoidCallback? onOpenSearch;
   final VoidCallback? onMore;
   final VoidCallback? onConfigureReasoning;
@@ -1114,6 +1116,24 @@ class _ChatInputBarState extends State<ChatInputBar>
                 icon: Lucide.Hammer,
                 label: l10n.chatInputBarMcpServersTooltip,
                 onTap: lockTap(widget.onOpenMcp),
+              ),
+            ),
+          );
+        }
+
+        if (widget.onOpenSkills != null) {
+          actions.add(
+            _OverflowAction(
+              width: normalButtonW,
+              builder: () => _CompactIconButton(
+                tooltip: 'Skills',
+                icon: Lucide.Sparkles,
+                onTap: lockTap(widget.onOpenSkills),
+              ),
+              menu: DesktopContextMenuItem(
+                icon: Lucide.Sparkles,
+                label: 'Skills',
+                onTap: lockTap(widget.onOpenSkills),
               ),
             ),
           );

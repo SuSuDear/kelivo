@@ -1191,14 +1191,9 @@ class _HomePageState extends State<HomePage>
   }
 
 
-  Future<ChatInputSubmissionResult?> _handleSkillsCommand(
-    ChatInputData input,
-  ) async {
-    final text = input.text.trim();
-    if (text != '/skills' && text != '/skill') return null;
-
+  Future<void> _openSkillsSheet() async {
     final invocation = await showSkillsSheet(context);
-    if (!mounted) return ChatInputSubmissionResult.rejected;
+    if (!mounted) return;
     if (invocation != null && invocation.trim().isNotEmpty) {
       _inputController.text = invocation;
       _inputController.selection = TextSelection.collapsed(
@@ -1206,6 +1201,15 @@ class _HomePageState extends State<HomePage>
       );
       _inputFocus.requestFocus();
     }
+  }
+
+  Future<ChatInputSubmissionResult?> _handleSkillsCommand(
+    ChatInputData input,
+  ) async {
+    final text = input.text.trim();
+    if (text != '/skills' && text != '/skill') return null;
+
+    await _openSkillsSheet();
     return ChatInputSubmissionResult.rejected;
   }
 
@@ -1250,6 +1254,7 @@ class _HomePageState extends State<HomePage>
           context,
         ).push(MaterialPageRoute(builder: (_) => const McpPage()));
       },
+      onOpenSkills: _openSkillsSheet,
       onOpenSearch: _openSearchSettings,
       onConfigureReasoning: () async {
         final assistantProvider = context.read<AssistantProvider>();
