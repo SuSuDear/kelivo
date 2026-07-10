@@ -171,6 +171,8 @@ String _toolTitleFor(
   }
   final localToolTitle = _localToolTitleFor(l10n, name, args);
   if (localToolTitle != null) return localToolTitle;
+  final semanticTitle = _semanticToolTitleFor(name, args, isResult: isResult);
+  if (semanticTitle != null) return semanticTitle;
   switch (name) {
     case 'create_memory':
       return l10n.chatMessageWidgetCreateMemory;
@@ -187,6 +189,94 @@ String _toolTitleFor(
       return isResult
           ? l10n.chatMessageWidgetToolResult(name)
           : l10n.chatMessageWidgetToolCall(name);
+  }
+}
+
+String? _semanticToolTitleFor(
+  String name,
+  Map<String, dynamic> args, {
+  required bool isResult,
+}) {
+  String pick(List<String> keys) {
+    for (final key in keys) {
+      final value = args[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty) return value;
+    }
+    return '';
+  }
+
+  String compact(String value, {int max = 34}) {
+    final normalized = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (normalized.length <= max) return normalized;
+    return '${normalized.substring(0, max)}…';
+  }
+
+  String basename(String path) {
+    final trimmed = path.trim();
+    if (trimmed.isEmpty) return '';
+    final noSlash = trimmed.endsWith('/') && trimmed.length > 1
+        ? trimmed.substring(0, trimmed.length - 1)
+        : trimmed;
+    final idx = noSlash.lastIndexOf('/');
+    return idx >= 0 ? noSlash.substring(idx + 1) : noSlash;
+  }
+
+  final path = pick(['path', 'file', 'file_path', 'directory', 'dir']);
+  final query = pick(['query', 'q', 'keywords', 'pattern']);
+  final url = pick(['url', 'uri']);
+  final command = pick(['command', 'cmd']);
+  final text = pick(['text', 'content']);
+
+  switch (name) {
+    case 'list_files':
+      final target = path.isEmpty ? '目录' : compact(basename(path).isEmpty ? path : basename(path));
+      return isResult ? '已查看 $target' : '查看 $target';
+    case 'read_file':
+      final target = path.isEmpty ? '文件' : compact(basename(path));
+      return isResult ? '已读取 $target' : '读取 $target';
+    case 'search_files':
+      final target = query.isEmpty ? '文件内容' : '“${compact(query, max: 24)}”';
+      return isResult ? '已搜索 $target' : '搜索 $target';
+    case 'run_command':
+      final target = command.isEmpty ? '命令' : compact(command, max: 28);
+      return isResult ? '命令已执行' : '执行 $target';
+    case 'fetch_url':
+      final target = url.isEmpty ? '网页' : compact(url, max: 32);
+      return isResult ? '已获取网页' : '访问 $target';
+    case 'read_project_skill':
+      final target = path.isEmpty ? '项目技能' : compact(basename(path));
+      return isResult ? '已读取 $target 指令' : '读取 $target 指令';
+    case 'get_device_info':
+      return isResult ? '已读取设备信息' : '读取设备信息';
+    case 'write_file':
+    case 'file_write':
+      final target = path.isEmpty ? '文件' : compact(basename(path));
+      return isResult ? '已写入 $target' : '写入 $target';
+    case 'edit_file':
+    case 'file_edit':
+      final target = path.isEmpty ? '文件' : compact(basename(path));
+      return isResult ? '已修改 $target' : '修改 $target';
+    case 'create_memory':
+      return isResult ? '已保存记忆' : '保存记忆';
+    case 'memory_search':
+    case 'search_memory':
+      final target = query.isEmpty ? '记忆' : '“${compact(query, max: 24)}”';
+      return isResult ? '已检索 $target' : '检索 $target';
+    case 'browser_navigate':
+    case 'navigate':
+      final target = url.isEmpty ? '网页' : compact(url, max: 32);
+      return isResult ? '已打开网页' : '打开 $target';
+    case 'browser_screenshot':
+    case 'screenshot':
+      return isResult ? '已查看页面截图' : '查看页面截图';
+    case 'browser_get_text':
+    case 'get_text':
+      return isResult ? '已提取页面文字' : '提取页面文字';
+    case 'shell_execute':
+      final target = command.isEmpty ? text : command;
+      return isResult ? '命令已执行' : '执行 ${compact(target, max: 28)}';
+    default:
+      return null;
   }
 }
 
