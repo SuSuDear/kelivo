@@ -128,6 +128,7 @@ class BuiltInSkillService {
   }) async {
     final catalog = await loadCatalog(bundle: bundle);
     if (catalog.isEmpty) return '';
+    final installDir = await userSkillsDirectory();
 
     final explicit = _findExplicitlyInvokedSkills(userMessage, catalog);
     final implicit = explicit.isEmpty
@@ -139,6 +140,10 @@ class BuiltInSkillService {
       ..writeln('## Built-in skills')
       ..writeln(
         'The app provides Codex-style skills. A skill is a bundled or user-installed directory with a SKILL.md file plus optional resources such as scripts, references, templates, examples, or fixtures. Use the catalog metadata below to decide whether a skill is relevant. Full SKILL.md instructions are loaded only when explicitly invoked or implicitly matched with high confidence.',
+      )
+      ..writeln('User-installed skills directory: ${installDir.path}')
+      ..writeln(
+        'Manual install rule: copy each skill directory that contains SKILL.md into the user-installed skills directory above. The app discovers immediate subdirectories as installed skills.',
       )
       ..writeln()
       ..writeln('Available skills:');

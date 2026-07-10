@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/services/skills/builtin_skill_service.dart';
@@ -36,6 +39,34 @@ class _SkillsSheetState extends State<SkillsSheet> {
   Future<void> _installSkill() async {
     final sourcePath = await _askInstallPath();
     if (sourcePath == null || sourcePath.trim().isEmpty) return;
+    await _installSkillFromPath(sourcePath);
+  }
+
+  Future<void> _importSkill() async {
+    String? sourcePath;
+    try {
+      sourcePath = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: '选择包含 SKILL.md 的技能目录',
+      );
+    } catch (_) {}
+
+    if (sourcePath == null || sourcePath.trim().isEmpty) {
+      final result = await FilePicker.platform.pickFiles(
+        dialogTitle: '选择 SKILL.md',
+        type: FileType.custom,
+        allowedExtensions: const <String>['md'],
+        allowMultiple: false,
+        withData: false,
+      );
+      final filePath = result?.files.single.path;
+      if (filePath == null || filePath.trim().isEmpty) return;
+      sourcePath = File(filePath).parent.path;
+    }
+
+    await _installSkillFromPath(sourcePath);
+  }
+
+  Future<void> _installSkillFromPath(String sourcePath) async {
     try {
       final skill = await BuiltInSkillService.installFromDirectory(sourcePath);
       if (!mounted) return;
@@ -59,7 +90,7 @@ class _SkillsSheetState extends State<SkillsSheet> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('安装技能目录'),
+          title: const Text('输入路径安装'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,9 +158,14 @@ class _SkillsSheetState extends State<SkillsSheet> {
                     ),
                   ),
                   TextButton.icon(
+                    onPressed: _importSkill,
+                    icon: const Icon(Icons.file_upload_outlined),
+                    label: const Text('导入'),
+                  ),
+                  IconButton(
+                    tooltip: '输入路径安装',
                     onPressed: _installSkill,
-                    icon: const Icon(Icons.add),
-                    label: const Text('安装'),
+                    icon: const Icon(Icons.edit_outlined),
                   ),
                   IconButton(
                     tooltip: '关闭',
@@ -179,7 +215,7 @@ class _SkillsSheetState extends State<SkillsSheet> {
                           ),
                           trailing: Text(skill.isBundled ? '内置' : '用户'),
                           onTap: () {
-                            Navigator.of(context).pop('\$' + skill.name + ' ');
+                            Navigator.of(context).pop('\$${skill.name} ');
                           },
                         ),
                       );
