@@ -164,7 +164,13 @@ String _toolTitleFor(
   String name,
   Map<String, dynamic> args, {
   required bool isResult,
+  String? displayTitle,
+  String? resultTitle,
 }) {
+  final explicitTitle = isResult
+      ? ((resultTitle?.trim().isNotEmpty == true) ? resultTitle!.trim() : displayTitle?.trim())
+      : displayTitle?.trim();
+  if (explicitTitle != null && explicitTitle.isNotEmpty) return explicitTitle;
   final l10n = AppLocalizations.of(context)!;
   if (name == LocalToolNames.askUser) {
     return _askUserToolTitleFor(l10n, args);
@@ -410,6 +416,8 @@ void _showToolDetail(BuildContext context, ToolUIPart part) {
                                 part.toolName,
                                 part.arguments,
                                 isResult: !part.loading,
+                                displayTitle: part.displayTitle,
+                                resultTitle: part.resultTitle,
                               ),
                               style: TextStyle(
                                 fontSize: 16,
@@ -3404,12 +3412,16 @@ class ToolUIPart {
   final Map<String, dynamic> arguments;
   final String? content; // null means still loading/result not yet available
   final bool loading;
+  final String? displayTitle;
+  final String? resultTitle;
   const ToolUIPart({
     required this.id,
     required this.toolName,
     required this.arguments,
     this.content,
     this.loading = false,
+    this.displayTitle,
+    this.resultTitle,
   });
 }
 
@@ -4034,7 +4046,14 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
     Map<String, dynamic> args, {
     required bool isResult,
   }) {
-    return _toolTitleFor(context, name, args, isResult: isResult);
+    return _toolTitleFor(
+      context,
+      name,
+      args,
+      isResult: isResult,
+      displayTitle: widget.part.displayTitle,
+      resultTitle: widget.part.resultTitle,
+    );
   }
 
   String _argsSummary(Map<String, dynamic> args) {
@@ -4316,7 +4335,14 @@ class _ToolCallItemState extends State<_ToolCallItem> {
     Map<String, dynamic> args, {
     required bool isResult,
   }) {
-    return _toolTitleFor(context, name, args, isResult: isResult);
+    return _toolTitleFor(
+      context,
+      name,
+      args,
+      isResult: isResult,
+      displayTitle: widget.part.displayTitle,
+      resultTitle: widget.part.resultTitle,
+    );
   }
 
   /// Build a short argument summary for display in the approval card.

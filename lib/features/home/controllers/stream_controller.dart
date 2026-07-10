@@ -543,6 +543,66 @@ class StreamController {
     return 'name:$name|args:${_encodeJson(arguments)}';
   }
 
+  Map<String, dynamic> _toolDisplayMetadata(String name, Map<String, dynamic> args, {String? content}) {
+    String pick(List<String> keys) {
+      for (final key in keys) {
+        final value = args[key]?.toString().trim() ?? '';
+        if (value.isNotEmpty) return value;
+      }
+      return '';
+    }
+    String compact(String value, {int max = 34}) {
+      final normalized = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+      if (normalized.length <= max) return normalized;
+      return '${normalized.substring(0, max)}…';
+    }
+    String basename(String path) {
+      final trimmed = path.trim();
+      if (trimmed.isEmpty) return '';
+      final noSlash = trimmed.endsWith('/') && trimmed.length > 1 ? trimmed.substring(0, trimmed.length - 1) : trimmed;
+      final idx = noSlash.lastIndexOf('/');
+      return idx >= 0 ? noSlash.substring(idx + 1) : noSlash;
+    }
+    final path = pick(['path', 'file', 'file_path', 'directory', 'dir']);
+    final query = pick(['query', 'q', 'keywords', 'pattern']);
+    final command = pick(['command', 'cmd']);
+    String running;
+    String done;
+    switch (name) {
+      case 'list_files':
+        final target = path.isEmpty ? '目录' : compact(basename(path).isEmpty ? path : basename(path));
+        running = '查看 $target'; done = '已查看 $target'; break;
+      case 'read_file':
+        final target = path.isEmpty ? '文件' : compact(basename(path));
+        running = '读取 $target'; done = '已读取 $target'; break;
+      case 'search_files':
+        final target = query.isEmpty ? '文件内容' : '“${compact(query, max: 24)}”';
+        running = '搜索 $target'; done = '已搜索 $target'; break;
+      case 'run_command':
+      case 'shell_execute':
+        final semantic = _commandDisplayTitle(command);
+        running = semantic.$1; done = semantic.$2; break;
+      default:
+        running = name; done = name;
+    }
+    return {'displayTitle': running, 'resultTitle': done};
+  }
+
+  (String, String) _commandDisplayTitle(String command) {
+    final cmd = command.trim();
+    final lower = cmd.toLowerCase();
+    if (lower.contains('git status')) return ('检查 Git 状态', '已检查 Git 状态');
+    if (lower.contains('git diff')) return ('查看代码修改', '已查看代码修改');
+    if (lower.contains('git commit')) return ('提交修改', '已提交修改');
+    if (lower.contains('git push')) return ('推送修改', '已推送修改');
+    if (RegExp(r'(grep|rg)').hasMatch(lower)) return ('搜索代码', '已搜索代码');
+    if (RegExp(r'(ls|find)').hasMatch(lower)) return ('查看目录', '已查看目录');
+    if (RegExp(r'(cat|sed|head|tail)').hasMatch(lower)) return ('读取文件', '已读取文件');
+    if (RegExp(r'(python3?|dart|flutter)').hasMatch(lower)) return ('运行脚本', '已运行脚本');
+    final short = cmd.length > 28 ? '${cmd.substring(0, 28)}…' : (cmd.isEmpty ? '命令' : cmd);
+    return ('执行 $short', '已执行命令');
+  }
+
   bool _hasToolContent(String? content) => content?.trim().isNotEmpty == true;
 
   int _completedToolBoundary(String messageId) {
@@ -974,6 +1034,8 @@ class StreamController {
         toolName: c.name,
         arguments: c.arguments,
         loading: true,
+        displayTitle: (c.metadata?['displayTitle'] ?? _toolDisplayMetadata(c.name, c.arguments)['displayTitle'])?.toString(),
+        resultTitle: (c.metadata?['resultTitle'] ?? _toolDisplayMetadata(c.name, c.arguments)['resultTitle'])?.toString(),
       );
       if (idx >= 0) {
         existing[idx] = part;
@@ -1046,8 +1108,10 @@ class StreamController {
             'name': c.name,
             'arguments': c.arguments,
             'content': null,
-            if (c.metadata != null && c.metadata!.isNotEmpty)
-              'metadata': c.metadata,
+            'metadata': {
+              ..._toolDisplayMetadata(c.name, c.arguments),
+              if (c.metadata != null && c.metadata!.isNotEmpty) ...c.metadata!,
+            },
           },
       ];
       await setToolEventsInDb(messageId, dedupeToolEvents(newEvents));
@@ -1093,6 +1157,8 @@ class StreamController {
               : parts[idx].arguments,
           content: r.content,
           loading: false,
+          displayTitle: parts[idx].displayTitle,
+          resultTitle: (r.metadata?['resultTitle'] ?? parts[idx].resultTitle ?? _toolDisplayMetadata(r.name, r.arguments, content: r.content)['resultTitle'])?.toString(),
         );
       } else {
         parts.add(
@@ -1102,6 +1168,8 @@ class StreamController {
             arguments: r.arguments,
             content: r.content,
             loading: false,
+            displayTitle: (r.metadata?['displayTitle'] ?? _toolDisplayMetadata(r.name, r.arguments)['displayTitle'])?.toString(),
+            resultTitle: (r.metadata?['resultTitle'] ?? _toolDisplayMetadata(r.name, r.arguments, content: r.content)['resultTitle'])?.toString(),
           ),
         );
       }
@@ -1113,7 +1181,10 @@ class StreamController {
           name: r.name,
           arguments: args,
           content: r.content,
-          metadata: r.metadata,
+          metadata: {
+            ..._toolDisplayMetadata(r.name, args, content: r.content),
+            if (r.metadata != null && r.metadata!.isNotEmpty) ...r.metadata!,
+          },
         );
       } catch (_) {}
     }
@@ -1395,6 +1466,8 @@ class StreamController {
                     ? e['content'].toString()
                     : null,
                 loading: !(e['content']?.toString().isNotEmpty == true),
+                displayTitle: ((e['metadata'] as Map?)?['displayTitle'])?.toString(),
+                resultTitle: ((e['metadata'] as Map?)?['resultTitle'])?.toString(),
               ),
             )
             .toList();
