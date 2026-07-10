@@ -739,6 +739,7 @@ class ChatMessageWidget extends StatefulWidget {
   final int reconnectAttempt;
   final int reconnectMaxAttempts;
   final int reconnectRemainingSeconds;
+  final String? reconnectReason;
   final VoidCallback? onStopStreaming;
   final VoidCallback? onRetryStreamingNow;
   final List<String> suggestions;
@@ -788,6 +789,7 @@ class ChatMessageWidget extends StatefulWidget {
     this.reconnectAttempt = 0,
     this.reconnectMaxAttempts = 0,
     this.reconnectRemainingSeconds = 0,
+    this.reconnectReason,
     this.onStopStreaming,
     this.onRetryStreamingNow,
     this.suggestions = const <String>[],
@@ -2120,11 +2122,15 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final attempt = widget.reconnectAttempt;
     final max = widget.reconnectMaxAttempts;
     final remaining = widget.reconnectRemainingSeconds;
-    final text = max > 0
+    final baseText = max > 0
         ? (remaining > 0
               ? l10n.chatReconnectWaiting(attempt, max, remaining)
               : l10n.chatReconnectRetrying(attempt, max))
         : l10n.chatReconnectGeneric;
+    final reason = widget.reconnectReason?.trim();
+    final text = reason == null || reason.isEmpty
+        ? baseText
+        : '$baseText($reason)';
     return Padding(
       padding: const EdgeInsets.only(left: 8),
       child: Row(
@@ -2156,7 +2162,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               ),
             ),
           ],
-          if (widget.onRetryStreamingNow != null) ...[
+          if (remaining > 0 && widget.onRetryStreamingNow != null) ...[
             const SizedBox(width: 6),
             GestureDetector(
               behavior: HitTestBehavior.opaque,

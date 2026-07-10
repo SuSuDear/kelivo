@@ -67,6 +67,7 @@ class StreamingContentNotifier {
         reconnectAttempt: current.reconnectAttempt,
         reconnectMaxAttempts: current.reconnectMaxAttempts,
         reconnectRemainingSeconds: current.reconnectRemainingSeconds,
+        reconnectReason: current.reconnectReason,
       );
     }
   }
@@ -104,6 +105,7 @@ class StreamingContentNotifier {
         reconnectAttempt: current.reconnectAttempt,
         reconnectMaxAttempts: current.reconnectMaxAttempts,
         reconnectRemainingSeconds: current.reconnectRemainingSeconds,
+        reconnectReason: current.reconnectReason,
       );
     }
   }
@@ -139,6 +141,7 @@ class StreamingContentNotifier {
         reconnectAttempt: current.reconnectAttempt,
         reconnectMaxAttempts: current.reconnectMaxAttempts,
         reconnectRemainingSeconds: current.reconnectRemainingSeconds,
+        reconnectReason: current.reconnectReason,
       );
     }
   }
@@ -150,6 +153,7 @@ class StreamingContentNotifier {
     int reconnectAttempt = 0,
     int reconnectMaxAttempts = 0,
     int reconnectRemainingSeconds = 0,
+    String? reconnectReason,
   }) {
     final notifier = _notifiers[messageId];
     if (notifier != null) {
@@ -173,6 +177,9 @@ class StreamingContentNotifier {
         reconnectAttempt: reconnectAttempt,
         reconnectMaxAttempts: reconnectMaxAttempts,
         reconnectRemainingSeconds: reconnectRemainingSeconds,
+        reconnectReason: reconnecting
+            ? (reconnectReason ?? current.reconnectReason)
+            : null,
       );
     }
   }
@@ -199,6 +206,7 @@ class StreamingContentNotifier {
         reconnectAttempt: current.reconnectAttempt,
         reconnectMaxAttempts: current.reconnectMaxAttempts,
         reconnectRemainingSeconds: current.reconnectRemainingSeconds,
+        reconnectReason: current.reconnectReason,
       );
     }
   }
@@ -255,6 +263,7 @@ class StreamingContentData {
     this.reconnectAttempt = 0,
     this.reconnectMaxAttempts = 0,
     this.reconnectRemainingSeconds = 0,
+    this.reconnectReason,
   });
 
   final String content;
@@ -291,6 +300,9 @@ class StreamingContentData {
   /// 0 means the attempt is currently being made.
   final int reconnectRemainingSeconds;
 
+  /// Short reason that triggered the current reconnect attempt.
+  final String? reconnectReason;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -313,7 +325,8 @@ class StreamingContentData {
           reconnecting == other.reconnecting &&
           reconnectAttempt == other.reconnectAttempt &&
           reconnectMaxAttempts == other.reconnectMaxAttempts &&
-          reconnectRemainingSeconds == other.reconnectRemainingSeconds;
+          reconnectRemainingSeconds == other.reconnectRemainingSeconds &&
+          reconnectReason == other.reconnectReason;
 
   @override
   int get hashCode =>
@@ -334,5 +347,6 @@ class StreamingContentData {
       reconnecting.hashCode ^
       reconnectAttempt.hashCode ^
       reconnectMaxAttempts.hashCode ^
-      reconnectRemainingSeconds.hashCode;
+      reconnectRemainingSeconds.hashCode ^
+      reconnectReason.hashCode;
 }

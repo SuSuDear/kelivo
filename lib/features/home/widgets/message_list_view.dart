@@ -730,6 +730,7 @@ class _MessageListViewState extends State<MessageListView> {
             reconnectAttempt: data.reconnectAttempt,
             reconnectMaxAttempts: data.reconnectMaxAttempts,
             reconnectRemainingSeconds: data.reconnectRemainingSeconds,
+            reconnectReason: data.reconnectReason,
             enableStreamingTextMotion: !deferUpdates,
           ),
         );
@@ -757,6 +758,7 @@ class _MessageListViewState extends State<MessageListView> {
     int reconnectAttempt = 0,
     int reconnectMaxAttempts = 0,
     int reconnectRemainingSeconds = 0,
+    String? reconnectReason,
   }) {
     return ChatMessageWidget(
       message: message,
@@ -765,6 +767,7 @@ class _MessageListViewState extends State<MessageListView> {
       reconnectAttempt: reconnectAttempt,
       reconnectMaxAttempts: reconnectMaxAttempts,
       reconnectRemainingSeconds: reconnectRemainingSeconds,
+      reconnectReason: reconnectReason,
       onStopStreaming: widget.onStopStreaming,
       onRetryStreamingNow: () => widget.onRetryStreamingNow?.call(message.id),
       versionIndex: selectedIdx,

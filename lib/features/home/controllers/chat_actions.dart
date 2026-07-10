@@ -1105,6 +1105,35 @@ class ChatActions {
         text.contains('504');
   }
 
+  String _reconnectReasonForError(dynamic error) {
+    var reason = error.toString().trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (reason.isEmpty) return '';
+
+    reason = reason.replaceFirst(
+      RegExp(
+        r'^(?:HttpException|SocketException|TimeoutException|ClientException|DioException(?:\s*\[[^\]]+\])?|HandshakeException):\s*',
+      ),
+      '',
+    );
+
+    final httpMatch = RegExp(
+      r'\bHTTP\s+(\d{3})\b',
+      caseSensitive: false,
+    ).firstMatch(reason);
+    if (httpMatch != null) {
+      final status = httpMatch.group(1)!;
+      final prefix = 'HTTP $status';
+      if (reason.length <= 80 && reason.toUpperCase().startsWith(prefix)) {
+        return reason;
+      }
+      return prefix;
+    }
+
+    const maxLength = 80;
+    if (reason.length <= maxLength) return reason;
+    return '${reason.substring(0, maxLength - 1)}…';
+  }
+
   bool _canAutoReconnect(
     dynamic error,
     stream_ctrl.StreamingState state,
@@ -1286,6 +1315,7 @@ class ChatActions {
     state.reconnectDedupePending = state.fullContentRaw.isNotEmpty;
     final attempt = state.retryCount;
     final maxAttempts = state.maxRetryCount;
+    final reconnectReason = _reconnectReasonForError(error);
 
     final processed = _transformAssistantContent(state);
     await chatService.updateMessageSilent(
@@ -1311,6 +1341,7 @@ class ChatActions {
       reconnectAttempt: attempt,
       reconnectMaxAttempts: maxAttempts,
       reconnectRemainingSeconds: delaySeconds,
+      reconnectReason: reconnectReason,
     );
 
     final now = Completer<void>();
@@ -1323,6 +1354,7 @@ class ChatActions {
           reconnectAttempt: attempt,
           reconnectMaxAttempts: maxAttempts,
           reconnectRemainingSeconds: remaining,
+          reconnectReason: reconnectReason,
         );
         await Future.any<void>(<Future<void>>[
           Future<void>.delayed(const Duration(seconds: 1)),
@@ -1335,6 +1367,7 @@ class ChatActions {
         reconnecting: true,
         reconnectAttempt: attempt,
         reconnectMaxAttempts: maxAttempts,
+        reconnectReason: reconnectReason,
       );
     } finally {
       if (identical(state.reconnectNowCompleter, now)) {
