@@ -2854,21 +2854,12 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 http.StreamedResponse resp2;
                 try {
                   resp2 = await sendResponsesFollowUp(body2);
-                  ChatFlowDiagnostics.log(
-                    'RESP_FOLLOWUP_STATUS status=${resp2.statusCode} previous=$usePreviousResponseId',
-                  );
                 } catch (e) {
                   if (!usePreviousResponseId) rethrow;
-                  ChatFlowDiagnostics.log(
-                    'RESP_FOLLOWUP_PREVIOUS_FAILED fallbackReplay=true error=${ChatFlowDiagnostics.escape(e.toString())}',
-                  );
                   final fallbackBody2 = Map<String, dynamic>.from(body2)
                     ..remove('previous_response_id')
                     ..['input'] = currentInput;
                   resp2 = await sendResponsesFollowUp(fallbackBody2);
-                  ChatFlowDiagnostics.log(
-                    'RESP_FOLLOWUP_STATUS status=${resp2.statusCode} previous=false fallback=true',
-                  );
                 }
                 final s2 = resp2.stream.transform(utf8.decoder);
                 String buf2 = '';
@@ -3037,9 +3028,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                         }
                       }
                     } catch (e) {
-                      ChatFlowDiagnostics.log(
-                        'RESP2_PARSE_ERROR type=${e.runtimeType} error=${ChatFlowDiagnostics.escape(e.toString())}',
-                      );
                       if (e is! FormatException) rethrow;
                     }
                   }
@@ -4463,9 +4451,6 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           }
         }
       } catch (e) {
-        ChatFlowDiagnostics.log(
-          'SSE_PARSE_OR_FLOW_ERROR type=${e.runtimeType} error=${ChatFlowDiagnostics.escape(e.toString())}',
-        );
         // Only skip malformed JSON chunks. Network/follow-up/control-flow errors
         // must propagate so the UI can retry or show an error instead of
         // silently finalizing a partial answer.
