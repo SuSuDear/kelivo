@@ -2402,7 +2402,9 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                         label: l10n.chatMessageWidgetThinking,
                         child: Row(
                           mainAxisSize: MainAxisSize.max,
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                          crossAxisAlignment: widget.reconnecting
+                              ? CrossAxisAlignment.start
+                              : CrossAxisAlignment.center,
                           children: [
                             widget.hideStreamingIndicator
                                 ? const SizedBox(height: 16)
