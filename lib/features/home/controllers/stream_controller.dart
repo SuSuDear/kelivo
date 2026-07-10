@@ -114,11 +114,15 @@ class StreamController {
   // ============================================================================
 
   /// UI output interval for streaming content.
-  static const Duration _streamThrottleInterval = Duration(milliseconds: 50);
-  static const int _streamSmoothMinCount = 2;
-  static const int _streamSmoothBaseCount = 40;
-  static const int _streamSmoothMaxCount = 240;
-  static const double _streamSmoothPickRate = 0.1;
+  // Keep the visible stream typewriter-like even when some providers/CDNs
+  // deliver many SSE deltas in a short burst. The API layer may receive token
+  // deltas correctly, but if the UI smooth step is too large the user sees one
+  // big paragraph appear at once.
+  static const Duration _streamThrottleInterval = Duration(milliseconds: 35);
+  static const int _streamSmoothMinCount = 1;
+  static const int _streamSmoothBaseCount = 24;
+  static const int _streamSmoothMaxCount = 2000;
+  static const double _streamSmoothPickRate = 0.06;
   static const int _streamSmoothMoveAverageLength = 10;
 
   /// Throttle timers per message ID.
@@ -1646,7 +1650,9 @@ class _StreamSmoothState {
     if (backlog < baseCount) {
       effectivePickRate = pickRate * backlog / baseCount;
     } else if (backlog >= maxCount) {
-      effectivePickRate = math.max((backlog - baseCount) / backlog, pickRate);
+      // Very large backlogs should catch up, but not flush almost everything in
+      // a single tick; otherwise bursty SSE providers look non-streaming.
+      effectivePickRate = 0.35;
     } else {
       final t = (backlog - baseCount) / (maxCount - baseCount);
       effectivePickRate = pickRate + (0.5 - pickRate) * t;
