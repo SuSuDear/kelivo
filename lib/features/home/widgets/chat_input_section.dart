@@ -63,6 +63,7 @@ class ChatInputSection extends StatelessWidget {
     this.onClearContext,
     this.onCompressContext,
     this.conversationId,
+    this.conversationSkillsActive = false,
     this.sendButtonTooltip,
     this.backgroundImageActive = false,
   });
@@ -105,6 +106,7 @@ class ChatInputSection extends StatelessWidget {
   final VoidCallback? onClearContext;
   final VoidCallback? onCompressContext;
   final String? conversationId;
+  final bool conversationSkillsActive;
   final String? sendButtonTooltip;
   final bool backgroundImageActive;
 
@@ -169,6 +171,7 @@ class ChatInputSection extends StatelessWidget {
       onCancelQueuedInput: onCancelQueuedInput,
       showMcpButton: _shouldShowMcpButton(context, settings, a, pk, mid),
       mcpActive: _isMcpActive(context, a),
+      conversationSkillsActive: conversationSkillsActive,
       showQuickPhraseButton: _hasQuickPhrases(context, a),
       onQuickPhrase: onQuickPhrase,
       onLongPressQuickPhrase: onLongPressQuickPhrase,

@@ -184,7 +184,10 @@ class MessageGenerationService {
       assistant,
       hasBuiltInSearch,
     );
-    await messageBuilderService.injectBuiltInSkillPrompts(apiMessages);
+    await messageBuilderService.injectBuiltInSkillPrompts(
+      apiMessages,
+      activeSkillNames: currentConversation?.skillIds ?? const <String>[],
+    );
     await messageBuilderService.injectInstructionPrompts(
       apiMessages,
       assistantId,

@@ -630,12 +630,14 @@ class MessageBuilderService {
 
   /// Inject Codex-style built-in skill metadata and explicitly invoked SKILL.md content.
   Future<void> injectBuiltInSkillPrompts(
-    List<Map<String, dynamic>> apiMessages,
-  ) async {
+    List<Map<String, dynamic>> apiMessages, {
+    List<String> activeSkillNames = const <String>[],
+  }) async {
     try {
       final userMessage = _lastUserMessageText(apiMessages);
       final skillPrompt = await BuiltInSkillService.buildPromptForUserMessage(
         userMessage,
+        activeSkillNames: activeSkillNames,
       );
       if (skillPrompt.trim().isNotEmpty) {
         _appendToSystemMessage(apiMessages, skillPrompt);

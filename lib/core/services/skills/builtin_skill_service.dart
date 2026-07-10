@@ -6,36 +6,23 @@ import 'package:path/path.dart' as p;
 
 import '../../../utils/app_directories.dart';
 
-/// Codex-style skill metadata.
+/// Codex-style user-installed skill metadata.
 class BuiltInSkill {
   const BuiltInSkill({
     required this.name,
     required this.description,
-    required this.isBundled,
-    this.assetPath,
-    this.directoryPath,
+    required this.directoryPath,
   });
 
   final String name;
   final String description;
-  final bool isBundled;
-  final String? assetPath;
-  final String? directoryPath;
+  final String directoryPath;
 
-  bool get isUserInstalled => !isBundled;
-
-  String get sourcePath => assetPath ?? directoryPath ?? name;
+  String get sourcePath => directoryPath;
 }
 
-/// Loads app-bundled and user-installed Codex-style skills.
-///
-/// This follows Codex's progressive disclosure model:
-/// - the catalog exposes only name/description metadata;
-/// - the full SKILL.md and small text resources are injected only when the user
-///   explicitly invokes a skill or when a high-confidence description match is
-///   found for the current task.
+/// Loads user-installed Codex-style skills from the app data skills directory.
 class BuiltInSkillService {
-  static const String _systemSkillsRoot = 'assets/skills/.system/';
   static const int _maxSkillContentChars = 50000;
   static const int _maxResourceBytes = 12000;
   static const int _maxTotalResourceBytes = 64000;
@@ -60,22 +47,11 @@ class BuiltInSkillService {
     AssetBundle? bundle,
     bool refresh = false,
   }) async {
-    if (bundle == null && !refresh && _catalogCache != null) {
-      return _catalogCache!;
-    }
-
-    final assetBundle = bundle ?? rootBundle;
-    final catalog = <BuiltInSkill>[
-      ...await _loadBundledCatalog(assetBundle),
-      ...await _loadUserCatalog(),
-    ];
-    catalog.sort((a, b) {
-      if (a.isBundled != b.isBundled) return a.isBundled ? -1 : 1;
-      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-    });
-
+    if (!refresh && _catalogCache != null) return _catalogCache!;
+    final catalog = await _loadUserCatalog();
+    catalog.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final readonly = List<BuiltInSkill>.unmodifiable(catalog);
-    if (bundle == null) _catalogCache = readonly;
+    _catalogCache = readonly;
     return readonly;
   }
 
@@ -119,10 +95,8 @@ class BuiltInSkillService {
       name: p.basename(target.path),
       description: _descriptionFromSkillMarkdown(content),
       directoryPath: target.path,
-      isBundled: false,
     );
   }
-
 
   static Future<BuiltInSkill> installFromSkillFile(
     String skillFilePath, {
@@ -132,7 +106,14 @@ class BuiltInSkillService {
     if (!await sourceFile.exists()) {
       throw ArgumentError('SKILL.md file does not exist: ${sourceFile.path}');
     }
-    final name = _sanitizeSkillName((sourceFile.parent.uri.pathSegments.where((e) => e.isNotEmpty).isNotEmpty ? sourceFile.parent.uri.pathSegments.where((e) => e.isNotEmpty).last : sourceFile.parent.path.split('/').last));
+    final sourceSegments = sourceFile.parent.uri.pathSegments
+        .where((e) => e.isNotEmpty)
+        .toList(growable: false);
+    final name = _sanitizeSkillName(
+      sourceSegments.isNotEmpty
+          ? sourceSegments.last
+          : p.basename(sourceFile.parent.path),
+    );
     final root = await userSkillsDirectory();
     if (!await root.exists()) await root.create(recursive: true);
     final dirName = name.isEmpty
@@ -156,7 +137,6 @@ class BuiltInSkillService {
       name: p.basename(target.path),
       description: _descriptionFromSkillMarkdown(content),
       directoryPath: target.path,
-      isBundled: false,
     );
   }
 
@@ -172,13 +152,13 @@ class BuiltInSkillService {
     final archive = ZipDecoder().decodeBytes(bytes, verify: false);
     final skillEntries = archive.files.where((e) {
       final normalized = e.name.replaceAll('\\', '/');
-      return normalized.toLowerCase().endsWith('/skill.md') || normalized.toLowerCase() == 'skill.md';
+      return normalized.toLowerCase().endsWith('/skill.md') ||
+          normalized.toLowerCase() == 'skill.md';
     }).toList(growable: false);
     if (skillEntries.isEmpty) {
       throw ArgumentError('Zip package must contain SKILL.md');
     }
-    final skillEntry = skillEntries.first;
-    final normalized = skillEntry.name.replaceAll('\\', '/');
+    final normalized = skillEntries.first.name.replaceAll('\\', '/');
     final rootPrefix = normalized.toLowerCase() == 'skill.md'
         ? ''
         : normalized.substring(0, normalized.length - 'SKILL.md'.length);
@@ -213,18 +193,19 @@ class BuiltInSkillService {
       } else {
         relative = entryPath;
       }
-      relative = relative.replaceAll(RegExp(r'^/+'), '');
-      if (relative.isEmpty) continue;
-      if (relative.split('/').any((e) => e == '..' || e.isEmpty && relative.contains('//'))) {
-        continue;
-      }
-      final outPath = p.join(target.path, relative);
+      final parts = relative
+          .split('/')
+          .where((seg) => seg.isNotEmpty && seg != '.' && seg != '..')
+          .toList(growable: false);
+      if (parts.isEmpty) continue;
+      final outPath = p.joinAll(<String>[target.path, ...parts]);
       if (entry.isFile) {
-        final outFile = File(outPath);
-        await outFile.parent.create(recursive: true);
-        final data = entry.content;
-        if (data is List<int>) {
-          await outFile.writeAsBytes(data, flush: true);
+        File(outPath).parent.createSync(recursive: true);
+        final output = OutputFileStream(outPath);
+        try {
+          entry.writeContent(output);
+        } finally {
+          output.closeSync();
         }
       } else {
         await Directory(outPath).create(recursive: true);
@@ -240,50 +221,59 @@ class BuiltInSkillService {
       name: p.basename(target.path),
       description: _descriptionFromSkillMarkdown(content),
       directoryPath: target.path,
-      isBundled: false,
     );
   }
 
   static Future<String> buildPromptForUserMessage(
     String userMessage, {
+    List<String> activeSkillNames = const <String>[],
     AssetBundle? bundle,
   }) async {
-    final catalog = await loadCatalog(bundle: bundle);
-    if (catalog.isEmpty) return '';
+    final catalog = await loadCatalog();
     final installDir = await userSkillsDirectory();
+    if (catalog.isEmpty && !_looksSkillRelated(userMessage)) return '';
 
+    final conversation = _findNamedSkills(activeSkillNames, catalog);
     final explicit = _findExplicitlyInvokedSkills(userMessage, catalog);
-    final implicit = explicit.isEmpty
+    final implicit = explicit.isEmpty && conversation.isEmpty
         ? _findImplicitlyMatchedSkills(userMessage, catalog)
         : const <BuiltInSkill>[];
-    final loaded = _dedupeSkills(<BuiltInSkill>[...explicit, ...implicit]);
+    final loaded = _dedupeSkills(<BuiltInSkill>[
+      ...conversation,
+      ...explicit,
+      ...implicit,
+    ]);
 
     final buffer = StringBuffer()
-      ..writeln('## Built-in skills')
+      ..writeln('## Skills')
       ..writeln(
-        'The app provides Codex-style skills. A skill is a bundled or user-installed directory with a SKILL.md file plus optional resources such as scripts, references, templates, examples, or fixtures. Use the catalog metadata below to decide whether a skill is relevant. Full SKILL.md instructions are loaded only when explicitly invoked or implicitly matched with high confidence.',
+        'The app provides Codex-style user-installed skills. A skill is a directory with a SKILL.md file plus optional resources such as scripts, references, templates, examples, or fixtures. Full SKILL.md instructions are loaded when explicitly invoked, enabled for the current conversation, or implicitly matched with high confidence.',
       )
       ..writeln('User-installed skills directory: ${installDir.path}')
       ..writeln(
         'Manual install rule: copy each skill directory that contains SKILL.md into the user-installed skills directory above. The app discovers immediate subdirectories as installed skills.',
-      )
-      ..writeln()
-      ..writeln('Available skills:');
+      );
 
-    for (final skill in catalog) {
-      final description = skill.description.isEmpty
-          ? 'No description provided.'
-          : skill.description;
-      final source = skill.isBundled ? 'built-in' : 'user-installed';
-      buffer.writeln('- ${skill.name} [$source]: $description');
+    if (catalog.isNotEmpty) {
+      buffer
+        ..writeln()
+        ..writeln('Available skills:');
+      for (final skill in catalog) {
+        final description = skill.description.isEmpty
+            ? 'No description provided.'
+            : skill.description;
+        buffer.writeln('- ${skill.name}: $description');
+      }
     }
 
     if (loaded.isEmpty) {
-      buffer
-        ..writeln()
-        ..writeln(
-          'To load a skill, the user can explicitly invoke it with `\$skill-name`, `/skill-name`, `/skill skill-name`, or `/skills skill-name`. The `/skills` command opens the skill selector UI.',
-        );
+      if (catalog.isNotEmpty) {
+        buffer
+          ..writeln()
+          ..writeln(
+            'To load a skill for one message, explicitly invoke it with `\$skill-name`, `/skill-name`, `/skill skill-name`, or `/skills skill-name`. Use the Skills button to enable a skill for the current conversation.',
+          );
+      }
       return buffer.toString().trim();
     }
 
@@ -292,9 +282,11 @@ class BuiltInSkillService {
       ..writeln('Loaded skill instructions:');
 
     for (final skill in loaded) {
-      final trigger = explicit.contains(skill) ? 'explicit' : 'implicit';
-      final content = await _loadSkillContent(skill, bundle: bundle);
-      final resources = await _loadSkillResources(skill, bundle: bundle);
+      final trigger = conversation.contains(skill)
+          ? 'conversation'
+          : (explicit.contains(skill) ? 'explicit' : 'implicit');
+      final content = await _loadSkillContent(skill);
+      final resources = await _loadSkillResources(skill);
       if (content.trim().isEmpty && resources.trim().isEmpty) continue;
       buffer
         ..writeln(
@@ -315,45 +307,6 @@ class BuiltInSkillService {
     return buffer.toString().trim();
   }
 
-  static Future<List<BuiltInSkill>> _loadBundledCatalog(
-    AssetBundle assetBundle,
-  ) async {
-    final List<String> assets;
-    try {
-      final manifest = await AssetManifest.loadFromAssetBundle(assetBundle);
-      assets = manifest.listAssets();
-    } catch (_) {
-      return const <BuiltInSkill>[];
-    }
-
-    final skillPaths = assets
-        .where((path) =>
-            path.startsWith(_systemSkillsRoot) && path.endsWith('/SKILL.md'))
-        .toList(growable: false)
-      ..sort();
-
-    final catalog = <BuiltInSkill>[];
-    for (final path in skillPaths) {
-      final name = _skillNameFromPath(path);
-      if (name.isEmpty) continue;
-
-      String content = '';
-      try {
-        content = await assetBundle.loadString(path, cache: true);
-      } catch (_) {}
-
-      catalog.add(
-        BuiltInSkill(
-          name: name,
-          assetPath: path,
-          description: _descriptionFromSkillMarkdown(content),
-          isBundled: true,
-        ),
-      );
-    }
-    return catalog;
-  }
-
   static Future<List<BuiltInSkill>> _loadUserCatalog() async {
     try {
       final root = await userSkillsDirectory();
@@ -372,7 +325,6 @@ class BuiltInSkillService {
             name: p.basename(entity.path),
             description: _descriptionFromSkillMarkdown(content),
             directoryPath: entity.path,
-            isBundled: false,
           ),
         );
       }
@@ -382,99 +334,30 @@ class BuiltInSkillService {
     }
   }
 
-  static Future<String> _loadSkillContent(
-    BuiltInSkill skill, {
-    AssetBundle? bundle,
-  }) async {
+  static Future<String> _loadSkillContent(BuiltInSkill skill) async {
     final cacheKey = 'content:${skill.sourcePath}';
-    if (bundle == null && _contentCache.containsKey(cacheKey)) {
-      return _contentCache[cacheKey]!;
-    }
+    if (_contentCache.containsKey(cacheKey)) return _contentCache[cacheKey]!;
 
     var content = '';
-    if (skill.assetPath != null) {
+    final skillFile = _findSkillFileInDirectory(Directory(skill.directoryPath));
+    if (skillFile != null) {
       try {
-        content = await (bundle ?? rootBundle).loadString(
-          skill.assetPath!,
-          cache: true,
-        );
+        content = await skillFile.readAsString();
       } catch (_) {}
-    } else if (skill.directoryPath != null) {
-      final skillFile = _findSkillFileInDirectory(Directory(skill.directoryPath!));
-      if (skillFile != null) {
-        try {
-          content = await skillFile.readAsString();
-        } catch (_) {}
-      }
     }
 
     if (content.length > _maxSkillContentChars) {
       content = '${content.substring(0, _maxSkillContentChars)}\n\n[SKILL.md truncated]';
     }
-    if (bundle == null) _contentCache[cacheKey] = content;
+    _contentCache[cacheKey] = content;
     return content;
   }
 
-  static Future<String> _loadSkillResources(
-    BuiltInSkill skill, {
-    AssetBundle? bundle,
-  }) async {
+  static Future<String> _loadSkillResources(BuiltInSkill skill) async {
     final cacheKey = 'resources:${skill.sourcePath}';
-    if (bundle == null && _resourceCache.containsKey(cacheKey)) {
-      return _resourceCache[cacheKey]!;
-    }
+    if (_resourceCache.containsKey(cacheKey)) return _resourceCache[cacheKey]!;
 
-    final resources = skill.assetPath != null
-        ? await _loadAssetResources(skill, bundle: bundle)
-        : await _loadFileResources(skill);
-    if (bundle == null) _resourceCache[cacheKey] = resources;
-    return resources;
-  }
-
-  static Future<String> _loadAssetResources(
-    BuiltInSkill skill, {
-    AssetBundle? bundle,
-  }) async {
-    final assetPath = skill.assetPath;
-    if (assetPath == null) return '';
-    final root = assetPath.substring(0, assetPath.lastIndexOf('/') + 1);
-    final assetBundle = bundle ?? rootBundle;
-
-    final List<String> assets;
-    try {
-      final manifest = await AssetManifest.loadFromAssetBundle(assetBundle);
-      assets = manifest.listAssets();
-    } catch (_) {
-      return '';
-    }
-
-    var total = 0;
-    var count = 0;
-    final buffer = StringBuffer();
-    for (final path in assets.where((e) => e.startsWith(root)).toList()..sort()) {
-      final rel = path.substring(root.length);
-      if (rel == 'SKILL.md' || !_shouldIncludeResource(rel)) continue;
-      if (count >= _maxResourceFiles || total >= _maxTotalResourceBytes) break;
-      try {
-        final content = await assetBundle.loadString(path, cache: true);
-        if (content.length > _maxResourceBytes) continue;
-        total += content.length;
-        count++;
-        if (buffer.isEmpty) buffer.writeln('<skill-resources>');
-        buffer
-          ..writeln('<resource path="$rel">')
-          ..writeln(content.trimRight())
-          ..writeln('</resource>');
-      } catch (_) {}
-    }
-    if (buffer.isNotEmpty) buffer.writeln('</skill-resources>');
-    return buffer.toString().trim();
-  }
-
-  static Future<String> _loadFileResources(BuiltInSkill skill) async {
-    final directoryPath = skill.directoryPath;
-    if (directoryPath == null) return '';
-    final dir = Directory(directoryPath);
+    final dir = Directory(skill.directoryPath);
     if (!await dir.exists()) return '';
 
     final files = <File>[];
@@ -509,7 +392,21 @@ class BuiltInSkillService {
       } catch (_) {}
     }
     if (buffer.isNotEmpty) buffer.writeln('</skill-resources>');
-    return buffer.toString().trim();
+    final resources = buffer.toString().trim();
+    _resourceCache[cacheKey] = resources;
+    return resources;
+  }
+
+  static List<BuiltInSkill> _findNamedSkills(
+    List<String> names,
+    List<BuiltInSkill> catalog,
+  ) {
+    if (names.isEmpty || catalog.isEmpty) return const <BuiltInSkill>[];
+    final wanted = names.map((e) => e.trim().toLowerCase()).toSet();
+    final matches = catalog
+        .where((skill) => wanted.contains(skill.name.toLowerCase()))
+        .toList(growable: false);
+    return List<BuiltInSkill>.unmodifiable(matches);
   }
 
   static List<BuiltInSkill> _findExplicitlyInvokedSkills(
@@ -557,30 +454,6 @@ class BuiltInSkillService {
       for (final keyword in _keywordsFor(skill)) {
         if (normalized.contains(keyword)) score += 1;
       }
-      if (skill.name == 'skill-creator' &&
-          _containsAny(normalized, const <String>[
-            'create skill',
-            'build skill',
-            'write skill',
-            'new skill',
-            '创建技能',
-            '新建技能',
-            '制作技能',
-            '写一个技能',
-          ])) {
-        score += 4;
-      }
-      if (skill.name == 'skill-installer' &&
-          _containsAny(normalized, const <String>[
-            'install skill',
-            'import skill',
-            'add skill',
-            '安装技能',
-            '导入技能',
-            '添加技能',
-          ])) {
-        score += 4;
-      }
       if (score >= 3) matches.add(skill);
     }
     return List<BuiltInSkill>.unmodifiable(matches.take(2));
@@ -619,11 +492,9 @@ class BuiltInSkillService {
     }
   }
 
-  static bool _containsAny(String text, List<String> needles) {
-    for (final needle in needles) {
-      if (text.contains(needle)) return true;
-    }
-    return false;
+  static bool _looksSkillRelated(String text) {
+    final normalized = _normalizeText(text);
+    return normalized.contains('skill') || normalized.contains('技能');
   }
 
   static String _normalizeText(String text) {
@@ -667,12 +538,6 @@ class BuiltInSkillService {
       '.xml',
       '.csv',
     }.contains(ext);
-  }
-
-  static String _skillNameFromPath(String path) {
-    final parts = path.split('/');
-    if (parts.length < 2) return '';
-    return parts[parts.length - 2].trim();
   }
 
   static String _descriptionFromSkillMarkdown(String markdown) {

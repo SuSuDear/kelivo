@@ -236,6 +236,9 @@ class HomePageController extends ChangeNotifier {
 
   // Delegate to ChatController
   Conversation? get currentConversation => _chatController.currentConversation;
+  List<String> get conversationSkillIds =>
+      currentConversation?.skillIds ?? const <String>[];
+  bool get conversationSkillsActive => conversationSkillIds.isNotEmpty;
   List<ChatMessage> get messages => _chatController.messages;
   Map<String, int> get versionSelections => _chatController.versionSelections;
   Set<String> get loadingConversationIds =>
@@ -623,6 +626,16 @@ class HomePageController extends ChangeNotifier {
   // ============================================================================
   // Public Methods - Message Actions
   // ============================================================================
+
+  Future<void> setConversationSkill(String skillName, bool enabled) async {
+    final clean = skillName.trim();
+    if (clean.isEmpty) return;
+    if (currentConversation == null) {
+      await _createNewConversation();
+    }
+    await _chatController.setConversationSkill(clean, enabled);
+    notifyListeners();
+  }
 
   Future<ChatInputSubmissionResult> sendMessage(ChatInputData input) async {
     final content = input.text.trim();

@@ -631,6 +631,7 @@ class ChatService extends ChangeNotifier {
       summary: conversation.summary,
       lastSummarizedMessageCount: conversation.lastSummarizedMessageCount,
       chatSuggestions: List<String>.of(conversation.chatSuggestions),
+      skillIds: List.of(conversation.skillIds),
     );
     await _conversationsBox.put(restored.id, restored);
 
@@ -712,6 +713,57 @@ class ChatService extends ChangeNotifier {
       set.remove(serverId);
     }
     await setConversationMcpServers(conversationId, set.toList());
+  }
+
+  // Conversation-scoped skills selection
+  List<String> getConversationSkills(String conversationId) {
+    if (!_initialized) return const <String>[];
+    final c =
+        _conversationsBox.get(conversationId) ??
+        _draftConversations[conversationId];
+    return c?.skillIds ?? const <String>[];
+  }
+
+  Future<void> setConversationSkills(
+    String conversationId,
+    List<String> skillIds,
+  ) async {
+    if (!_initialized) await init();
+    final clean = skillIds
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    if (_draftConversations.containsKey(conversationId)) {
+      final draft = _draftConversations[conversationId]!;
+      draft.skillIds = List.of(clean);
+      draft.updatedAt = DateTime.now();
+      notifyListeners();
+      return;
+    }
+    final c = _conversationsBox.get(conversationId);
+    if (c == null) return;
+    c.skillIds = List.of(clean);
+    c.updatedAt = DateTime.now();
+    await c.save();
+    notifyListeners();
+  }
+
+  Future<void> toggleConversationSkill(
+    String conversationId,
+    String skillId,
+    bool enabled,
+  ) async {
+    final clean = skillId.trim();
+    if (clean.isEmpty) return;
+    final current = getConversationSkills(conversationId);
+    final set = current.toSet();
+    if (enabled) {
+      set.add(clean);
+    } else {
+      set.remove(clean);
+    }
+    await setConversationSkills(conversationId, set.toList());
   }
 
   Future<void> renameConversation(String id, String newTitle) async {

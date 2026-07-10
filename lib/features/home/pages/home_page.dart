@@ -1192,14 +1192,26 @@ class _HomePageState extends State<HomePage>
 
 
   Future<void> _openSkillsSheet() async {
-    final invocation = await showSkillsSheet(context);
-    if (!mounted) return;
-    if (invocation != null && invocation.trim().isNotEmpty) {
-      _inputController.text = invocation;
-      _inputController.selection = TextSelection.collapsed(
-        offset: invocation.length,
-      );
-      _inputFocus.requestFocus();
+    final result = await showSkillsSheet(
+      context,
+      activeSkillNames: _controller.conversationSkillIds,
+    );
+    if (!mounted || result == null) return;
+    switch (result.action) {
+      case SkillsSheetAction.useOnce:
+        final invocation = '\$${result.skillName} ';
+        _inputController.text = invocation;
+        _inputController.selection = TextSelection.collapsed(
+          offset: invocation.length,
+        );
+        _inputFocus.requestFocus();
+        break;
+      case SkillsSheetAction.enableConversation:
+        await _controller.setConversationSkill(result.skillName, true);
+        break;
+      case SkillsSheetAction.disableConversation:
+        await _controller.setConversationSkill(result.skillName, false);
+        break;
     }
   }
 
@@ -1225,6 +1237,7 @@ class _HomePageState extends State<HomePage>
       isReasoningModel: _controller.isReasoningModel,
       isReasoningEnabled: _controller.isReasoningEnabled,
       conversationId: _controller.currentConversation?.id,
+      conversationSkillsActive: _controller.conversationSkillsActive,
       sendButtonTooltip: _controller.isUserMessageEditActive
           ? AppLocalizations.of(context)!.messageEditPageSaveAndSend
           : null,

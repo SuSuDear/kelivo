@@ -5,17 +5,31 @@ import 'package:flutter/material.dart';
 
 import '../../../core/services/skills/builtin_skill_service.dart';
 
-Future<String?> showSkillsSheet(BuildContext context) {
-  return showModalBottomSheet<String>(
+enum SkillsSheetAction { useOnce, enableConversation, disableConversation }
+
+class SkillsSheetResult {
+  const SkillsSheetResult({required this.action, required this.skillName});
+
+  final SkillsSheetAction action;
+  final String skillName;
+}
+
+Future<SkillsSheetResult?> showSkillsSheet(
+  BuildContext context, {
+  List<String> activeSkillNames = const <String>[],
+}) {
+  return showModalBottomSheet<SkillsSheetResult>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) => const SkillsSheet(),
+    builder: (_) => SkillsSheet(activeSkillNames: activeSkillNames),
   );
 }
 
 class SkillsSheet extends StatefulWidget {
-  const SkillsSheet({super.key});
+  const SkillsSheet({super.key, this.activeSkillNames = const <String>[]});
+
+  final List<String> activeSkillNames;
 
   @override
   State<SkillsSheet> createState() => _SkillsSheetState();
@@ -23,6 +37,11 @@ class SkillsSheet extends StatefulWidget {
 
 class _SkillsSheetState extends State<SkillsSheet> {
   late Future<List<BuiltInSkill>> _future;
+
+  Set<String> get _activeSet => widget.activeSkillNames
+      .map((e) => e.trim().toLowerCase())
+      .where((e) => e.isNotEmpty)
+      .toSet();
 
   @override
   void initState() {
@@ -87,6 +106,50 @@ class _SkillsSheetState extends State<SkillsSheet> {
     }
   }
 
+  Future<void> _showSkillActions(BuiltInSkill skill, bool active) async {
+    final result = await showModalBottomSheet<SkillsSheetResult>(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(skill.name),
+                subtitle: Text(skill.description.isEmpty ? '无描述' : skill.description),
+              ),
+              ListTile(
+                leading: const Icon(Icons.play_arrow_outlined),
+                title: const Text('本次使用'),
+                onTap: () => Navigator.of(ctx).pop(
+                  SkillsSheetResult(
+                    action: SkillsSheetAction.useOnce,
+                    skillName: skill.name,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: Icon(active ? Icons.remove_circle_outline : Icons.add_circle_outline),
+                title: Text(active ? '关闭当前对话启用' : '当前对话启用'),
+                onTap: () => Navigator.of(ctx).pop(
+                  SkillsSheetResult(
+                    action: active
+                        ? SkillsSheetAction.disableConversation
+                        : SkillsSheetAction.enableConversation,
+                    skillName: skill.name,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+    if (!mounted || result == null) return;
+    Navigator.of(context).pop(result);
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -136,7 +199,7 @@ class _SkillsSheetState extends State<SkillsSheet> {
                   }
                   final skills = snapshot.data ?? const <BuiltInSkill>[];
                   if (skills.isEmpty) {
-                    return const Center(child: Text('暂无技能'));
+                    return const Center(child: Text('暂无技能，点击“导入”添加 SKILL.md 或 zip'));
                   }
                   return ListView.separated(
                     controller: controller,
@@ -145,29 +208,26 @@ class _SkillsSheetState extends State<SkillsSheet> {
                     separatorBuilder: (_, __) => const SizedBox(height: 6),
                     itemBuilder: (context, index) {
                       final skill = skills[index];
+                      final active = _activeSet.contains(skill.name.toLowerCase());
                       return Card(
                         elevation: 0,
-                        color: cs.surfaceContainerHighest.withValues(alpha: 0.42),
+                        color: active
+                            ? cs.primaryContainer.withValues(alpha: 0.55)
+                            : cs.surfaceContainerHighest.withValues(alpha: 0.42),
                         child: ListTile(
                           title: Text(skill.name),
                           subtitle: Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
-                              skill.description.isEmpty
-                                  ? '无描述'
-                                  : skill.description,
+                              skill.description.isEmpty ? '无描述' : skill.description,
                             ),
                           ),
                           leading: Icon(
-                            skill.isBundled
-                                ? Icons.verified_outlined
-                                : Icons.folder_outlined,
-                            color: cs.primary,
+                            active ? Icons.check_circle_outline : Icons.folder_outlined,
+                            color: active ? cs.primary : cs.onSurfaceVariant,
                           ),
-                          trailing: Text(skill.isBundled ? '内置' : '用户'),
-                          onTap: () {
-                            Navigator.of(context).pop('\$${skill.name} ');
-                          },
+                          trailing: active ? const Text('当前对话') : null,
+                          onTap: () => _showSkillActions(skill, active),
                         ),
                       );
                     },

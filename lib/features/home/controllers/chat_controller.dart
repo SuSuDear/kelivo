@@ -640,6 +640,22 @@ class ChatController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setConversationSkill(String skillName, bool enabled) async {
+    final conversation = _currentConversation;
+    final clean = skillName.trim();
+    if (conversation == null || clean.isEmpty) return;
+    await _chatService.toggleConversationSkill(
+      conversation.id,
+      clean,
+      enabled,
+    );
+    final updated = _chatService.getConversation(conversation.id);
+    if (updated != null) {
+      _currentConversation = updated;
+    }
+    notifyListeners();
+  }
+
   // ============================================================================
   // Version Selection
   // ============================================================================

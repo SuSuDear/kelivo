@@ -51,6 +51,10 @@ class Conversation extends HiveObject {
   @HiveField(12)
   List<String> chatSuggestions;
 
+  // Conversation-scoped enabled skills (by skill name).
+  @HiveField(13)
+  List<String> skillIds;
+
   Conversation({
     String? id,
     required this.title,
@@ -65,6 +69,7 @@ class Conversation extends HiveObject {
     this.summary,
     int? lastSummarizedMessageCount,
     List<String>? chatSuggestions,
+    List<String>? skillIds,
   }) : id = id ?? const Uuid().v4(),
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now(),
@@ -73,7 +78,8 @@ class Conversation extends HiveObject {
        truncateIndex = truncateIndex ?? -1,
        versionSelections = versionSelections ?? <String, int>{},
        lastSummarizedMessageCount = lastSummarizedMessageCount ?? 0,
-       chatSuggestions = chatSuggestions ?? [];
+       chatSuggestions = chatSuggestions ?? [],
+       skillIds = skillIds ?? [];
 
   Conversation copyWith({
     String? id,
@@ -89,6 +95,7 @@ class Conversation extends HiveObject {
     String? summary,
     int? lastSummarizedMessageCount,
     List<String>? chatSuggestions,
+    List<String>? skillIds,
     bool clearSummary = false,
   }) {
     return Conversation(
@@ -106,6 +113,7 @@ class Conversation extends HiveObject {
       lastSummarizedMessageCount:
           lastSummarizedMessageCount ?? this.lastSummarizedMessageCount,
       chatSuggestions: chatSuggestions ?? this.chatSuggestions,
+      skillIds: skillIds ?? this.skillIds,
     );
   }
 
@@ -124,6 +132,7 @@ class Conversation extends HiveObject {
       'summary': summary,
       'lastSummarizedMessageCount': lastSummarizedMessageCount,
       'chatSuggestions': chatSuggestions,
+      'skillIds': skillIds,
     };
   }
 
@@ -150,6 +159,8 @@ class Conversation extends HiveObject {
       chatSuggestions:
           (json['chatSuggestions'] as List?)?.cast<String>() ??
           const <String>[],
+      skillIds:
+          (json['skillIds'] as List?)?.cast<String>() ?? const <String>[],
     );
   }
 }

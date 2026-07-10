@@ -76,6 +76,7 @@ class ChatInputBar extends StatefulWidget {
     this.supportsReasoning = true,
     this.showMcpButton = false,
     this.mcpActive = false,
+    this.conversationSkillsActive = false,
     this.showMiniMapButton = false,
     this.onOpenMiniMap,
     this.onPickCamera,
@@ -126,6 +127,7 @@ class ChatInputBar extends StatefulWidget {
   final bool supportsReasoning;
   final bool showMcpButton;
   final bool mcpActive;
+  final bool conversationSkillsActive;
   final bool showMiniMapButton;
   final VoidCallback? onOpenMiniMap;
   final VoidCallback? onPickCamera;
@@ -1140,11 +1142,13 @@ class _ChatInputBarState extends State<ChatInputBar>
             _OverflowAction(
               width: normalButtonW,
               builder: () => _CompactIconButton(
-                tooltip: _skillsInvocationActive
-                    ? 'Skills active for this message'
-                    : 'Skills',
+                tooltip: widget.conversationSkillsActive
+                    ? 'Skills active for this conversation'
+                    : (_skillsInvocationActive
+                          ? 'Skills active for this message'
+                          : 'Skills'),
                 icon: Lucide.Sparkles,
-                active: _skillsInvocationActive,
+                active: _skillsInvocationActive || widget.conversationSkillsActive,
                 onTap: lockTap(widget.onOpenSkills),
               ),
               menu: DesktopContextMenuItem(
