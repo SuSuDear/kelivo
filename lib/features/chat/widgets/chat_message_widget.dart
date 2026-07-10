@@ -2116,6 +2116,30 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     return blocks;
   }
 
+  String _softBreakReconnectReason(String reason) {
+    const zeroWidthSpace = '\u200B';
+    const breakAfterChars = r'/\?&=._-,:;()[]{}';
+    final buffer = StringBuffer();
+    var continuousChars = 0;
+
+    for (final rune in reason.runes) {
+      final char = String.fromCharCode(rune);
+      buffer.write(char);
+      if (char.trim().isEmpty) {
+        continuousChars = 0;
+        continue;
+      }
+
+      continuousChars += 1;
+      if (breakAfterChars.contains(char) || continuousChars >= 18) {
+        buffer.write(zeroWidthSpace);
+        continuousChars = 0;
+      }
+    }
+
+    return buffer.toString();
+  }
+
   Widget _buildReconnectStatus(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
@@ -2130,22 +2154,23 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final reason = widget.reconnectReason?.trim();
     final text = reason == null || reason.isEmpty
         ? baseText
-        : '$baseText($reason)';
+        : '$baseText(${_softBreakReconnectReason(reason)})';
     return Padding(
       padding: const EdgeInsets.only(left: 8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 0,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(
             text,
+            softWrap: true,
             style: TextStyle(
               fontSize: 12,
               color: cs.onSurface.withValues(alpha: 0.62),
             ),
           ),
-          if (widget.onStopStreaming != null) ...[
-            const SizedBox(width: 8),
+          if (widget.onStopStreaming != null)
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: widget.onStopStreaming,
@@ -2161,9 +2186,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 ),
               ),
             ),
-          ],
-          if (remaining > 0 && widget.onRetryStreamingNow != null) ...[
-            const SizedBox(width: 6),
+          if (remaining > 0 && widget.onRetryStreamingNow != null)
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: widget.onRetryStreamingNow,
@@ -2179,7 +2202,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 ),
               ),
             ),
-          ],
         ],
       ),
     );
@@ -2353,14 +2375,14 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                       child: Semantics(
                         label: l10n.chatMessageWidgetThinking,
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                          mainAxisSize: MainAxisSize.max,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             widget.hideStreamingIndicator
                                 ? const SizedBox(height: 16)
                                 : const LoadingIndicator(),
                             if (widget.reconnecting)
-                              _buildReconnectStatus(context),
+                              Flexible(child: _buildReconnectStatus(context)),
                           ],
                         ),
                       ),
@@ -2395,13 +2417,14 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 Padding(
                   padding: const EdgeInsets.only(left: 4, top: 4),
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisSize: MainAxisSize.max,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       widget.hideStreamingIndicator
                           ? const SizedBox(height: 16)
                           : const LoadingIndicator(),
-                      if (widget.reconnecting) _buildReconnectStatus(context),
+                      if (widget.reconnecting)
+                        Flexible(child: _buildReconnectStatus(context)),
                     ],
                   ),
                 ),
