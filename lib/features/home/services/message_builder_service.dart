@@ -15,6 +15,7 @@ import '../../../core/services/chat/document_text_extractor.dart';
 import '../../../core/services/chat/prompt_transformer.dart';
 import '../../../core/services/instruction_injection_store.dart';
 import '../../../core/services/skills/builtin_skill_service.dart';
+import '../../../core/services/skills/project_instruction_service.dart';
 import '../../../core/services/search/search_tool_service.dart';
 import '../../../core/providers/instruction_injection_provider.dart';
 import '../../../core/services/api/builtin_tools.dart';
@@ -633,11 +634,17 @@ class MessageBuilderService {
   ) async {
     try {
       final userMessage = _lastUserMessageText(apiMessages);
-      final prompt = await BuiltInSkillService.buildPromptForUserMessage(
+      final skillPrompt = await BuiltInSkillService.buildPromptForUserMessage(
         userMessage,
       );
-      if (prompt.trim().isNotEmpty) {
-        _appendToSystemMessage(apiMessages, prompt);
+      if (skillPrompt.trim().isNotEmpty) {
+        _appendToSystemMessage(apiMessages, skillPrompt);
+      }
+      final projectPrompt = await ProjectInstructionService.buildPromptForUserMessage(
+        userMessage,
+      );
+      if (projectPrompt.trim().isNotEmpty) {
+        _appendToSystemMessage(apiMessages, projectPrompt);
       }
     } catch (_) {}
   }

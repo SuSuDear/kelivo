@@ -43,6 +43,7 @@ import '../../quick_phrase/widgets/quick_phrase_menu.dart';
 import '../widgets/chat_input_bar.dart';
 import '../widgets/mini_map_sheet.dart';
 import '../widgets/instruction_injection_sheet.dart';
+import '../widgets/skills_sheet.dart';
 import '../widgets/learning_prompt_sheet.dart';
 import '../widgets/scroll_nav_buttons.dart';
 import '../widgets/message_list_view.dart';
@@ -1189,6 +1190,25 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+
+  Future<ChatInputSubmissionResult?> _handleSkillsCommand(
+    ChatInputData input,
+  ) async {
+    final text = input.text.trim();
+    if (text != '/skills' && text != '/skill') return null;
+
+    final invocation = await showSkillsSheet(context);
+    if (!mounted) return ChatInputSubmissionResult.rejected;
+    if (invocation != null && invocation.trim().isNotEmpty) {
+      _inputController.text = invocation;
+      _inputController.selection = TextSelection.collapsed(
+        offset: invocation.length,
+      );
+      _inputFocus.requestFocus();
+    }
+    return ChatInputSubmissionResult.rejected;
+  }
+
   Widget _buildChatInputBar(BuildContext context, {required bool isTablet}) {
     return ChatInputSection(
       inputBarKey: _inputBarKey,
@@ -1247,8 +1267,10 @@ class _HomePageState extends State<HomePage>
           );
         }
       },
-      onSend: (text) async {
-        final result = await _controller.sendMessage(text);
+      onSend: (input) async {
+        final skillsResult = await _handleSkillsCommand(input);
+        if (skillsResult != null) return skillsResult;
+        final result = await _controller.sendMessage(input);
         if (!mounted) return result;
         if (PlatformUtils.isMobile &&
             result == ChatInputSubmissionResult.sent) {
