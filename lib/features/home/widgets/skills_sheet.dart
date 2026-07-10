@@ -36,12 +36,6 @@ class _SkillsSheetState extends State<SkillsSheet> {
     });
   }
 
-  Future<void> _installSkill() async {
-    final sourcePath = await _askInstallPath();
-    if (sourcePath == null || sourcePath.trim().isEmpty) return;
-    await _installSkillFromPath(sourcePath);
-  }
-
   Future<void> _importSkill() async {
     final result = await FilePicker.platform.pickFiles(
       dialogTitle: '选择 SKILL.md 或技能 zip',
@@ -93,71 +87,6 @@ class _SkillsSheetState extends State<SkillsSheet> {
     }
   }
 
-  Future<void> _installSkillFromPath(String sourcePath) async {
-    try {
-      final skill = await BuiltInSkillService.installFromDirectory(sourcePath);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已安装技能：${skill.name}')),
-      );
-      _reload();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('安装失败：$e')),
-      );
-    }
-  }
-
-  Future<String?> _askInstallPath() async {
-    final controller = TextEditingController();
-    final skillsDir = await BuiltInSkillService.userSkillsDirectory();
-    if (!mounted) return null;
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('输入路径安装'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('系统支持时可直接选择目录；否则优先使用“导入文件”。'),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                minLines: 1,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  hintText: '/path/to/my-skill',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                '安装位置：${skillsDir.path}',
-                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-              child: const Text('安装'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -187,12 +116,7 @@ class _SkillsSheetState extends State<SkillsSheet> {
                   TextButton.icon(
                     onPressed: _importSkill,
                     icon: const Icon(Icons.file_upload_outlined),
-                    label: const Text('导入文件'),
-                  ),
-                  IconButton(
-                    tooltip: '选择目录安装',
-                    onPressed: _installSkill,
-                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('导入'),
                   ),
                   IconButton(
                     tooltip: '关闭',
