@@ -43,27 +43,54 @@ class _SkillsSheetState extends State<SkillsSheet> {
   }
 
   Future<void> _importSkill() async {
-    String? sourcePath;
-    try {
-      sourcePath = await FilePicker.platform.getDirectoryPath(
-        dialogTitle: '选择包含 SKILL.md 的技能目录',
-      );
-    } catch (_) {}
+    final result = await FilePicker.platform.pickFiles(
+      dialogTitle: '选择 SKILL.md 或技能 zip',
+      type: FileType.custom,
+      allowedExtensions: const <String>['md', 'zip'],
+      allowMultiple: false,
+      withData: false,
+    );
+    final filePath = result?.files.single.path;
+    if (filePath == null || filePath.trim().isEmpty) return;
 
-    if (sourcePath == null || sourcePath.trim().isEmpty) {
-      final result = await FilePicker.platform.pickFiles(
-        dialogTitle: '选择 SKILL.md',
-        type: FileType.custom,
-        allowedExtensions: const <String>['md'],
-        allowMultiple: false,
-        withData: false,
-      );
-      final filePath = result?.files.single.path;
-      if (filePath == null || filePath.trim().isEmpty) return;
-      sourcePath = File(filePath).parent.path;
+    final lower = filePath.toLowerCase();
+    if (lower.endsWith('.zip')) {
+      await _installSkillZip(filePath);
+      return;
     }
+    await _installSkillFile(filePath);
+  }
 
-    await _installSkillFromPath(sourcePath);
+  Future<void> _installSkillFile(String filePath) async {
+    try {
+      final skill = await BuiltInSkillService.installFromSkillFile(filePath);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已导入技能：${skill.name}')),
+      );
+      _reload();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('导入失败：$e')),
+      );
+    }
+  }
+
+  Future<void> _installSkillZip(String filePath) async {
+    try {
+      final skill = await BuiltInSkillService.installFromZipFile(filePath);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已导入技能包：${skill.name}')),
+      );
+      _reload();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('导入失败：$e')),
+      );
+    }
   }
 
   Future<void> _installSkillFromPath(String sourcePath) async {
@@ -95,7 +122,7 @@ class _SkillsSheetState extends State<SkillsSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('请输入包含 SKILL.md 的本地目录路径：'),
+              const Text('系统支持时可直接选择目录；否则优先使用“导入文件”。'),
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
@@ -160,10 +187,10 @@ class _SkillsSheetState extends State<SkillsSheet> {
                   TextButton.icon(
                     onPressed: _importSkill,
                     icon: const Icon(Icons.file_upload_outlined),
-                    label: const Text('导入'),
+                    label: const Text('导入文件'),
                   ),
                   IconButton(
-                    tooltip: '输入路径安装',
+                    tooltip: '选择目录安装',
                     onPressed: _installSkill,
                     icon: const Icon(Icons.edit_outlined),
                   ),

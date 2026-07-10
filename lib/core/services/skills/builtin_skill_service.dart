@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:archive/archive_io.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
@@ -114,6 +115,127 @@ class BuiltInSkillService {
     clearCache();
 
     final content = await skillFile.readAsString();
+    return BuiltInSkill(
+      name: p.basename(target.path),
+      description: _descriptionFromSkillMarkdown(content),
+      directoryPath: target.path,
+      isBundled: false,
+    );
+  }
+
+
+  static Future<BuiltInSkill> installFromSkillFile(
+    String skillFilePath, {
+    bool overwrite = false,
+  }) async {
+    final sourceFile = File(skillFilePath.trim()).absolute;
+    if (!await sourceFile.exists()) {
+      throw ArgumentError('SKILL.md file does not exist: ${sourceFile.path}');
+    }
+    final name = _sanitizeSkillName((sourceFile.parent.uri.pathSegments.where((e) => e.isNotEmpty).isNotEmpty ? sourceFile.parent.uri.pathSegments.where((e) => e.isNotEmpty).last : sourceFile.parent.path.split('/').last));
+    final root = await userSkillsDirectory();
+    if (!await root.exists()) await root.create(recursive: true);
+    final dirName = name.isEmpty
+        ? 'skill-${DateTime.now().millisecondsSinceEpoch}'
+        : name;
+    var target = Directory(p.join(root.path, dirName));
+    if (await target.exists()) {
+      if (overwrite) {
+        await target.delete(recursive: true);
+      } else {
+        target = Directory(
+          p.join(root.path, '$dirName-${DateTime.now().millisecondsSinceEpoch}'),
+        );
+      }
+    }
+    await target.create(recursive: true);
+    await sourceFile.copy(p.join(target.path, 'SKILL.md'));
+    clearCache();
+    final content = await sourceFile.readAsString();
+    return BuiltInSkill(
+      name: p.basename(target.path),
+      description: _descriptionFromSkillMarkdown(content),
+      directoryPath: target.path,
+      isBundled: false,
+    );
+  }
+
+  static Future<BuiltInSkill> installFromZipFile(
+    String zipFilePath, {
+    bool overwrite = false,
+  }) async {
+    final zipFile = File(zipFilePath.trim()).absolute;
+    if (!await zipFile.exists()) {
+      throw ArgumentError('Zip file does not exist: ${zipFile.path}');
+    }
+    final bytes = await zipFile.readAsBytes();
+    final archive = ZipDecoder().decodeBytes(bytes, verify: false);
+    final skillEntries = archive.files.where((e) {
+      final normalized = e.name.replaceAll('\\', '/');
+      return normalized.toLowerCase().endsWith('/skill.md') || normalized.toLowerCase() == 'skill.md';
+    }).toList(growable: false);
+    if (skillEntries.isEmpty) {
+      throw ArgumentError('Zip package must contain SKILL.md');
+    }
+    final skillEntry = skillEntries.first;
+    final normalized = skillEntry.name.replaceAll('\\', '/');
+    final rootPrefix = normalized.toLowerCase() == 'skill.md'
+        ? ''
+        : normalized.substring(0, normalized.length - 'SKILL.md'.length);
+    final sourceName = _sanitizeSkillName(
+      rootPrefix.isEmpty
+          ? p.basenameWithoutExtension(zipFile.path)
+          : rootPrefix.split('/').where((e) => e.isNotEmpty).last,
+    );
+    final root = await userSkillsDirectory();
+    if (!await root.exists()) await root.create(recursive: true);
+    final dirName = sourceName.isEmpty
+        ? 'skill-${DateTime.now().millisecondsSinceEpoch}'
+        : sourceName;
+    var target = Directory(p.join(root.path, dirName));
+    if (await target.exists()) {
+      if (overwrite) {
+        await target.delete(recursive: true);
+      } else {
+        target = Directory(
+          p.join(root.path, '$dirName-${DateTime.now().millisecondsSinceEpoch}'),
+        );
+      }
+    }
+    await target.create(recursive: true);
+
+    for (final entry in archive.files) {
+      final entryPath = entry.name.replaceAll('\\', '/');
+      String relative;
+      if (rootPrefix.isNotEmpty) {
+        if (!entryPath.startsWith(rootPrefix)) continue;
+        relative = entryPath.substring(rootPrefix.length);
+      } else {
+        relative = entryPath;
+      }
+      relative = relative.replaceAll(RegExp(r'^/+'), '');
+      if (relative.isEmpty) continue;
+      if (relative.split('/').any((e) => e == '..' || e.isEmpty && relative.contains('//'))) {
+        continue;
+      }
+      final outPath = p.join(target.path, relative);
+      if (entry.isFile) {
+        final outFile = File(outPath);
+        await outFile.parent.create(recursive: true);
+        final data = entry.content;
+        if (data is List<int>) {
+          await outFile.writeAsBytes(data, flush: true);
+        }
+      } else {
+        await Directory(outPath).create(recursive: true);
+      }
+    }
+    final installedSkillFile = _findSkillFileInDirectory(target);
+    if (installedSkillFile == null || !await installedSkillFile.exists()) {
+      throw ArgumentError('Zip package extracted but SKILL.md was not installed');
+    }
+    clearCache();
+    final content = await installedSkillFile.readAsString();
     return BuiltInSkill(
       name: p.basename(target.path),
       description: _descriptionFromSkillMarkdown(content),
