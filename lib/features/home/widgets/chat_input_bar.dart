@@ -182,6 +182,20 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   bool get _composerLocked => widget.hasQueuedInput;
 
+  bool get _skillsInvocationActive {
+    final text = _controller.text;
+    if (text.trim().isEmpty) return false;
+    return RegExp(
+      r'(^|[^A-Za-z0-9_-])\$[A-Za-z0-9][A-Za-z0-9_-]*(?=\s|$)',
+    ).hasMatch(text) ||
+        RegExp(
+          r'(^|\s)/skills?\s+[A-Za-z0-9][A-Za-z0-9_-]*(?=\s|$)',
+        ).hasMatch(text) ||
+        RegExp(
+          r'(^|\s)/[A-Za-z0-9][A-Za-z0-9_-]*(?=\s|$)',
+        ).hasMatch(text);
+  }
+
   Color _inputFillColor({
     required ThemeData theme,
     required bool backgroundImageActive,
@@ -1126,8 +1140,11 @@ class _ChatInputBarState extends State<ChatInputBar>
             _OverflowAction(
               width: normalButtonW,
               builder: () => _CompactIconButton(
-                tooltip: 'Skills',
+                tooltip: _skillsInvocationActive
+                    ? 'Skills active for this message'
+                    : 'Skills',
                 icon: Lucide.Sparkles,
+                active: _skillsInvocationActive,
                 onTap: lockTap(widget.onOpenSkills),
               ),
               menu: DesktopContextMenuItem(
