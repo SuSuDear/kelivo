@@ -19,12 +19,29 @@ void main() {
       expect(parsed.thinkingTexts, const ['reasoning here']);
     });
 
+    test('extracts closed thinking block', () {
+      const input = '<thinking>reasoning here</thinking>answer';
+      final parsed = ThinkingTagParser.parseLegacyInlineBlocks(input);
+
+      expect(parsed.visibleContent, 'answer');
+      expect(parsed.thinkingTexts, const ['reasoning here']);
+    });
+
+    test('extracts closed reasoning block', () {
+      const input = '<reasoning>reasoning here</reasoning>answer';
+      final parsed = ThinkingTagParser.parseLegacyInlineBlocks(input);
+
+      expect(parsed.visibleContent, 'answer');
+      expect(parsed.thinkingTexts, const ['reasoning here']);
+    });
+
     test('extracts multiple closed blocks', () {
-      const input = '<think>a</think>mid<thought>b</thought>end';
+      const input =
+          '<think>a</think>mid<thought>b</thought><reasoning>c</reasoning>end';
       final parsed = ThinkingTagParser.parseLegacyInlineBlocks(input);
 
       expect(parsed.visibleContent, 'midend');
-      expect(parsed.thinkingTexts, const ['a', 'b']);
+      expect(parsed.thinkingTexts, const ['a', 'b', 'c']);
     });
 
     test('keeps unclosed think tag visible', () {

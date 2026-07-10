@@ -12,7 +12,7 @@ class ThinkingTagParseResult {
 
 class ThinkingTagParser {
   static final RegExp _openTagRe = RegExp(
-    r'<(think|thought)>',
+    r'<(think|thought|thinking|reasoning)>',
     caseSensitive: false,
   );
 
