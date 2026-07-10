@@ -1464,6 +1464,9 @@ class ChatActions {
       );
     }
 
+    ChatFlowDiagnostics.trace(
+      'UI_APPLY contentLen=${chunkContent.length} reasoningLen=${chunk.reasoning?.length ?? 0} done=${chunk.isDone} fullBefore=${state.fullContentRaw.length}',
+    );
     state.fullContentRaw += chunkContent;
     state.streamStartedAt ??= DateTime.now();
     if (chunk.totalTokens > 0) {

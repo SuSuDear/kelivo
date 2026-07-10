@@ -1850,7 +1850,18 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
   String? currentSseEvent;
   String? finishReason;
 
+  var apiChunkIndex = 0;
+  DateTime? lastApiChunkAt;
   await for (final chunk in _ensureTrailingNewline(sse)) {
+    apiChunkIndex += 1;
+    final apiNow = DateTime.now();
+    final apiGapMs = lastApiChunkAt == null
+        ? -1
+        : apiNow.difference(lastApiChunkAt!).inMilliseconds;
+    lastApiChunkAt = apiNow;
+    ChatFlowDiagnostics.trace(
+      'API_UTF8_CHUNK idx=$apiChunkIndex chars=${chunk.length} gapMs=$apiGapMs preview=${ChatFlowDiagnostics.summarizeChunk(chunk, max: 240)}',
+    );
     buffer += chunk;
     final lines = buffer.split('\n');
     buffer = lines.last;
@@ -2902,7 +2913,18 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                 var sawCompleted2 = false;
                 var contentAccum2 = '';
                 String? currentSseEvent2;
+                var apiChunkIndex2 = 0;
+                DateTime? lastApiChunkAt2;
                 await for (final ch in _ensureTrailingNewline(s2)) {
+                  apiChunkIndex2 += 1;
+                  final apiNow2 = DateTime.now();
+                  final apiGapMs2 = lastApiChunkAt2 == null
+                      ? -1
+                      : apiNow2.difference(lastApiChunkAt2!).inMilliseconds;
+                  lastApiChunkAt2 = apiNow2;
+                  ChatFlowDiagnostics.trace(
+                    'API2_UTF8_CHUNK idx=$apiChunkIndex2 chars=${ch.length} gapMs=$apiGapMs2 preview=${ChatFlowDiagnostics.summarizeChunk(ch, max: 240)}',
+                  );
                   buf2 += ch;
                   final lines2 = buf2.split('\n');
                   buf2 = lines2.last;
@@ -2945,6 +2967,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
                           sawTextDelta2 = true;
                           contentAccum2 += delta;
                           approxCompletionChars += delta.length;
+                          ChatFlowDiagnostics.trace('YIELD2_TEXT len=${delta.length}');
                           yield ChatStreamChunk(
                             content: delta,
                             isDone: false,
@@ -3469,6 +3492,9 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           if (content.isNotEmpty) {
             assistantContentBuffer += content;
           }
+          ChatFlowDiagnostics.trace(
+            'YIELD_MAIN contentLen=${content.length} reasoningLen=${reasoning?.length ?? 0} totalTokens=$totalTokens',
+          );
           yield ChatStreamChunk(
             content: content,
             reasoning: reasoning,

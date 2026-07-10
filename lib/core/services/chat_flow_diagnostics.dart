@@ -55,6 +55,24 @@ class ChatFlowDiagnostics {
     });
   }
 
+
+  static void trace(String line) {
+    if (!_active && !line.startsWith('FLOW_START')) return;
+    final now = DateTime.now();
+    final stamp = _formatTs(now);
+    final id = _flowId ?? '-';
+    final text = '[$stamp] [flow:$id] $line\n';
+    _queue = _queue.then((_) async {
+      try {
+        final dir = await AppDirectories.getAppDataDirectory();
+        final logsDir = Directory('${dir.path}/logs');
+        if (!await logsDir.exists()) await logsDir.create(recursive: true);
+        final file = File('${logsDir.path}/chat_stream_trace.txt');
+        await file.writeAsString(text, mode: FileMode.append, flush: true);
+      } catch (_) {}
+    });
+  }
+
   static String summarizeChunk(String text, {int max = 500}) {
     final escaped = escape(text);
     if (escaped.length <= max) return escaped;

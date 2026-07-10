@@ -215,15 +215,29 @@ class DioHttpClient extends http.BaseClient {
           );
         }
       }
+      ChatFlowDiagnostics.trace(
+        'HTTP_RES_HEADERS req=$reqId status=$statusCode headers=${ChatFlowDiagnostics.summarizeObject(headers, max: 1200)}',
+      );
 
       final body = resp.data!;
       final int? contentLength = (body.contentLength >= 0)
           ? body.contentLength
           : null;
       final controller = StreamController<List<int>>(sync: true);
+      var netChunkIndex = 0;
+      DateTime? lastNetChunkAt;
       controller.onListen = () {
         body.stream.listen(
           (chunk) {
+            netChunkIndex += 1;
+            final now = DateTime.now();
+            final gapMs = lastNetChunkAt == null
+                ? -1
+                : now.difference(lastNetChunkAt!).inMilliseconds;
+            lastNetChunkAt = now;
+            ChatFlowDiagnostics.trace(
+              'NET_BYTES req=$reqId idx=$netChunkIndex bytes=${chunk.length} gapMs=$gapMs preview=${ChatFlowDiagnostics.summarizeChunk(RequestLogger.safeDecodeUtf8(chunk), max: 240)}',
+            );
             controller.add(chunk);
             if (RequestLogger.enabled && RequestLogger.saveOutput) {
               final s = RequestLogger.safeDecodeUtf8(chunk);
