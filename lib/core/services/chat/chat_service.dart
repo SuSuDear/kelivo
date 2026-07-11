@@ -79,7 +79,11 @@ class ChatService extends ChangeNotifier {
     if (_initialized) return Future<void>.value();
     final existing = _initializing;
     if (existing != null) return existing;
-    final future = _initialize();
+    final future = _initialize().catchError((Object error, StackTrace stackTrace) {
+      debugPrint('[ChatService] initialization failed: $error');
+      debugPrint('$stackTrace');
+      throw error;
+    });
     _initializing = future;
     return future.whenComplete(() {
       if (identical(_initializing, future)) _initializing = null;
@@ -393,20 +397,22 @@ class ChatService extends ChangeNotifier {
     final conversation = _conversationsBox.get(id);
     if (conversation == null) return false;
 
-    for (final messageId in conversation.messageIds) {
-      final msg = _messagesBox.get(messageId);
-      if (msg != null && msg.role == 'assistant') {
-        try {
-          await _toolEventsBox.delete(msg.id);
-        } catch (_) {}
-        try {
-          await _toolEventsBox.delete(_sigKey(msg.id));
-        } catch (_) {}
+    final messageIds = List<String>.of(conversation.messageIds);
+    final toolEventKeys = <String>[];
+    for (final messageId in messageIds) {
+      _cancelPendingStreamPersist(messageId);
+      final message = _messagesBox.get(messageId);
+      if (message != null && message.role == 'assistant') {
+        toolEventKeys
+          ..add(message.id)
+          ..add(_sigKey(message.id));
       }
-      await _messagesBox.delete(messageId);
     }
-
-    await _conversationsBox.delete(id);
+    await _sqliteStorage.deleteConversation(
+      conversationId: id,
+      messageIds: messageIds,
+      toolEventKeys: toolEventKeys,
+    );
     _messagesCache.remove(id);
 
     if (_currentConversationId == id) {
@@ -935,6 +941,19 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _cancelPendingStreamPersist(String messageId) {
+    _streamPersistTimers.remove(messageId)?.cancel();
+    _pendingStreamMessages.remove(messageId);
+  }
+
+  void _cancelAllPendingStreamPersists() {
+    for (final timer in _streamPersistTimers.values) {
+      timer.cancel();
+    }
+    _streamPersistTimers.clear();
+    _pendingStreamMessages.clear();
+  }
+
   Future<ChatMessage> addMessage({
     required String conversationId,
     required String role,
@@ -953,15 +972,14 @@ class ChatService extends ChangeNotifier {
 
     var conversation = _conversationsBox.get(conversationId);
     final temporary = _temporaryConversationIds.contains(conversationId);
+    var removedDraft = false;
     // If conversation doesn't exist yet, persist draft (if any)
     if (conversation == null) {
       final draft = temporary
           ? _draftConversations[conversationId]
           : _draftConversations.remove(conversationId);
+      removedDraft = !temporary && draft != null;
       if (draft != null) {
-        if (!temporary) {
-          await _conversationsBox.put(draft.id, draft);
-        }
         conversation = draft;
       } else {
         // Create a new one on the fly as a fallback
@@ -969,9 +987,7 @@ class ChatService extends ChangeNotifier {
           id: conversationId,
           title: _defaultConversationTitle,
         );
-        if (!temporary) {
-          await _conversationsBox.put(conversationId, conversation);
-        } else {
+        if (temporary) {
           _draftConversations[conversationId] = conversation;
         }
       }
@@ -992,22 +1008,33 @@ class ChatService extends ChangeNotifier {
       version: version,
     );
 
-    if (!temporary) {
-      await _messagesBox.put(message.id, message);
-    }
-
-    // Track streaming state for crash-recovery cleanup
-    if (isStreaming && !temporary) {
-      _trackStreamingId(message.id);
-    }
-
+    final previousMessageIds = List<String>.of(conversation.messageIds);
+    final previousUpdatedAt = conversation.updatedAt;
     conversation.messageIds.add(message.id);
     conversation.updatedAt = DateTime.now();
     if (temporary) {
       _messagesCache.putIfAbsent(conversationId, () => <ChatMessage>[]);
     } else {
-      await _conversationsBox.put(conversation.id, conversation);
+      try {
+        await _sqliteStorage.putMessageAndConversation(message, conversation);
+      } catch (error, stackTrace) {
+        conversation.messageIds
+          ..clear()
+          ..addAll(previousMessageIds);
+        conversation.updatedAt = previousUpdatedAt;
+        if (removedDraft) {
+          _draftConversations[conversationId] = conversation;
+        }
+        debugPrint('[ChatService] addMessage transaction failed: $error');
+        debugPrint('$stackTrace');
+        rethrow;
+      }
       _saveLastConversationId(conversationId);
+    }
+
+    // Track streaming state for crash-recovery cleanup
+    if (isStreaming && !temporary) {
+      _trackStreamingId(message.id);
     }
 
     // Update cache
@@ -1508,6 +1535,9 @@ class ChatService extends ChangeNotifier {
     }
 
     final conversation = _conversationsBox.get(message.conversationId);
+    final previousMessageIds = conversation == null
+        ? null
+        : List<String>.of(conversation.messageIds);
     if (conversation != null) {
       final gid = message.groupId ?? message.id;
       final ids = conversation.messageIds;
@@ -1551,18 +1581,27 @@ class ChatService extends ChangeNotifier {
         }
       }
 
-      await _conversationsBox.put(conversation.id, conversation);
     }
 
-    await _messagesBox.delete(messageId);
-    // Remove any tool events linked to this assistant message
-    if (message.role == 'assistant') {
-      try {
-        await _toolEventsBox.delete(message.id);
-      } catch (_) {}
-      try {
-        await _toolEventsBox.delete(_sigKey(message.id));
-      } catch (_) {}
+    _cancelPendingStreamPersist(messageId);
+    final toolEventKeys = message.role == 'assistant'
+        ? <String>[message.id, _sigKey(message.id)]
+        : const <String>[];
+    try {
+      await _sqliteStorage.deleteMessageAndUpdateConversation(
+        messageId: messageId,
+        conversation: conversation,
+        toolEventKeys: toolEventKeys,
+      );
+    } catch (error, stackTrace) {
+      if (conversation != null && previousMessageIds != null) {
+        conversation.messageIds
+          ..clear()
+          ..addAll(previousMessageIds);
+      }
+      debugPrint('[ChatService] deleteMessage transaction failed: $error');
+      debugPrint('$stackTrace');
+      rethrow;
     }
 
     // Update cache: clear this conversation so that next getMessages()
@@ -1589,9 +1628,8 @@ class ChatService extends ChangeNotifier {
   Future<void> clearAllData() async {
     if (!_initialized) return;
 
-    await _messagesBox.clear();
-    await _conversationsBox.clear();
-    await _toolEventsBox.clear();
+    _cancelAllPendingStreamPersists();
+    await _sqliteStorage.clearAll();
     _messagesCache.clear();
     _draftConversations.clear();
     _temporaryConversationIds.clear();
