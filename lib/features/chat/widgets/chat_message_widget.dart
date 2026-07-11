@@ -2181,55 +2181,52 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final text = reason == null || reason.isEmpty
         ? baseText
         : '$baseText(${_softBreakReconnectReason(reason)})';
-    return Padding(
-      padding: const EdgeInsets.only(left: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 0,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Text(
-            text,
-            softWrap: true,
-            style: TextStyle(
-              fontSize: 12,
-              color: cs.onSurface.withValues(alpha: 0.62),
+    return Wrap(
+      spacing: 8,
+      runSpacing: 0,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          text,
+          softWrap: true,
+          style: TextStyle(
+            fontSize: 12,
+            color: cs.onSurface.withValues(alpha: 0.62),
+          ),
+        ),
+        if (widget.onStopStreaming != null)
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onStopStreaming,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Text(
+                l10n.chatReconnectStop,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: AppFontWeights.medium,
+                  color: cs.primary,
+                ),
+              ),
             ),
           ),
-          if (widget.onStopStreaming != null)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: widget.onStopStreaming,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                child: Text(
-                  l10n.chatReconnectStop,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: AppFontWeights.medium,
-                    color: cs.primary,
-                  ),
+        if (remaining > 0 && widget.onRetryStreamingNow != null)
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onRetryStreamingNow,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Text(
+                l10n.chatReconnectRetryNow,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: AppFontWeights.medium,
+                  color: cs.primary,
                 ),
               ),
             ),
-          if (remaining > 0 && widget.onRetryStreamingNow != null)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: widget.onRetryStreamingNow,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                child: Text(
-                  l10n.chatReconnectRetryNow,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: AppFontWeights.medium,
-                    color: cs.primary,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -2406,11 +2403,12 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                               ? CrossAxisAlignment.start
                               : CrossAxisAlignment.center,
                           children: [
-                            widget.hideStreamingIndicator
-                                ? const SizedBox(height: 16)
-                                : const LoadingIndicator(),
                             if (widget.reconnecting)
-                              Flexible(child: _buildReconnectStatus(context)),
+                              Flexible(child: _buildReconnectStatus(context))
+                            else if (widget.hideStreamingIndicator)
+                              const SizedBox(height: 16)
+                            else
+                              const LoadingIndicator(),
                           ],
                         ),
                       ),
@@ -2448,11 +2446,12 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                     mainAxisSize: MainAxisSize.max,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      widget.hideStreamingIndicator
-                          ? const SizedBox(height: 16)
-                          : const LoadingIndicator(),
                       if (widget.reconnecting)
-                        Flexible(child: _buildReconnectStatus(context)),
+                        Flexible(child: _buildReconnectStatus(context))
+                      else if (widget.hideStreamingIndicator)
+                        const SizedBox(height: 16)
+                      else
+                        const LoadingIndicator(),
                     ],
                   ),
                 ),
