@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'sqlite_chat_storage.dart';
 import '../../models/chat_message.dart';
 import '../../models/conversation.dart';
 import '../../../utils/sandbox_path_resolver.dart';
@@ -15,15 +19,18 @@ class ChatService extends ChangeNotifier {
   static const String _toolEventsBoxName = 'tool_events_v1';
   static const String _activeStreamingKey = '_active_streaming_ids';
   static const String _lastConversationIdKey = 'chat_last_conversation_id_v1';
+  static const String _hiveMigrationCompleteKey =
+      'chat_hive_to_sqlite_migration_v1';
   static const int defaultInitialMessageMin = 2;
   static const int defaultInitialMessageMax = 240;
   static const int defaultInitialTextBudget = 20000;
   static const int defaultHistoryPageSize = 20;
   static const int defaultLoadedWindowMax = 360;
 
-  late Box<Conversation> _conversationsBox;
-  late Box<ChatMessage> _messagesBox;
-  late Box
+  late SqliteChatStorage _sqliteStorage;
+  late SqliteJsonStore<Conversation> _conversationsBox;
+  late SqliteJsonStore<ChatMessage> _messagesBox;
+  late SqliteJsonStore<dynamic>
   _toolEventsBox; // key: assistantMessageId, value: List<Map<String,dynamic>>
   String _sigKey(String id) => 'sig_$id';
 
@@ -34,6 +41,10 @@ class ChatService extends ChangeNotifier {
   final Map<String, List<Map<String, dynamic>>> _temporaryToolEvents =
       <String, List<Map<String, dynamic>>>{};
   final Map<String, String> _temporaryGeminiThoughtSigs = <String, String>{};
+  final Map<String, Timer> _streamPersistTimers = <String, Timer>{};
+  final Map<String, ChatMessage> _pendingStreamMessages =
+      <String, ChatMessage>{};
+  static const Duration _streamPersistInterval = Duration(milliseconds: 300);
 
   // Localized default title for new conversations; set by UI on startup.
   String _defaultConversationTitle = 'New Chat';
@@ -86,9 +97,26 @@ class ChatService extends ChangeNotifier {
       Hive.registerAdapter(ConversationAdapter());
     }
 
-    _conversationsBox = await Hive.openBox<Conversation>(_conversationsBoxName);
-    _messagesBox = await Hive.openBox<ChatMessage>(_messagesBoxName);
-    _toolEventsBox = await Hive.openBox(_toolEventsBoxName);
+    final legacyConversations = await Hive.openBox<Conversation>(
+      _conversationsBoxName,
+    );
+    final legacyMessages = await Hive.openBox<ChatMessage>(_messagesBoxName);
+    final legacyToolEvents = await Hive.openBox(_toolEventsBoxName);
+
+    _sqliteStorage = await SqliteChatStorage.open();
+    _conversationsBox = _sqliteStorage.conversations;
+    _messagesBox = _sqliteStorage.messages;
+    _toolEventsBox = _sqliteStorage.toolEvents;
+    await _migrateFromHiveIfNeeded(
+      legacyConversations,
+      legacyMessages,
+      legacyToolEvents,
+    );
+    await Future.wait([
+      legacyConversations.close(),
+      legacyMessages.close(),
+      legacyToolEvents.close(),
+    ]);
 
     // Migrate any persisted message content that references old iOS sandbox paths
     await _migrateSandboxPaths();
@@ -99,6 +127,58 @@ class ChatService extends ChangeNotifier {
 
     _initialized = true;
     notifyListeners();
+  }
+
+  Future<void> _migrateFromHiveIfNeeded(
+    Box<Conversation> legacyConversations,
+    Box<ChatMessage> legacyMessages,
+    Box<dynamic> legacyToolEvents,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_hiveMigrationCompleteKey) == true) return;
+    if (!_conversationsBox.isEmpty ||
+        !_messagesBox.isEmpty ||
+        !_toolEventsBox.isEmpty ||
+        legacyConversations.isEmpty) {
+      await prefs.setBool(_hiveMigrationCompleteKey, true);
+      return;
+    }
+
+    await _sqliteStorage.database.transaction((txn) async {
+      for (final entry in legacyConversations.toMap().entries) {
+        await txn.insert(
+          'conversations',
+          {
+            'key': entry.key.toString(),
+            'payload': jsonEncode(entry.value.toJson()),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      for (final entry in legacyMessages.toMap().entries) {
+        await txn.insert(
+          'messages',
+          {
+            'key': entry.key.toString(),
+            'payload': jsonEncode(entry.value.toJson()),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      for (final entry in legacyToolEvents.toMap().entries) {
+        await txn.insert(
+          'tool_events',
+          {'key': entry.key.toString(), 'payload': jsonEncode(entry.value)},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+    await Future.wait([
+      _conversationsBox.load(),
+      _messagesBox.load(),
+      _toolEventsBox.load(),
+    ]);
+    await prefs.setBool(_hiveMigrationCompleteKey, true);
   }
 
   List<Conversation> getAllConversations() {
@@ -1089,6 +1169,8 @@ class ChatService extends ChangeNotifier {
       return;
     }
 
+    _streamPersistTimers.remove(messageId)?.cancel();
+    _pendingStreamMessages.remove(messageId);
     await _messagesBox.put(messageId, updatedMessage);
 
     // Update streaming tracking for crash-recovery
@@ -1154,7 +1236,18 @@ class ChatService extends ChangeNotifier {
       return;
     }
 
-    await _messagesBox.put(messageId, updatedMessage);
+    _messagesBox.putCached(messageId, updatedMessage);
+    _pendingStreamMessages[messageId] = updatedMessage;
+    _streamPersistTimers[messageId] ??= Timer(
+      _streamPersistInterval,
+      () {
+        _streamPersistTimers.remove(messageId);
+        final pending = _pendingStreamMessages.remove(messageId);
+        if (pending != null) {
+          unawaited(_messagesBox.put(messageId, pending));
+        }
+      },
+    );
 
     // Update streaming tracking for crash-recovery
     if (isStreaming == false) {

@@ -156,9 +156,18 @@ class ChatActions {
     }
   }
 
+  DateTime? _lastIosBackgroundUpdateAt;
+
   Future<void> _updateIosBackgroundGeneration(
     stream_ctrl.StreamingState state,
   ) async {
+    final now = DateTime.now();
+    final lastUpdate = _lastIosBackgroundUpdateAt;
+    if (lastUpdate != null &&
+        now.difference(lastUpdate) < const Duration(milliseconds: 500)) {
+      return;
+    }
+    _lastIosBackgroundUpdateAt = now;
     final l10n = _l10n;
     if (l10n == null) return;
     try {
@@ -285,11 +294,13 @@ class ChatActions {
   }) {
     late final StreamSubscription<T> subscription;
     var terminalStarted = false;
+    Future<void> pending = Future<void>.value();
 
     Future<void> handleError(Object error, StackTrace stackTrace) async {
       if (terminalStarted) return;
       terminalStarted = true;
       try {
+        await pending;
         await onError(error, stackTrace);
       } finally {
         await subscription.cancel();
@@ -298,11 +309,12 @@ class ChatActions {
 
     Future<void> handleDone() async {
       if (terminalStarted) return;
-      terminalStarted = true;
       try {
+        await pending;
+        if (terminalStarted) return;
+        terminalStarted = true;
         await onDone();
       } catch (error, stackTrace) {
-        terminalStarted = false;
         await handleError(error, stackTrace);
       }
     }
@@ -310,17 +322,16 @@ class ChatActions {
     subscription = stream.listen(
       (chunk) {
         if (terminalStarted) return;
-        subscription.pause();
-        Future<void>.sync(() => onData(chunk)).then(
-          (_) {
-            if (!terminalStarted) {
-              subscription.resume();
-            }
-          },
-          onError: (Object error, StackTrace stackTrace) {
-            unawaited(handleError(error, stackTrace));
-          },
-        );
+        pending = pending.then((_) => onData(chunk));
+        pending = pending.catchError((Object error, StackTrace stackTrace) async {
+          if (terminalStarted) return;
+          terminalStarted = true;
+          try {
+            await onError(error, stackTrace);
+          } finally {
+            await subscription.cancel();
+          }
+        });
       },
       onError: (Object error, StackTrace stackTrace) {
         unawaited(handleError(error, stackTrace));
@@ -1673,7 +1684,7 @@ class ChatActions {
       await _finishReasoningOnContent(state);
     }
 
-    await _updateIosBackgroundGeneration(state);
+    unawaited(_updateIosBackgroundGeneration(state));
 
     // Re-check before scheduling timer — timer creation after _finishStreaming
     // would create a new timer that periodically overwrites _messages[index]
@@ -1829,10 +1840,14 @@ class ChatActions {
     final messageId = state.messageId;
     final conversationId = state.conversationId;
 
+    // Let the smooth UI queue drain before final cleanup. This prevents a
+    // large final SSE burst from appearing as one paragraph when [DONE] arrives.
+    await streamController.drainPendingStreamUpdate(messageId);
+
     // Mark streaming as ended to allow UI rebuilds again
     streamController.markStreamingEnded(messageId);
 
-    // Clean up stream throttle timer and flush final content
+    // Clean up stream throttle timer and flush any remaining final content.
     streamController.cleanupTimers(messageId);
 
     final shouldGenerateTitle =

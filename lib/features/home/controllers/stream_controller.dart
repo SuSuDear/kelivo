@@ -738,6 +738,19 @@ class StreamController {
     return content;
   }
 
+  /// Let the UI consume pending text before final cleanup.
+  Future<void> drainPendingStreamUpdate(
+    String messageId, {
+    Duration timeout = const Duration(milliseconds: 1200),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      final state = _streamSmoothStates[messageId];
+      if (state == null || state.targetContent == state.visibleContent) return;
+      await Future<void>.delayed(_streamThrottleInterval);
+    }
+  }
+
   /// Get pending stream content for a message.
   String? getPendingStreamContent(String messageId) =>
       _streamSmoothStates[messageId]?.targetContent;
