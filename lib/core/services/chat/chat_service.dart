@@ -1,10 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'sqlite_chat_storage.dart';
@@ -14,13 +11,8 @@ import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/app_directories.dart';
 
 class ChatService extends ChangeNotifier {
-  static const String _conversationsBoxName = 'conversations';
-  static const String _messagesBoxName = 'messages';
-  static const String _toolEventsBoxName = 'tool_events_v1';
   static const String _activeStreamingKey = '_active_streaming_ids';
   static const String _lastConversationIdKey = 'chat_last_conversation_id_v1';
-  static const String _hiveMigrationCompleteKey =
-      'chat_hive_to_sqlite_migration_v1';
   static const int defaultInitialMessageMin = 2;
   static const int defaultInitialMessageMax = 240;
   static const int defaultInitialTextBudget = 20000;
@@ -85,38 +77,10 @@ class ChatService extends ChangeNotifier {
   Future<void> init() async {
     if (_initialized) return;
 
-    // Initialize Hive with platform-specific directory
-    final appDataDir = await AppDirectories.getAppDataDirectory();
-    await Hive.initFlutter(appDataDir.path);
-
-    // Register adapters if not already registered
-    if (!Hive.isAdapterRegistered(0)) {
-      Hive.registerAdapter(ChatMessageAdapter());
-    }
-    if (!Hive.isAdapterRegistered(1)) {
-      Hive.registerAdapter(ConversationAdapter());
-    }
-
-    final legacyConversations = await Hive.openBox<Conversation>(
-      _conversationsBoxName,
-    );
-    final legacyMessages = await Hive.openBox<ChatMessage>(_messagesBoxName);
-    final legacyToolEvents = await Hive.openBox(_toolEventsBoxName);
-
     _sqliteStorage = await SqliteChatStorage.open();
     _conversationsBox = _sqliteStorage.conversations;
     _messagesBox = _sqliteStorage.messages;
     _toolEventsBox = _sqliteStorage.toolEvents;
-    await _migrateFromHiveIfNeeded(
-      legacyConversations,
-      legacyMessages,
-      legacyToolEvents,
-    );
-    await Future.wait([
-      legacyConversations.close(),
-      legacyMessages.close(),
-      legacyToolEvents.close(),
-    ]);
 
     // Migrate any persisted message content that references old iOS sandbox paths
     await _migrateSandboxPaths();
@@ -127,58 +91,6 @@ class ChatService extends ChangeNotifier {
 
     _initialized = true;
     notifyListeners();
-  }
-
-  Future<void> _migrateFromHiveIfNeeded(
-    Box<Conversation> legacyConversations,
-    Box<ChatMessage> legacyMessages,
-    Box<dynamic> legacyToolEvents,
-  ) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(_hiveMigrationCompleteKey) == true) return;
-    if (!_conversationsBox.isEmpty ||
-        !_messagesBox.isEmpty ||
-        !_toolEventsBox.isEmpty ||
-        legacyConversations.isEmpty) {
-      await prefs.setBool(_hiveMigrationCompleteKey, true);
-      return;
-    }
-
-    await _sqliteStorage.database.transaction((txn) async {
-      for (final entry in legacyConversations.toMap().entries) {
-        await txn.insert(
-          'conversations',
-          {
-            'key': entry.key.toString(),
-            'payload': jsonEncode(entry.value.toJson()),
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      for (final entry in legacyMessages.toMap().entries) {
-        await txn.insert(
-          'messages',
-          {
-            'key': entry.key.toString(),
-            'payload': jsonEncode(entry.value.toJson()),
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      for (final entry in legacyToolEvents.toMap().entries) {
-        await txn.insert(
-          'tool_events',
-          {'key': entry.key.toString(), 'payload': jsonEncode(entry.value)},
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-    });
-    await Future.wait([
-      _conversationsBox.load(),
-      _messagesBox.load(),
-      _toolEventsBox.load(),
-    ]);
-    await prefs.setBool(_hiveMigrationCompleteKey, true);
   }
 
   List<Conversation> getAllConversations() {
@@ -767,7 +679,7 @@ class ChatService extends ChangeNotifier {
       if (!conversation.messageIds.contains(message.id)) {
         conversation.messageIds.add(message.id);
         // Keep original updatedAt during restore
-        await conversation.save();
+        await _conversationsBox.put(conversation.id, conversation);
       }
     }
 
@@ -806,7 +718,7 @@ class ChatService extends ChangeNotifier {
     if (c == null) return;
     c.mcpServerIds = List.of(serverIds);
     c.updatedAt = DateTime.now();
-    await c.save();
+    await _conversationsBox.put(c.id, c);
     notifyListeners();
   }
 
@@ -855,7 +767,7 @@ class ChatService extends ChangeNotifier {
     if (c == null) return;
     c.skillIds = List.of(clean);
     c.updatedAt = DateTime.now();
-    await c.save();
+    await _conversationsBox.put(c.id, c);
     notifyListeners();
   }
 
@@ -891,7 +803,7 @@ class ChatService extends ChangeNotifier {
 
     conversation.title = newTitle;
     conversation.updatedAt = DateTime.now();
-    await conversation.save();
+    await _conversationsBox.put(conversation.id, conversation);
     notifyListeners();
   }
 
@@ -916,7 +828,7 @@ class ChatService extends ChangeNotifier {
 
     conversation.summary = summary;
     conversation.lastSummarizedMessageCount = messageCount;
-    await conversation.save();
+    await _conversationsBox.put(conversation.id, conversation);
     notifyListeners();
   }
 
@@ -952,7 +864,7 @@ class ChatService extends ChangeNotifier {
 
     conversation.summary = null;
     conversation.lastSummarizedMessageCount = 0;
-    await conversation.save();
+    await _conversationsBox.put(conversation.id, conversation);
     notifyListeners();
   }
 
@@ -979,7 +891,7 @@ class ChatService extends ChangeNotifier {
     if (conversation == null) return;
 
     conversation.chatSuggestions = clean;
-    await conversation.save();
+    await _conversationsBox.put(conversation.id, conversation);
     notifyListeners();
   }
 
@@ -998,7 +910,7 @@ class ChatService extends ChangeNotifier {
     if (conversation == null || conversation.chatSuggestions.isEmpty) return;
 
     conversation.chatSuggestions = <String>[];
-    await conversation.save();
+    await _conversationsBox.put(conversation.id, conversation);
     notifyListeners();
   }
 
@@ -1015,7 +927,7 @@ class ChatService extends ChangeNotifier {
     if (conversation == null) return;
 
     conversation.isPinned = !conversation.isPinned;
-    await conversation.save();
+    await _conversationsBox.put(conversation.id, conversation);
     notifyListeners();
   }
 
@@ -1090,7 +1002,7 @@ class ChatService extends ChangeNotifier {
     if (temporary) {
       _messagesCache.putIfAbsent(conversationId, () => <ChatMessage>[]);
     } else {
-      await conversation.save();
+      await _conversationsBox.put(conversation.id, conversation);
       _saveLastConversationId(conversationId);
     }
 
@@ -1426,7 +1338,7 @@ class ChatService extends ChangeNotifier {
         ..addAll(ids);
       c.versionSelections = <String, int>{};
       c.updatedAt = DateTime.now();
-      await c.save();
+      await _conversationsBox.put(c.id, c);
     }
     // Cache
     _messagesCache[convo.id] = [for (final id in ids) _messagesBox.get(id)!];
@@ -1484,7 +1396,7 @@ class ChatService extends ChangeNotifier {
         c.updatedAt = DateTime.now();
         // Persist selection of latest version for this group
         c.versionSelections[gid] = nextVersion;
-        await c.save();
+        await _conversationsBox.put(c.id, c);
       }
     }
     // Update caches
@@ -1517,7 +1429,7 @@ class ChatService extends ChangeNotifier {
     if (c == null) return;
     c.versionSelections[groupId] = version;
     c.updatedAt = DateTime.now();
-    await c.save();
+    await _conversationsBox.put(c.id, c);
     notifyListeners();
   }
 
@@ -1536,7 +1448,7 @@ class ChatService extends ChangeNotifier {
     if (c == null) return;
     c.versionSelections.remove(groupId);
     c.updatedAt = DateTime.now();
-    await c.save();
+    await _conversationsBox.put(c.id, c);
     notifyListeners();
   }
 
@@ -1568,7 +1480,7 @@ class ChatService extends ChangeNotifier {
     c.truncateIndex = newValue;
     if ((defaultTitle ?? '').isNotEmpty) c.title = defaultTitle!;
     c.updatedAt = DateTime.now();
-    await c.save();
+    await _conversationsBox.put(c.id, c);
     notifyListeners();
     return c;
   }
@@ -1635,7 +1547,7 @@ class ChatService extends ChangeNotifier {
         }
       }
 
-      await conversation.save();
+      await _conversationsBox.put(conversation.id, conversation);
     }
 
     await _messagesBox.delete(messageId);
@@ -1739,7 +1651,7 @@ class ChatService extends ChangeNotifier {
     if (c == null) return;
     c.assistantId = assistantId;
     c.updatedAt = DateTime.now();
-    await c.save();
+    await _conversationsBox.put(c.id, c);
     notifyListeners();
   }
 }
