@@ -46,6 +46,7 @@ class ChatService extends ChangeNotifier {
   }
 
   bool _initialized = false;
+  Future<void>? _initializing;
   bool get initialized => _initialized;
 
   String? get currentConversationId => _currentConversationId;
@@ -74,21 +75,24 @@ class ChatService extends ChangeNotifier {
     return id != null && _temporaryConversationIds.contains(id);
   }
 
-  Future<void> init() async {
-    if (_initialized) return;
+  Future<void> init() {
+    if (_initialized) return Future<void>.value();
+    final existing = _initializing;
+    if (existing != null) return existing;
+    final future = _initialize();
+    _initializing = future;
+    return future.whenComplete(() {
+      if (identical(_initializing, future)) _initializing = null;
+    });
+  }
 
+  Future<void> _initialize() async {
     _sqliteStorage = await SqliteChatStorage.open();
     _conversationsBox = _sqliteStorage.conversations;
     _messagesBox = _sqliteStorage.messages;
     _toolEventsBox = _sqliteStorage.toolEvents;
-
-    // Migrate any persisted message content that references old iOS sandbox paths
     await _migrateSandboxPaths();
-
-    // Reset any stale isStreaming flags left over from a previous app crash or
-    // force-quit.  After a fresh launch no message can be actively streaming.
     await _resetStaleStreamingFlags();
-
     _initialized = true;
     notifyListeners();
   }

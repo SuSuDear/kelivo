@@ -42,13 +42,6 @@ class SqliteChatStorage {
     final database = await openDatabase(
       p.join(appDataDir.path, 'chat.sqlite3'),
       version: 1,
-      onConfigure: (db) async {
-        await db.execute('PRAGMA foreign_keys=ON');
-      },
-      onOpen: (db) async {
-        await db.execute('PRAGMA journal_mode=WAL');
-        await db.execute('PRAGMA synchronous=NORMAL');
-      },
       onCreate: (db, version) async {
         for (final table in const ['conversations', 'messages', 'tool_events']) {
           await db.execute(
