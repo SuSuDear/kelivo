@@ -1,0 +1,70 @@
+name: Build iOS
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.44.1'
+
+jobs:
+  build-ios:
+    name: 构建 iOS
+    runs-on: macos-latest
+    
+    steps:
+      - name: 📦 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐦 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: 🔧 关闭 Swift Package Manager
+        run: flutter config --no-enable-swift-package-manager
+
+      - name: 📝 注入 fallback key
+        shell: bash
+        run: |
+          mkdir -p lib/secrets
+          cat > lib/secrets/fallback.dart <<'EOF'
+          const String siliconflowFallbackKey = '';
+          EOF
+
+      - name: 📝 获取版本号
+        id: version
+        run: |
+          VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          VERSION="${VERSION}_${SHORT_SHA}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "版本号: $VERSION"
+
+      - name: 🏗️ 构建 iOS (无签名)
+        run: |
+          # Flutter tooling still generates iOS plugin registrant files under ios/Runner.
+          # Keep the repository renamed to Kelivo, but provide a transient CI symlink.
+          [ -e ios/Runner ] || ln -s Kelivo ios/Runner
+          flutter build ios --release --no-codesign --flavor Kelivo
+          cd build/ios/iphoneos
+          mkdir Payload
+          APP_PATH=$(find . -maxdepth 1 -name "*.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found" >&2
+            exit 1
+          fi
+          cp -r "$APP_PATH" Payload/
+          zip -r ../../../Kelivo_ios_${VERSION}.ipa Payload
+
+      - name: 📤 上传 IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kelivo-iOS-${{ env.VERSION }}
+          path: Kelivo_ios_*.ipa
+          retention-days: 30
