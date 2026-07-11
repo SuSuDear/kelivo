@@ -4324,6 +4324,7 @@ class _ToolCallItem extends StatefulWidget {
 }
 
 class _ToolCallItemState extends State<_ToolCallItem> {
+  StateSetter? _toolDetailSetState;
   // Cache image paths (local file or URL)
   List<String> _imagePaths = const [];
   String? _lastContent;
@@ -4383,9 +4384,21 @@ class _ToolCallItemState extends State<_ToolCallItem> {
   @override
   void didUpdateWidget(covariant _ToolCallItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.part.content != widget.part.content) {
+    final contentChanged = oldWidget.part.content != widget.part.content;
+    final argumentsChanged = oldWidget.part.arguments != widget.part.arguments;
+    final loadingChanged = oldWidget.part.loading != widget.part.loading;
+    if (contentChanged) {
       _updateImageCache();
     }
+    if (contentChanged || argumentsChanged || loadingChanged) {
+      _toolDetailSetState?.call(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _toolDetailSetState = null;
+    super.dispose();
   }
 
   IconData _iconFor(String name, Map<String, dynamic> args) {
@@ -4677,14 +4690,6 @@ class _ToolCallItemState extends State<_ToolCallItem> {
   void _showDetail(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final argsPretty = const JsonEncoder.withIndent(
-      '  ',
-    ).convert(widget.part.arguments);
-    final (cleanText, images) = _parseMcpImagePaths(widget.part.content);
-    final resultText = cleanText.isNotEmpty
-        ? _prettyJson(cleanText)
-        : l10n.chatMessageWidgetNoResultYet;
-
     final bool isDesktop =
         defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
@@ -4695,7 +4700,19 @@ class _ToolCallItemState extends State<_ToolCallItem> {
         context: context,
         barrierDismissible: true,
         builder: (ctx) {
-          return Dialog(
+          return StatefulBuilder(
+            builder: (ctx, setDetailState) {
+              _toolDetailSetState = setDetailState;
+              final argsPretty = const JsonEncoder.withIndent(
+                '  ',
+              ).convert(widget.part.arguments);
+              final (cleanText, images) = _parseMcpImagePaths(
+                widget.part.content,
+              );
+              final resultText = cleanText.isNotEmpty
+                  ? _prettyJson(cleanText)
+                  : l10n.chatMessageWidgetNoResultYet;
+              return Dialog(
             elevation: 12,
             insetPadding: const EdgeInsets.symmetric(
               horizontal: 24,
@@ -4873,8 +4890,12 @@ class _ToolCallItemState extends State<_ToolCallItem> {
               ),
             ),
           );
+            },
+          );
         },
-      );
+      ).whenComplete(() {
+        if (mounted) _toolDetailSetState = null;
+      });
       return;
     }
 
@@ -4887,8 +4908,20 @@ class _ToolCallItemState extends State<_ToolCallItem> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
-        final bottomInset = MediaQuery.viewInsetsOf(ctx).bottom;
-        return SafeArea(
+        return StatefulBuilder(
+          builder: (ctx, setDetailState) {
+            _toolDetailSetState = setDetailState;
+            final bottomInset = MediaQuery.viewInsetsOf(ctx).bottom;
+            final argsPretty = const JsonEncoder.withIndent(
+              '  ',
+            ).convert(widget.part.arguments);
+            final (cleanText, images) = _parseMcpImagePaths(
+              widget.part.content,
+            );
+            final resultText = cleanText.isNotEmpty
+                ? _prettyJson(cleanText)
+                : l10n.chatMessageWidgetNoResultYet;
+            return SafeArea(
           child: FractionallySizedBox(
             heightFactor: 0.6,
             child: Padding(
@@ -5004,8 +5037,12 @@ class _ToolCallItemState extends State<_ToolCallItem> {
             ),
           ),
         );
+          },
+        );
       },
-    );
+    ).whenComplete(() {
+      if (mounted) _toolDetailSetState = null;
+    });
   }
 
   /// Show full-size image using ImageViewerPage for save/share/copy support.

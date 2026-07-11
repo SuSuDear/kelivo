@@ -290,6 +290,69 @@ class AssistantProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
+  bool _isAssistantResourceStillReferenced(
+    String? rawPath,
+    String? Function(Assistant assistant) selector,
+  ) {
+    final raw = (rawPath ?? '').trim();
+    if (raw.isEmpty) return false;
+    if (raw.startsWith('data:')) return false;
+    if (raw.startsWith('http')) {
+      return _assistants.any(
+        (assistant) => (selector(assistant) ?? '').trim() == raw,
+      );
+    }
+
+    try {
+      final target = p.normalize(
+        File(SandboxPathResolver.fix(raw)).absolute.path,
+      );
+      return _assistants.any((assistant) {
+        final other = (selector(assistant) ?? '').trim();
+        if (other.isEmpty ||
+            other.startsWith('http') ||
+            other.startsWith('data:')) {
+          return false;
+        }
+        final otherPath = p.normalize(
+          File(SandboxPathResolver.fix(other)).absolute.path,
+        );
+        return p.equals(target, otherPath);
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _cleanupAssistantResources(Assistant assistant) async {
+    final rawAvatar = (assistant.avatar ?? '').trim();
+    if (rawAvatar.startsWith('http')) {
+      if (!_isAssistantResourceStillReferenced(rawAvatar, (a) => a.avatar)) {
+        try {
+          await AvatarCache.evict(rawAvatar);
+        } catch (_) {}
+      }
+    } else if (!_isAssistantResourceStillReferenced(rawAvatar, (a) => a.avatar)) {
+      await _deleteManagedFileIfOwned(
+        rawAvatar,
+        directoryAsync: AppDirectories.getAvatarsDirectory,
+        replacementPath: null,
+      );
+    }
+
+    final rawBackground = (assistant.background ?? '').trim();
+    if (!_isAssistantResourceStillReferenced(
+      rawBackground,
+      (a) => a.background,
+    )) {
+      await _deleteManagedFileIfOwned(
+        rawBackground,
+        directoryAsync: AppDirectories.getImagesDirectory,
+        replacementPath: null,
+      );
+    }
+  }
+
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_assistantsKey, Assistant.encodeList(_assistants));
@@ -504,10 +567,12 @@ class AssistantProvider extends ChangeNotifier {
     // Do not allow deleting the last remaining assistant
     if (_assistants.length <= 1) return false;
 
+    final removedAssistant = _assistants[idx];
     await chatService?.deleteConversationsForAssistant(id);
 
-    final removingCurrent = _assistants[idx].id == _currentAssistantId;
+    final removingCurrent = removedAssistant.id == _currentAssistantId;
     _assistants.removeAt(idx);
+    await _cleanupAssistantResources(removedAssistant);
     if (removingCurrent) {
       _currentAssistantId = _assistants.isNotEmpty
           ? _assistants.first.id

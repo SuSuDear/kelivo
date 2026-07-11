@@ -450,25 +450,36 @@ class ChatService extends ChangeNotifier {
 
   Set<String> _extractAttachmentPaths(String content) {
     final out = <String>{};
+
+    void addLocalPath(String? rawPath) {
+      var pth = (rawPath ?? '').trim();
+      if (pth.isEmpty || pth.startsWith('http') || pth.startsWith('data:')) {
+        return;
+      }
+      if (pth.startsWith('<') && pth.endsWith('>') && pth.length > 2) {
+        pth = pth.substring(1, pth.length - 1).trim();
+      }
+      if (pth.startsWith('file://')) {
+        try {
+          pth = Uri.parse(pth).toFilePath();
+        } catch (_) {}
+      }
+      out.add(SandboxPathResolver.fix(pth));
+    }
+
     final imgRe = RegExp(r"\[image:(.+?)\]");
     for (final m in imgRe.allMatches(content)) {
-      final pth = m.group(1)?.trim();
-      if (pth != null &&
-          pth.isNotEmpty &&
-          !pth.startsWith('http') &&
-          !pth.startsWith('data:')) {
-        out.add(SandboxPathResolver.fix(pth));
-      }
+      addLocalPath(m.group(1));
     }
+
+    final markdownImgRe = RegExp(r"!\[[^\]]*\]\(([^)]+)\)");
+    for (final m in markdownImgRe.allMatches(content)) {
+      addLocalPath(m.group(1));
+    }
+
     final fileRe = RegExp(r"\[file:(.+?)\|(.+?)\|(.+?)\]");
     for (final m in fileRe.allMatches(content)) {
-      final pth = m.group(1)?.trim();
-      if (pth != null &&
-          pth.isNotEmpty &&
-          !pth.startsWith('http') &&
-          !pth.startsWith('data:')) {
-        out.add(SandboxPathResolver.fix(pth));
-      }
+      addLocalPath(m.group(1));
     }
     return out;
   }
@@ -573,9 +584,9 @@ class ChatService extends ChangeNotifier {
   Future<void> _cleanupOrphanUploads() async {
     try {
       final uploadDir = await AppDirectories.getUploadDirectory();
-      if (!await uploadDir.exists()) return;
+      final imagesDir = await AppDirectories.getImagesDirectory();
 
-      // Build the set of all referenced paths across all messages
+      // Build the set of all referenced paths across all messages.
       String canon(String pth) {
         // Normalize separators and resolve redundant segments to enable
         // reliable equality checks across platforms (esp. Windows).
@@ -591,10 +602,23 @@ class ChatService extends ChangeNotifier {
         }
       }
 
-      // Walk upload directory recursively to consider all files
-      final entries = uploadDir.listSync(recursive: true, followLinks: false);
-      for (final ent in entries) {
-        if (ent is File) {
+      bool isProtectedManagedImage(File file) {
+        final name = p.basename(file.path).toLowerCase();
+        // Chat-wide backgrounds and assistant backgrounds live under images/ too,
+        // but they are not message attachments and must not be removed when a
+        // conversation is deleted.
+        return name.startsWith('chat_background_') || name.startsWith('background_');
+      }
+
+      Future<void> deleteUnreferencedFiles(
+        Directory dir, {
+        bool protectManagedImages = false,
+      }) async {
+        if (!await dir.exists()) return;
+        final entries = dir.listSync(recursive: true, followLinks: false);
+        for (final ent in entries) {
+          if (ent is! File) continue;
+          if (protectManagedImages && isProtectedManagedImage(ent)) continue;
           final filePath = canon(ent.path);
           if (!referenced.contains(filePath)) {
             try {
@@ -603,6 +627,12 @@ class ChatService extends ChangeNotifier {
           }
         }
       }
+
+      // Chat attachments live under upload/. Inline/generated images live under
+      // images/. Both can become orphaned after messages or conversations are
+      // deleted.
+      await deleteUnreferencedFiles(uploadDir);
+      await deleteUnreferencedFiles(imagesDir, protectManagedImages: true);
     } catch (_) {}
   }
 
