@@ -21,10 +21,14 @@ struct KelivoLiveActivityWidget: Widget {
             .font(.caption.monospacedDigit())
             .foregroundStyle(.secondary)
         }
-        Text(context.state.detail)
-          .font(.subheadline)
-          .lineLimit(2)
-          .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 2) {
+          Text(context.state.conversationTitle)
+            .lineLimit(1)
+          Text(context.state.detail)
+            .lineLimit(2)
+        }
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
       }
       .padding()
       .activitySystemActionForegroundColor(.orange)
@@ -39,11 +43,15 @@ struct KelivoLiveActivityWidget: Widget {
             .font(.caption.monospacedDigit())
         }
         DynamicIslandExpandedRegion(.bottom) {
-          Text(context.state.detail)
-            .font(.subheadline)
-            .multilineTextAlignment(.leading)
-            .lineLimit(4)
-            .frame(maxWidth: .infinity, alignment: .leading)
+          VStack(alignment: .leading, spacing: 2) {
+            Text(context.state.conversationTitle)
+              .lineLimit(1)
+            Text(context.state.detail)
+              .lineLimit(3)
+          }
+          .font(.subheadline)
+          .multilineTextAlignment(.leading)
+          .frame(maxWidth: .infinity, alignment: .leading)
         }
       } compactLeading: {
         Image(systemName: context.state.isFinished ? (context.state.success ? "checkmark.circle.fill" : "xmark.circle.fill") : "sparkles")

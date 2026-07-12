@@ -5,6 +5,7 @@ import Foundation
 struct KelivoBackgroundActivityAttributes: ActivityAttributes {
   struct ContentState: Codable, Hashable {
     var title: String
+    var conversationTitle: String
     var detail: String
     var tokenCount: Int
     var tokenLabel: String

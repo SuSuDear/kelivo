@@ -151,11 +151,11 @@ class ChatActions {
         locationTrackingEnabled: settings.iosBackgroundLocationTrackingEnabled,
         conversationId: ctx.assistantMessage.conversationId,
         title: l10n.iosBackgroundGenerationActiveTitle,
-        detail: _liveActivityDetail(
+        conversationTitle: _liveActivityConversationTitle(
           ctx.assistantMessage.conversationId,
-          l10n.iosBackgroundGenerationWaitingDetail,
           l10n,
         ),
+        detail: l10n.iosBackgroundGenerationWaitingDetail,
         tokenLabel: l10n.iosBackgroundGenerationTokenCount(0),
       );
     } catch (error, stackTrace) {
@@ -216,15 +216,6 @@ class ChatActions {
         : title;
   }
 
-  String _liveActivityDetail(
-    String conversationId,
-    String detail,
-    AppLocalizations l10n,
-  ) {
-    final title = _liveActivityConversationTitle(conversationId, l10n);
-    return '$title\n$detail';
-  }
-
   String _liveActivityContentPreview(String content) {
     final normalized = _systemDisplayPlainText(content);
     if (normalized.isEmpty) return '';
@@ -270,13 +261,13 @@ class ChatActions {
     try {
       await IosBackgroundGenerationService.instance.update(
         conversationId: state.conversationId,
-        detail: _liveActivityDetail(
+        conversationTitle: _liveActivityConversationTitle(
           state.conversationId,
-          preview.isEmpty
-              ? l10n.iosBackgroundGenerationStreamingDetail
-              : preview,
           l10n,
         ),
+        detail: preview.isEmpty
+            ? l10n.iosBackgroundGenerationStreamingDetail
+            : preview,
         tokenLabel: l10n.iosBackgroundGenerationTokenCount(state.totalTokens),
         tokenCount: state.totalTokens,
       );
@@ -298,6 +289,10 @@ class ChatActions {
         title: success
             ? l10n.iosBackgroundGenerationCompleteTitle
             : l10n.iosBackgroundGenerationInterruptedTitle,
+        conversationTitle: _liveActivityConversationTitle(
+          conversationId,
+          l10n,
+        ),
         detail:
             detail ??
             (success
@@ -313,9 +308,14 @@ class ChatActions {
   Future<void> _cancelIosBackgroundGeneration(String conversationId) async {
     final l10n = _l10n;
     try {
+      if (l10n == null) return;
       await IosBackgroundGenerationService.instance.cancel(
         conversationId: conversationId,
-        detail: l10n?.iosBackgroundGenerationCancelledDetail,
+        conversationTitle: _liveActivityConversationTitle(
+          conversationId,
+          l10n,
+        ),
+        detail: l10n.iosBackgroundGenerationCancelledDetail,
       );
     } catch (error, stackTrace) {
       _logIosBackgroundGenerationFailure('cancel', error, stackTrace);

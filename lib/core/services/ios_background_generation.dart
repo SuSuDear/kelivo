@@ -123,6 +123,7 @@ class IosBackgroundGenerationService {
     required bool liveActivityEnabled,
     required String conversationId,
     required String title,
+    required String conversationTitle,
     required String detail,
     required String tokenLabel,
     int tokenCount = 0,
@@ -139,6 +140,7 @@ class IosBackgroundGenerationService {
           'liveActivityEnabled': liveActivityEnabled,
           'conversationId': conversationId,
           'title': title,
+          'conversationTitle': conversationTitle,
           'detail': detail,
           'tokenCount': tokenCount,
           'tokenLabel': tokenLabel,
@@ -150,6 +152,7 @@ class IosBackgroundGenerationService {
 
   Future<void> update({
     required String conversationId,
+    required String conversationTitle,
     required String detail,
     required String tokenLabel,
     int? tokenCount,
@@ -157,6 +160,7 @@ class IosBackgroundGenerationService {
     if (!_isIos || !_nativeGenerationIds.contains(conversationId)) return;
     await _channel.invokeMethod<bool>('update', <String, Object?>{
       'conversationId': conversationId,
+      'conversationTitle': conversationTitle,
       'detail': detail,
       'tokenLabel': tokenLabel,
       if (tokenCount != null) 'tokenCount': tokenCount,
@@ -166,6 +170,7 @@ class IosBackgroundGenerationService {
   Future<void> finish({
     required String conversationId,
     required String title,
+    required String conversationTitle,
     required String detail,
     required bool success,
   }) async {
@@ -174,6 +179,7 @@ class IosBackgroundGenerationService {
       await _channel.invokeMethod<bool>('finish', <String, Object?>{
         'conversationId': conversationId,
         'title': title,
+        'conversationTitle': conversationTitle,
         'detail': detail,
         'success': success,
       });
@@ -184,12 +190,14 @@ class IosBackgroundGenerationService {
 
   Future<void> cancel({
     required String conversationId,
+    required String conversationTitle,
     String? detail,
   }) async {
     if (!_isIos || !_nativeGenerationIds.contains(conversationId)) return;
     try {
       await _channel.invokeMethod<bool>('cancel', <String, Object?>{
         'conversationId': conversationId,
+        'conversationTitle': conversationTitle,
         if (detail != null) 'detail': detail,
       });
     } finally {
