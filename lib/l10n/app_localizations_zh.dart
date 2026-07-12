@@ -1022,6 +1022,78 @@ class AppLocalizationsZh extends AppLocalizations {
   String get iosBackgroundGenerationCancelledDetail => '生成已停止';
 
   @override
+  String get iosBackgroundEnhancedNoticeTitle =>
+      '仅供自用的后台增强';
+
+  @override
+  String get iosBackgroundEnhancedNoticeBody =>
+      '启用后，Kelivo 会在生成回复时使用 iOS 后台时间、实时活动和低精度定位心跳尽量保持任务活跃。不会使用语音播报或后台音频，也不会保存精确位置。';
+
+  @override
+  String get iosBackgroundLiveActivityTitle =>
+      '实时活动 / 灵动岛';
+
+  @override
+  String get iosBackgroundLiveActivitySubtitle =>
+      '在锁屏和灵动岛显示生成状态、token 数和完成/中断状态。';
+
+  @override
+  String get iosBackgroundLocationTrackingTitle =>
+      '位置心跳保活';
+
+  @override
+  String get iosBackgroundLocationTrackingSubtitle =>
+      '仅使用粗略低精度定位作为后台心跳，不追踪或保存精确位置。需要始终允许定位权限。';
+
+  @override
+  String get iosBackgroundKeepAliveStatusTitle =>
+      '保活状态';
+
+  @override
+  String get iosBackgroundLocationAuthorizationTitle =>
+      '定位权限';
+
+  @override
+  String get iosBackgroundLocationHeartbeatTitle =>
+      '位置心跳';
+
+  @override
+  String get iosBackgroundStatusActive =>
+      '活跃';
+
+  @override
+  String get iosBackgroundStatusInactive =>
+      '非活跃';
+
+  @override
+  String get iosBackgroundLocationAuthorizationAlways =>
+      '始终允许';
+
+  @override
+  String get iosBackgroundLocationAuthorizationWhenInUse =>
+      '使用期间';
+
+  @override
+  String get iosBackgroundLocationAuthorizationDenied =>
+      '已拒绝';
+
+  @override
+  String get iosBackgroundLocationAuthorizationRestricted =>
+      '受限制';
+
+  @override
+  String get iosBackgroundLocationAuthorizationNotDetermined =>
+      '未决定';
+
+  @override
+  String get iosBackgroundLocationAuthorizationDisabled =>
+      '定位服务关闭';
+
+  @override
+  String get iosBackgroundLocationAuthorizationUnavailable =>
+      '不可用';
+
+  @override
   String get androidBackgroundStatusOn => '开启';
 
   @override
@@ -6210,6 +6282,78 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get iosBackgroundGenerationCancelledDetail => '生成已停止';
 
   @override
+  String get iosBackgroundEnhancedNoticeTitle =>
+      '仅供自用的后台增强';
+
+  @override
+  String get iosBackgroundEnhancedNoticeBody =>
+      '启用后，Kelivo 会在生成回复时使用 iOS 后台时间、实时活动和低精度定位心跳尽量保持任务活跃。不会使用语音播报或后台音频，也不会保存精确位置。';
+
+  @override
+  String get iosBackgroundLiveActivityTitle =>
+      '实时活动 / 灵动岛';
+
+  @override
+  String get iosBackgroundLiveActivitySubtitle =>
+      '在锁屏和灵动岛显示生成状态、token 数和完成/中断状态。';
+
+  @override
+  String get iosBackgroundLocationTrackingTitle =>
+      '位置心跳保活';
+
+  @override
+  String get iosBackgroundLocationTrackingSubtitle =>
+      '仅使用粗略低精度定位作为后台心跳，不追踪或保存精确位置。需要始终允许定位权限。';
+
+  @override
+  String get iosBackgroundKeepAliveStatusTitle =>
+      '保活状态';
+
+  @override
+  String get iosBackgroundLocationAuthorizationTitle =>
+      '定位权限';
+
+  @override
+  String get iosBackgroundLocationHeartbeatTitle =>
+      '位置心跳';
+
+  @override
+  String get iosBackgroundStatusActive =>
+      '活跃';
+
+  @override
+  String get iosBackgroundStatusInactive =>
+      '非活跃';
+
+  @override
+  String get iosBackgroundLocationAuthorizationAlways =>
+      '始终允许';
+
+  @override
+  String get iosBackgroundLocationAuthorizationWhenInUse =>
+      '使用期间';
+
+  @override
+  String get iosBackgroundLocationAuthorizationDenied =>
+      '已拒绝';
+
+  @override
+  String get iosBackgroundLocationAuthorizationRestricted =>
+      '受限制';
+
+  @override
+  String get iosBackgroundLocationAuthorizationNotDetermined =>
+      '未决定';
+
+  @override
+  String get iosBackgroundLocationAuthorizationDisabled =>
+      '定位服务关闭';
+
+  @override
+  String get iosBackgroundLocationAuthorizationUnavailable =>
+      '不可用';
+
+  @override
   String get androidBackgroundStatusOn => '开启';
 
   @override
@@ -11396,6 +11540,78 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get iosBackgroundGenerationCancelledDetail => '生成已停止';
+
+  @override
+  String get iosBackgroundEnhancedNoticeTitle =>
+      '僅供自用的後台增強';
+
+  @override
+  String get iosBackgroundEnhancedNoticeBody =>
+      '啟用後，Kelivo 會在生成回覆時使用 iOS 後台時間、即時活動和低精度定位心跳，盡量保持任務活躍。不會使用語音播報或後台音訊，也不會儲存精確位置。';
+
+  @override
+  String get iosBackgroundLiveActivityTitle =>
+      '即時活動 / 靈動島';
+
+  @override
+  String get iosBackgroundLiveActivitySubtitle =>
+      '在鎖定畫面和靈動島顯示生成狀態、token 數和完成/中斷狀態。';
+
+  @override
+  String get iosBackgroundLocationTrackingTitle =>
+      '位置心跳保活';
+
+  @override
+  String get iosBackgroundLocationTrackingSubtitle =>
+      '僅使用粗略低精度定位作為後台心跳，不追蹤或儲存精確位置。需要永遠允許定位權限。';
+
+  @override
+  String get iosBackgroundKeepAliveStatusTitle =>
+      '保活狀態';
+
+  @override
+  String get iosBackgroundLocationAuthorizationTitle =>
+      '定位權限';
+
+  @override
+  String get iosBackgroundLocationHeartbeatTitle =>
+      '位置心跳';
+
+  @override
+  String get iosBackgroundStatusActive =>
+      '活躍';
+
+  @override
+  String get iosBackgroundStatusInactive =>
+      '非活躍';
+
+  @override
+  String get iosBackgroundLocationAuthorizationAlways =>
+      '永遠允許';
+
+  @override
+  String get iosBackgroundLocationAuthorizationWhenInUse =>
+      '使用期間';
+
+  @override
+  String get iosBackgroundLocationAuthorizationDenied =>
+      '已拒絕';
+
+  @override
+  String get iosBackgroundLocationAuthorizationRestricted =>
+      '受限制';
+
+  @override
+  String get iosBackgroundLocationAuthorizationNotDetermined =>
+      '未決定';
+
+  @override
+  String get iosBackgroundLocationAuthorizationDisabled =>
+      '定位服務關閉';
+
+  @override
+  String get iosBackgroundLocationAuthorizationUnavailable =>
+      '不可用';
 
   @override
   String get androidBackgroundStatusOn => '開啟';

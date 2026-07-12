@@ -2045,6 +2045,114 @@ abstract class AppLocalizations {
   /// **'Generation stopped'**
   String get iosBackgroundGenerationCancelledDetail;
 
+  /// No description provided for @iosBackgroundEnhancedNoticeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal background enhancements'**
+  String get iosBackgroundEnhancedNoticeTitle;
+
+  /// No description provided for @iosBackgroundEnhancedNoticeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'When enabled, Kelivo uses iOS background time, Live Activities, and coarse low-accuracy location heartbeat while generating replies to help keep the task active. It does not use voice playback or background audio, and it does not store precise locations.'**
+  String get iosBackgroundEnhancedNoticeBody;
+
+  /// No description provided for @iosBackgroundLiveActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Activity / Dynamic Island'**
+  String get iosBackgroundLiveActivityTitle;
+
+  /// No description provided for @iosBackgroundLiveActivitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show generation status, token count, and completion/interruption state on the Lock Screen and Dynamic Island.'**
+  String get iosBackgroundLiveActivitySubtitle;
+
+  /// No description provided for @iosBackgroundLocationTrackingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location heartbeat'**
+  String get iosBackgroundLocationTrackingTitle;
+
+  /// No description provided for @iosBackgroundLocationTrackingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use only coarse low-accuracy location as a background heartbeat. Precise locations are not tracked or stored. Always permission is required.'**
+  String get iosBackgroundLocationTrackingSubtitle;
+
+  /// No description provided for @iosBackgroundKeepAliveStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep-alive status'**
+  String get iosBackgroundKeepAliveStatusTitle;
+
+  /// No description provided for @iosBackgroundLocationAuthorizationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission'**
+  String get iosBackgroundLocationAuthorizationTitle;
+
+  /// No description provided for @iosBackgroundLocationHeartbeatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location heartbeat'**
+  String get iosBackgroundLocationHeartbeatTitle;
+
+  /// No description provided for @iosBackgroundStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get iosBackgroundStatusActive;
+
+  /// No description provided for @iosBackgroundStatusInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get iosBackgroundStatusInactive;
+
+  /// No description provided for @iosBackgroundLocationAuthorizationAlways.
+  ///
+  /// In en, this message translates to:
+  /// **'Always'**
+  String get iosBackgroundLocationAuthorizationAlways;
+
+  /// No description provided for @iosBackgroundLocationAuthorizationWhenInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'While Using'**
+  String get iosBackgroundLocationAuthorizationWhenInUse;
+
+  /// No description provided for @iosBackgroundLocationAuthorizationDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Denied'**
+  String get iosBackgroundLocationAuthorizationDenied;
+
+  /// No description provided for @iosBackgroundLocationAuthorizationRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Restricted'**
+  String get iosBackgroundLocationAuthorizationRestricted;
+
+  /// No description provided for @iosBackgroundLocationAuthorizationNotDetermined.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Determined'**
+  String get iosBackgroundLocationAuthorizationNotDetermined;
+
+  /// No description provided for @iosBackgroundLocationAuthorizationDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Location Services Off'**
+  String get iosBackgroundLocationAuthorizationDisabled;
+
+  /// No description provided for @iosBackgroundLocationAuthorizationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get iosBackgroundLocationAuthorizationUnavailable;
+
   /// No description provided for @androidBackgroundStatusOn.
   ///
   /// In en, this message translates to:

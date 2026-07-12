@@ -1,0 +1,4 @@
+"ios_background_generation_active_title" = "Kelivo is generating";
+"ios_background_generation_cancelled_detail" = "Generation stopped";
+"ios_background_generation_finished_success" = "Done";
+"ios_background_generation_finished_interrupted" = "Interrupted";

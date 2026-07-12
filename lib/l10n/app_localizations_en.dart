@@ -1063,6 +1063,78 @@ class AppLocalizationsEn extends AppLocalizations {
   String get iosBackgroundGenerationCancelledDetail => 'Generation stopped';
 
   @override
+  String get iosBackgroundEnhancedNoticeTitle =>
+      'Personal background enhancements';
+
+  @override
+  String get iosBackgroundEnhancedNoticeBody =>
+      'When enabled, Kelivo uses iOS background time, Live Activities, and coarse low-accuracy location heartbeat while generating replies to help keep the task active. It does not use voice playback or background audio, and it does not store precise locations.';
+
+  @override
+  String get iosBackgroundLiveActivityTitle =>
+      'Live Activity / Dynamic Island';
+
+  @override
+  String get iosBackgroundLiveActivitySubtitle =>
+      'Show generation status, token count, and completion/interruption state on the Lock Screen and Dynamic Island.';
+
+  @override
+  String get iosBackgroundLocationTrackingTitle =>
+      'Location heartbeat';
+
+  @override
+  String get iosBackgroundLocationTrackingSubtitle =>
+      'Use only coarse low-accuracy location as a background heartbeat. Precise locations are not tracked or stored. Always permission is required.';
+
+  @override
+  String get iosBackgroundKeepAliveStatusTitle =>
+      'Keep-alive status';
+
+  @override
+  String get iosBackgroundLocationAuthorizationTitle =>
+      'Location permission';
+
+  @override
+  String get iosBackgroundLocationHeartbeatTitle =>
+      'Location heartbeat';
+
+  @override
+  String get iosBackgroundStatusActive =>
+      'Active';
+
+  @override
+  String get iosBackgroundStatusInactive =>
+      'Inactive';
+
+  @override
+  String get iosBackgroundLocationAuthorizationAlways =>
+      'Always';
+
+  @override
+  String get iosBackgroundLocationAuthorizationWhenInUse =>
+      'While Using';
+
+  @override
+  String get iosBackgroundLocationAuthorizationDenied =>
+      'Denied';
+
+  @override
+  String get iosBackgroundLocationAuthorizationRestricted =>
+      'Restricted';
+
+  @override
+  String get iosBackgroundLocationAuthorizationNotDetermined =>
+      'Not Determined';
+
+  @override
+  String get iosBackgroundLocationAuthorizationDisabled =>
+      'Location Services Off';
+
+  @override
+  String get iosBackgroundLocationAuthorizationUnavailable =>
+      'Unavailable';
+
+  @override
   String get androidBackgroundStatusOn => 'On';
 
   @override

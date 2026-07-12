@@ -1,0 +1,7 @@
+"NSCameraUsageDescription" = "Kelivo uses the camera to capture photos that you can share with AI assistants for analysis. Your photo may be uploaded by your choice.";
+"NSLocationWhenInUseUsageDescription" = "Kelivo uses coarse low-accuracy location as a background heartbeat to keep generation active. Precise location is not stored.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Allow Kelivo to use coarse low-accuracy location in the background as a heartbeat for background replies and Live Activity updates.";
+"NSLocationAlwaysUsageDescription" = "Allow Kelivo to use coarse low-accuracy location in the background as a heartbeat.";
+"NSMicrophoneUsageDescription" = "We use your audio data for speech recognition. Your data is processed by the system; we do not collect this information.";
+"NSPhotoLibraryAddUsageDescription" = "Allow saving images to your photo library. Your data will be saved locally.";
+"NSPhotoLibraryUsageDescription" = "Allow access to your photos to pick an avatar.";

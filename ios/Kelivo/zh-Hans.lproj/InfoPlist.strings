@@ -1,0 +1,7 @@
+"NSCameraUsageDescription" = "Kelivo 需要使用相机拍摄照片，以便您将图片发送给 AI 助手进行分析。您可以选择是否上传照片。";
+"NSLocationWhenInUseUsageDescription" = "Kelivo 使用粗略低精度定位作为后台心跳，帮助后台生成保持活跃。不会保存精确位置。";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "允许 Kelivo 在后台使用粗略低精度定位作为心跳，以便后台回复和实时活动尽量保持刷新。";
+"NSLocationAlwaysUsageDescription" = "允许 Kelivo 在后台使用粗略低精度定位作为心跳。";
+"NSMicrophoneUsageDescription" = "我们使用您的音频数据进行语音识别。您的数据由系统处理；我们不会收集这些信息。";
+"NSPhotoLibraryAddUsageDescription" = "允许保存图片到相册，您的数据将保存在本地。";
+"NSPhotoLibraryUsageDescription" = "允许访问相册以选择头像图片。";

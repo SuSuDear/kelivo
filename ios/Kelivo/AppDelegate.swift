@@ -8,6 +8,10 @@ import ActivityKit
 private let backgroundRefreshIdentifier = "com.susu.kelivo.background-generation.refresh"
 private let backgroundProcessingIdentifier = "com.susu.kelivo.background-generation.processing"
 
+private func kelivoLocalized(_ key: String, fallback: String) -> String {
+  NSLocalizedString(key, tableName: nil, bundle: .main, value: fallback, comment: "")
+}
+
 @main
 @objc class AppDelegate: FlutterAppDelegate {
   private let fileSaveHandler = NativeFileSaveHandler()
@@ -155,7 +159,7 @@ private final class IosBackgroundGenerationHandler: NSObject, CLLocationManagerD
 
   private func cancel(arguments: Any?, result: @escaping FlutterResult) {
     let args = arguments as? [String: Any] ?? [:]
-    let detail = args["detail"] as? String ?? "生成已停止"
+    let detail = args["detail"] as? String ?? kelivoLocalized("ios_background_generation_cancelled_detail", fallback: "Generation stopped")
     endLiveActivity(title: "Kelivo", detail: detail, success: false)
     endBackgroundTask()
     resetGenerationOptions()
@@ -450,7 +454,7 @@ private final class IosBackgroundGenerationHandler: NSObject, CLLocationManagerD
     guard #available(iOS 16.1, *) else { return }
     guard let activity = liveActivity as? Activity<KelivoBackgroundActivityAttributes> else { return }
     let state = KelivoBackgroundActivityAttributes.ContentState(
-      title: "Kelivo 正在生成",
+      title: kelivoLocalized("ios_background_generation_active_title", fallback: "Kelivo is generating"),
       detail: detail,
       tokenCount: tokenCount,
       tokenLabel: tokenLabel,
@@ -474,7 +478,7 @@ private final class IosBackgroundGenerationHandler: NSObject, CLLocationManagerD
       title: title,
       detail: detail,
       tokenCount: 0,
-      tokenLabel: success ? "完成" : "中断",
+      tokenLabel: success ? kelivoLocalized("ios_background_generation_finished_success", fallback: "Done") : kelivoLocalized("ios_background_generation_finished_interrupted", fallback: "Interrupted"),
       isFinished: true,
       success: success
     )

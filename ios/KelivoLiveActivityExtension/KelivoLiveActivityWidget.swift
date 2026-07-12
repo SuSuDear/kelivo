@@ -2,6 +2,10 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
+private func kelivoWidgetLocalized(_ key: String, fallback: String) -> String {
+  NSLocalizedString(key, tableName: nil, bundle: .main, value: fallback, comment: "")
+}
+
 @available(iOSApplicationExtension 16.1, *)
 struct KelivoLiveActivityWidget: Widget {
   var body: some WidgetConfiguration {
@@ -23,7 +27,6 @@ struct KelivoLiveActivityWidget: Widget {
           .foregroundStyle(.secondary)
       }
       .padding()
-      .activityBackgroundTint(Color(.secondarySystemBackground))
       .activitySystemActionForegroundColor(.orange)
     } dynamicIsland: { context in
       DynamicIsland {
@@ -59,7 +62,11 @@ struct KelivoLiveActivityWidget: Widget {
   }
 
   private func shortTokenLabel(_ state: KelivoBackgroundActivityAttributes.ContentState) -> String {
-    if state.isFinished { return state.success ? "完成" : "中断" }
+    if state.isFinished {
+      return state.success
+        ? kelivoWidgetLocalized("ios_background_generation_finished_success", fallback: "Done")
+        : kelivoWidgetLocalized("ios_background_generation_finished_interrupted", fallback: "Interrupted")
+    }
     if state.tokenCount >= 1000 { return "\(state.tokenCount / 1000)k" }
     return "\(state.tokenCount)"
   }
