@@ -2003,6 +2003,12 @@ abstract class AppLocalizations {
   /// **'The assistant is replying in the background'**
   String get iosBackgroundGenerationActiveDetail;
 
+  /// No description provided for @iosBackgroundGenerationWaitingDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the assistant to reply'**
+  String get iosBackgroundGenerationWaitingDetail;
+
   /// No description provided for @iosBackgroundGenerationStreamingDetail.
   ///
   /// In en, this message translates to:

@@ -439,6 +439,7 @@
   "iosBackgroundNotificationsNotAuthorized": "Notifications not allowed",
   "iosBackgroundGenerationActiveTitle": "Kelivo is generating",
   "iosBackgroundGenerationActiveDetail": "The assistant is replying in the background",
+  "iosBackgroundGenerationWaitingDetail": "Waiting for the assistant to reply",
   "iosBackgroundGenerationStreamingDetail": "Receiving assistant response",
   "iosBackgroundGenerationTokenCount": "{count} tokens",
   "@iosBackgroundGenerationTokenCount": {

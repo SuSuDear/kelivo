@@ -999,6 +999,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get iosBackgroundGenerationActiveDetail => '助手正在后台回复';
 
   @override
+  String get iosBackgroundGenerationWaitingDetail => '等待助手回复';
+
+  @override
   String get iosBackgroundGenerationStreamingDetail => '正在接收助手回复';
 
   @override
@@ -6259,6 +6262,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get iosBackgroundGenerationActiveDetail => '助手正在后台回复';
 
   @override
+  String get iosBackgroundGenerationWaitingDetail => '等待助手回复';
+
+  @override
   String get iosBackgroundGenerationStreamingDetail => '正在接收助手回复';
 
   @override
@@ -11517,6 +11523,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get iosBackgroundGenerationActiveDetail => '助理正在後台回覆';
+
+  @override
+  String get iosBackgroundGenerationWaitingDetail => '等待助理回覆';
 
   @override
   String get iosBackgroundGenerationStreamingDetail => '正在接收助理回覆';

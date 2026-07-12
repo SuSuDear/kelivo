@@ -142,6 +142,13 @@ class ChatActions {
     final settings = ctx.settings;
     final l10n = _l10n;
     if (l10n == null) return;
+    final conversationTitle = chatService
+        .getConversation(ctx.assistantMessage.conversationId)
+        ?.title
+        .trim();
+    final displayTitle = conversationTitle == null || conversationTitle.isEmpty
+        ? l10n.chatServiceDefaultConversationTitle
+        : conversationTitle;
     try {
       await IosBackgroundGenerationService.instance.start(
         enabled: settings.iosBackgroundGenerationEnabled,
@@ -151,7 +158,7 @@ class ChatActions {
         locationTrackingEnabled: settings.iosBackgroundLocationTrackingEnabled,
         conversationId: ctx.assistantMessage.conversationId,
         title: l10n.iosBackgroundGenerationActiveTitle,
-        detail: l10n.iosBackgroundGenerationActiveDetail,
+        detail: '$displayTitle\n${l10n.iosBackgroundGenerationWaitingDetail}',
         tokenLabel: l10n.iosBackgroundGenerationTokenCount(0),
       );
     } catch (error, stackTrace) {

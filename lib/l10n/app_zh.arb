@@ -251,6 +251,7 @@
   "iosBackgroundNotificationsNotAuthorized": "通知未允许",
   "iosBackgroundGenerationActiveTitle": "Kelivo 正在生成",
   "iosBackgroundGenerationActiveDetail": "助手正在后台回复",
+  "iosBackgroundGenerationWaitingDetail": "等待助手回复",
   "iosBackgroundGenerationStreamingDetail": "正在接收助手回复",
   "iosBackgroundGenerationTokenCount": "{count} tokens",
   "@iosBackgroundGenerationTokenCount": {

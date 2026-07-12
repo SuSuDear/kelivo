@@ -1036,6 +1036,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The assistant is replying in the background';
 
   @override
+  String get iosBackgroundGenerationWaitingDetail =>
+      'Waiting for the assistant to reply';
+
+  @override
   String get iosBackgroundGenerationStreamingDetail =>
       'Receiving assistant response';
 
