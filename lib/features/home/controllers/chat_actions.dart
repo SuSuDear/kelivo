@@ -142,13 +142,6 @@ class ChatActions {
     final settings = ctx.settings;
     final l10n = _l10n;
     if (l10n == null) return;
-    final conversationTitle = chatService
-        .getConversation(ctx.assistantMessage.conversationId)
-        ?.title
-        .trim();
-    final displayTitle = conversationTitle == null || conversationTitle.isEmpty
-        ? l10n.chatServiceDefaultConversationTitle
-        : conversationTitle;
     try {
       await IosBackgroundGenerationService.instance.start(
         enabled: settings.iosBackgroundGenerationEnabled,
@@ -158,7 +151,11 @@ class ChatActions {
         locationTrackingEnabled: settings.iosBackgroundLocationTrackingEnabled,
         conversationId: ctx.assistantMessage.conversationId,
         title: l10n.iosBackgroundGenerationActiveTitle,
-        detail: '$displayTitle\n${l10n.iosBackgroundGenerationWaitingDetail}',
+        detail: _liveActivityDetail(
+          ctx.assistantMessage.conversationId,
+          l10n.iosBackgroundGenerationWaitingDetail,
+          l10n,
+        ),
         tokenLabel: l10n.iosBackgroundGenerationTokenCount(0),
       );
     } catch (error, stackTrace) {
@@ -209,6 +206,25 @@ class ChatActions {
         .trim();
   }
 
+  String _liveActivityConversationTitle(
+    String conversationId,
+    AppLocalizations l10n,
+  ) {
+    final title = chatService.getConversation(conversationId)?.title.trim();
+    return title == null || title.isEmpty
+        ? l10n.chatServiceDefaultConversationTitle
+        : title;
+  }
+
+  String _liveActivityDetail(
+    String conversationId,
+    String detail,
+    AppLocalizations l10n,
+  ) {
+    final title = _liveActivityConversationTitle(conversationId, l10n);
+    return '$title\n$detail';
+  }
+
   String _liveActivityContentPreview(String content) {
     final normalized = _systemDisplayPlainText(content);
     if (normalized.isEmpty) return '';
@@ -254,9 +270,13 @@ class ChatActions {
     try {
       await IosBackgroundGenerationService.instance.update(
         conversationId: state.conversationId,
-        detail: preview.isEmpty
-            ? l10n.iosBackgroundGenerationStreamingDetail
-            : preview,
+        detail: _liveActivityDetail(
+          state.conversationId,
+          preview.isEmpty
+              ? l10n.iosBackgroundGenerationStreamingDetail
+              : preview,
+          l10n,
+        ),
         tokenLabel: l10n.iosBackgroundGenerationTokenCount(state.totalTokens),
         tokenCount: state.totalTokens,
       );
