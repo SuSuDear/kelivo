@@ -127,6 +127,14 @@ class _StorageSpacePageState extends State<StorageSpacePage> {
 
   String _subTitleFor(String id, AppLocalizations l10n) {
     switch (id) {
+      case 'chat_database':
+        return l10n.storageSpaceSubChatMessages;
+      case 'sqlite_wal':
+        return l10n.storageSpaceSubChatConversations;
+      case 'sqlite_shared_memory':
+        return l10n.storageSpaceSubChatToolEvents;
+      case 'legacy_hive':
+        return l10n.storageSpaceCategoryChatData;
       case 'messages':
         return l10n.storageSpaceSubChatMessages;
       case 'conversations':

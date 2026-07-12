@@ -105,6 +105,30 @@ abstract final class StorageUsageService {
     return p.basename(name).toLowerCase().startsWith('chat_background_');
   }
 
+  static String? _chatStorageSubcategoryId(String lowerName) {
+    switch (lowerName) {
+      case 'chat.sqlite3':
+        return 'chat_database';
+      case 'chat.sqlite3-wal':
+        return 'sqlite_wal';
+      case 'chat.sqlite3-shm':
+        return 'sqlite_shared_memory';
+    }
+    if (lowerName.endsWith('.hive') || lowerName.endsWith('.lock')) {
+      return 'legacy_hive';
+    }
+    return null;
+  }
+
+  static String _chatStorageSubcategoryPath(String rootPath, String id) {
+    return switch (id) {
+      'chat_database' => p.join(rootPath, 'chat.sqlite3'),
+      'sqlite_wal' => p.join(rootPath, 'chat.sqlite3-wal'),
+      'sqlite_shared_memory' => p.join(rootPath, 'chat.sqlite3-shm'),
+      _ => rootPath,
+    };
+  }
+
   static Future<StorageUsageReport> computeReport() async {
     final root = await AppDirectories.getAppDataDirectory();
 
@@ -113,9 +137,10 @@ abstract final class StorageUsageService {
     };
 
     final chatSubs = <String, _MutableStats>{
-      'messages': _MutableStats(),
-      'conversations': _MutableStats(),
-      'tool_events_v1': _MutableStats(),
+      'chat_database': _MutableStats(),
+      'sqlite_wal': _MutableStats(),
+      'sqlite_shared_memory': _MutableStats(),
+      'legacy_hive': _MutableStats(),
     };
 
     final assistantSubs = <String, _MutableStats>{'avatars': _MutableStats()};
@@ -169,16 +194,15 @@ abstract final class StorageUsageService {
           continue;
         }
 
-        // Root-level files are mostly Hive boxes / preferences.
+        // Root-level files include the SQLite chat database, old Hive chat
+        // files from previous versions, and preferences.
         if (parts.length == 1) {
           final name = parts.first;
           final lower = name.toLowerCase();
-          final isHive = lower.endsWith('.hive') || lower.endsWith('.lock');
-          if (isHive) {
+          final chatSubId = _chatStorageSubcategoryId(lower);
+          if (chatSubId != null) {
             byCat[StorageUsageCategoryKey.chatData]!.add(bytes);
-            final box = _basenameNoExt(name);
-            final sub = chatSubs[box];
-            if (sub != null) sub.add(bytes);
+            chatSubs[chatSubId]!.add(bytes);
           } else {
             byCat[StorageUsageCategoryKey.other]!.add(bytes);
           }
@@ -288,7 +312,7 @@ abstract final class StorageUsageService {
               StorageUsageSubcategory(
                 id: e.key,
                 stats: e.value.toStats(),
-                path: p.join(root.path, '${e.key}.hive'),
+                path: _chatStorageSubcategoryPath(root.path, e.key),
               ),
         ],
       ),

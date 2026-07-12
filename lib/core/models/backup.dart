@@ -11,7 +11,7 @@ class WebDavConfig {
   final String password;
   final String path;
   final String userAgent;
-  final bool includeChats; // Hive boxes
+  final bool includeChats; // SQLite chat database
   final bool includeFiles; // uploads/
 
   const WebDavConfig({
