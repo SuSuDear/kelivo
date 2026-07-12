@@ -191,7 +191,14 @@ class ChatActions {
         .replaceAll('&gt;', '>')
         .replaceAll('&quot;', '"')
         .replaceAll('&#39;', "'");
-    return text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    text = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    final lines = text.split('\n').map(
+      (line) => line.replaceAll(RegExp(r'[\t \f\v]+'), ' ').trim(),
+    );
+    return lines
+        .join('\n')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
   }
 
   String _liveActivityContentPreview(String content) {

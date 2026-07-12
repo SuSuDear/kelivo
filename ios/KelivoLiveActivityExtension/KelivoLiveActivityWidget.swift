@@ -44,6 +44,8 @@ struct KelivoLiveActivityWidget: Widget {
               .font(.subheadline)
               .multilineTextAlignment(.leading)
               .lineLimit(4)
+              .fixedSize(horizontal: false, vertical: true)
+              .layoutPriority(1)
             Spacer(minLength: 0)
           }
           .frame(maxWidth: .infinity, alignment: .leading)
