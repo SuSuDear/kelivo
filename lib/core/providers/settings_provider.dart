@@ -239,6 +239,10 @@ class SettingsProvider extends ChangeNotifier {
       'ios_background_task_refresh_enabled_v1';
   static const String _iosBackgroundNotificationsEnabledKey =
       'ios_background_notifications_enabled_v1';
+  static const String _iosBackgroundLocationTrackingEnabledKey =
+      'ios_background_location_tracking_enabled_v1';
+  static const String _iosBackgroundLiveActivityEnabledKey =
+      'ios_background_live_activity_enabled_v1';
   // Fonts
   static const String _displayAppFontFamilyKey = 'display_app_font_family_v1';
   static const String _displayCodeFontFamilyKey = 'display_code_font_family_v1';
@@ -1157,6 +1161,10 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool(_iosBackgroundTaskRefreshEnabledKey) ?? false;
     _iosBackgroundNotificationsEnabled =
         prefs.getBool(_iosBackgroundNotificationsEnabledKey) ?? false;
+    _iosBackgroundLiveActivityEnabled =
+        prefs.getBool(_iosBackgroundLiveActivityEnabledKey) ?? false;
+    _iosBackgroundLocationTrackingEnabled =
+        prefs.getBool(_iosBackgroundLocationTrackingEnabledKey) ?? false;
 
     // load search settings
     final searchServicesStr = prefs.getString(_searchServicesKey);
@@ -2320,6 +2328,8 @@ class SettingsProvider extends ChangeNotifier {
     if (!v) {
       _iosBackgroundTaskRefreshEnabled = false;
       _iosBackgroundNotificationsEnabled = false;
+      _iosBackgroundLiveActivityEnabled = false;
+      _iosBackgroundLocationTrackingEnabled = false;
     }
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
@@ -2330,6 +2340,8 @@ class SettingsProvider extends ChangeNotifier {
     if (!v) {
       await prefs.setBool(_iosBackgroundTaskRefreshEnabledKey, false);
       await prefs.setBool(_iosBackgroundNotificationsEnabledKey, false);
+      await prefs.setBool(_iosBackgroundLiveActivityEnabledKey, false);
+      await prefs.setBool(_iosBackgroundLocationTrackingEnabledKey, false);
     }
   }
 
@@ -2362,6 +2374,41 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setBool(
       _iosBackgroundNotificationsEnabledKey,
       _iosBackgroundNotificationsEnabled,
+    );
+    if (v) {
+      await prefs.setBool(_iosBackgroundGenerationEnabledKey, true);
+    }
+  }
+
+  bool _iosBackgroundLocationTrackingEnabled = false;
+  bool get iosBackgroundLocationTrackingEnabled =>
+      _iosBackgroundLocationTrackingEnabled;
+  Future<void> setIosBackgroundLocationTrackingEnabled(bool v) async {
+    if (_iosBackgroundLocationTrackingEnabled == v) return;
+    _iosBackgroundLocationTrackingEnabled = v;
+    if (v) _iosBackgroundGenerationEnabled = true;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(
+      _iosBackgroundLocationTrackingEnabledKey,
+      _iosBackgroundLocationTrackingEnabled,
+    );
+    if (v) {
+      await prefs.setBool(_iosBackgroundGenerationEnabledKey, true);
+    }
+  }
+
+  bool _iosBackgroundLiveActivityEnabled = false;
+  bool get iosBackgroundLiveActivityEnabled => _iosBackgroundLiveActivityEnabled;
+  Future<void> setIosBackgroundLiveActivityEnabled(bool v) async {
+    if (_iosBackgroundLiveActivityEnabled == v) return;
+    _iosBackgroundLiveActivityEnabled = v;
+    if (v) _iosBackgroundGenerationEnabled = true;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(
+      _iosBackgroundLiveActivityEnabledKey,
+      _iosBackgroundLiveActivityEnabled,
     );
     if (v) {
       await prefs.setBool(_iosBackgroundGenerationEnabledKey, true);
@@ -4212,6 +4259,9 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._iosBackgroundTaskRefreshEnabled = _iosBackgroundTaskRefreshEnabled;
     copy._iosBackgroundNotificationsEnabled =
         _iosBackgroundNotificationsEnabled;
+    copy._iosBackgroundLocationTrackingEnabled =
+        _iosBackgroundLocationTrackingEnabled;
+    copy._iosBackgroundLiveActivityEnabled = _iosBackgroundLiveActivityEnabled;
     copy._desktopSendShortcut = _desktopSendShortcut;
     copy._desktopMessageNavButtonsMode = _desktopMessageNavButtonsMode;
     copy._chatFontScale = _chatFontScale;

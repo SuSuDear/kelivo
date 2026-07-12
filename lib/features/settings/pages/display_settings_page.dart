@@ -2553,6 +2553,34 @@ class _IosBackgroundSettingsPageState extends State<IosBackgroundSettingsPage> {
     _refreshStatus();
   }
 
+  Future<void> _setLiveActivityEnabled(bool enabled) async {
+    await context.read<SettingsProvider>().setIosBackgroundLiveActivityEnabled(
+      enabled,
+    );
+    if (!mounted) return;
+    _refreshStatus();
+  }
+
+  Future<void> _setLocationTrackingEnabled(bool enabled) async {
+    final settings = context.read<SettingsProvider>();
+    if (!enabled) {
+      await settings.setIosBackgroundLocationTrackingEnabled(false);
+      await IosBackgroundGenerationService.instance.setLocationTrackingEnabled(
+        false,
+      );
+      if (!mounted) return;
+      _refreshStatus();
+      return;
+    }
+
+    final granted = await IosBackgroundGenerationService.instance
+        .requestLocationAlwaysAuthorization();
+    if (!mounted) return;
+    await settings.setIosBackgroundLocationTrackingEnabled(granted);
+    if (!mounted) return;
+    _refreshStatus();
+  }
+
   Future<void> _openAppSettings() async {
     await IosBackgroundGenerationService.instance.openAppSettings();
     if (!mounted) return;
@@ -2563,6 +2591,31 @@ class _IosBackgroundSettingsPageState extends State<IosBackgroundSettingsPage> {
     await IosBackgroundGenerationService.instance.openNotificationSettings();
     if (!mounted) return;
     _refreshStatus();
+  }
+
+  String _locationAuthorizationLabel(String value) {
+    switch (value) {
+      case 'always':
+        return 'Always';
+      case 'whenInUse':
+        return '使用期间';
+      case 'denied':
+        return '已拒绝';
+      case 'restricted':
+        return '受限制';
+      case 'notDetermined':
+        return '未决定';
+      case 'disabled':
+        return '定位服务关闭';
+      default:
+        return '不可用';
+    }
+  }
+
+  bool _isKeepAliveActive(IosBackgroundGenerationStatus status) {
+    return status.backgroundTaskActive ||
+        status.liveActivityActive ||
+        status.locationTrackingActive;
   }
 
   @override
@@ -2589,8 +2642,9 @@ class _IosBackgroundSettingsPageState extends State<IosBackgroundSettingsPage> {
         children: [
           _noticeCard(
             context,
-            title: l10n.iosBackgroundLimitNoticeTitle,
-            body: l10n.iosBackgroundLimitNoticeBody,
+            title: '仅供自用的后台增强',
+            body:
+                '启用后，Kelivo 会在生成回复时使用 iOS 后台时间、Live Activity 和低精度定位心跳尽量保持任务活跃。不会使用语音播报或后台音频，也不会保存精确位置。',
           ),
           const SizedBox(height: 12),
           _iosSectionCard(
@@ -2604,6 +2658,24 @@ class _IosBackgroundSettingsPageState extends State<IosBackgroundSettingsPage> {
                 onChanged: (v) => context
                     .read<SettingsProvider>()
                     .setIosBackgroundGenerationEnabled(v),
+              ),
+              _iosDivider(context),
+              _iosSwitchRow(
+                context,
+                icon: Lucide.Zap,
+                label: '实时活动 / 灵动岛',
+                subtitle: '在锁屏和灵动岛显示生成状态、token 数和完成/中断状态。',
+                value: sp.iosBackgroundLiveActivityEnabled,
+                onChanged: _setLiveActivityEnabled,
+              ),
+              _iosDivider(context),
+              _iosSwitchRow(
+                context,
+                icon: Lucide.Compass,
+                label: '位置追踪保活',
+                subtitle: '仅使用粗略低精度定位作为后台心跳，不追踪或保存精确位置。需要 Always 权限。',
+                value: sp.iosBackgroundLocationTrackingEnabled,
+                onChanged: _setLocationTrackingEnabled,
               ),
               _iosDivider(context),
               _iosSwitchRow(
@@ -2632,15 +2704,51 @@ class _IosBackgroundSettingsPageState extends State<IosBackgroundSettingsPage> {
             future: _statusFuture,
             builder: (context, snapshot) {
               final status = snapshot.data;
+              final keepAliveActive =
+                  status != null && _isKeepAliveActive(status);
               return _iosSectionCard(
                 children: [
                   _iosNavRow(
                     context,
-                    icon: Lucide.BadgeInfo,
-                    label: l10n.iosBackgroundNativeStatusTitle,
+                    icon: Lucide.HeartPulse,
+                    label: '保活状态',
                     detailText: status == null
                         ? l10n.iosBackgroundNativeStatusUnavailable
-                        : null,
+                        : keepAliveActive
+                            ? '活跃'
+                            : '非活跃',
+                    onTap: _openAppSettings,
+                  ),
+                  _iosDivider(context),
+                  _iosNavRow(
+                    context,
+                    icon: Lucide.Zap,
+                    label: status?.liveActivityAvailable == true
+                        ? l10n.iosBackgroundLiveActivityAvailable
+                        : l10n.iosBackgroundLiveActivityUnavailable,
+                    detailText: status?.liveActivityActive == true ? '活跃' : null,
+                    onTap: _openAppSettings,
+                  ),
+                  _iosDivider(context),
+                  _iosNavRow(
+                    context,
+                    icon: Lucide.Compass,
+                    label: '定位权限',
+                    detailText: status == null
+                        ? l10n.iosBackgroundNativeStatusUnavailable
+                        : _locationAuthorizationLabel(
+                            status.locationAuthorizationStatus,
+                          ),
+                    onTap: _openAppSettings,
+                  ),
+                  _iosDivider(context),
+                  _iosNavRow(
+                    context,
+                    icon: Lucide.Map,
+                    label: '位置心跳',
+                    detailText: status?.locationTrackingActive == true
+                        ? '活跃'
+                        : '非活跃',
                     onTap: _openAppSettings,
                   ),
                   _iosDivider(context),

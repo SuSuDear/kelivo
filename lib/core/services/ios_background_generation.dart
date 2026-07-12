@@ -6,18 +6,54 @@ class IosBackgroundGenerationStatus {
   const IosBackgroundGenerationStatus({
     required this.backgroundTaskActive,
     required this.notificationsAuthorized,
+    required this.locationTrackingActive,
+    required this.locationAlwaysAuthorized,
+    required this.locationAuthorizationStatus,
+    required this.liveActivityAvailable,
+    required this.liveActivityActive,
+    required this.liveActivitiesEnabled,
   });
 
   factory IosBackgroundGenerationStatus.fromMap(Map<dynamic, dynamic>? map) {
     bool readBool(String key) => map?[key] == true;
+    final locationStatus =
+        (map?['locationAuthorizationStatus'] as String?) ??
+        (map?['locationAuthorization'] as String?) ??
+        'unavailable';
+    final liveActivitiesEnabled =
+        readBool('liveActivitiesEnabled') || readBool('liveActivityAvailable');
     return IosBackgroundGenerationStatus(
       backgroundTaskActive: readBool('backgroundTaskActive'),
       notificationsAuthorized: readBool('notificationsAuthorized'),
+      locationTrackingActive: readBool('locationTrackingActive'),
+      locationAlwaysAuthorized:
+          readBool('locationAlwaysAuthorized') || locationStatus == 'always',
+      locationAuthorizationStatus: locationStatus,
+      liveActivityAvailable: readBool('liveActivityAvailable'),
+      liveActivityActive: readBool('liveActivityActive'),
+      liveActivitiesEnabled: liveActivitiesEnabled,
     );
   }
 
   final bool backgroundTaskActive;
   final bool notificationsAuthorized;
+  final bool locationTrackingActive;
+  final bool locationAlwaysAuthorized;
+  final String locationAuthorizationStatus;
+  final bool liveActivityAvailable;
+  final bool liveActivityActive;
+  final bool liveActivitiesEnabled;
+
+  static const unavailable = IosBackgroundGenerationStatus(
+    backgroundTaskActive: false,
+    notificationsAuthorized: false,
+    locationTrackingActive: false,
+    locationAlwaysAuthorized: false,
+    locationAuthorizationStatus: 'unavailable',
+    liveActivityAvailable: false,
+    liveActivityActive: false,
+    liveActivitiesEnabled: false,
+  );
 }
 
 class IosBackgroundGenerationService {
@@ -36,12 +72,7 @@ class IosBackgroundGenerationService {
   bool get _isIos => debugForceIosForTest || Platform.isIOS;
 
   Future<IosBackgroundGenerationStatus> getStatus() async {
-    if (!_isIos) {
-      return const IosBackgroundGenerationStatus(
-        backgroundTaskActive: false,
-        notificationsAuthorized: false,
-      );
-    }
+    if (!_isIos) return IosBackgroundGenerationStatus.unavailable;
     final result = await _channel.invokeMethod<dynamic>('getStatus');
     return IosBackgroundGenerationStatus.fromMap(
       result as Map<dynamic, dynamic>?,
@@ -52,6 +83,23 @@ class IosBackgroundGenerationService {
     if (!_isIos) return false;
     return await _channel.invokeMethod<bool>(
           'requestNotificationAuthorization',
+        ) ??
+        false;
+  }
+
+  Future<bool> requestLocationAlwaysAuthorization() async {
+    if (!_isIos) return false;
+    return await _channel.invokeMethod<bool>(
+          'requestLocationAlwaysAuthorization',
+        ) ??
+        false;
+  }
+
+  Future<bool> setLocationTrackingEnabled(bool enabled) async {
+    if (!_isIos) return false;
+    return await _channel.invokeMethod<bool>(
+          'setLocationTrackingEnabled',
+          <String, Object?>{'enabled': enabled},
         ) ??
         false;
   }
@@ -67,11 +115,13 @@ class IosBackgroundGenerationService {
         false;
   }
 
-
   Future<void> start({
     required bool enabled,
     required bool notificationsEnabled,
     required bool refreshEnabled,
+    required bool locationTrackingEnabled,
+    required bool liveActivityEnabled,
+    required String conversationId,
     required String title,
     required String detail,
     required String tokenLabel,
@@ -88,6 +138,9 @@ class IosBackgroundGenerationService {
         .invokeMethod<bool>('start', <String, Object?>{
           'notificationsEnabled': notificationsEnabled,
           'refreshEnabled': refreshEnabled,
+          'locationTrackingEnabled': locationTrackingEnabled,
+          'liveActivityEnabled': liveActivityEnabled,
+          'conversationId': conversationId,
           'title': title,
           'detail': detail,
           'tokenCount': tokenCount,
