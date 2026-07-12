@@ -161,6 +161,17 @@ class ChatActions {
 
   DateTime? _lastIosBackgroundUpdateAt;
 
+  String _liveActivityContentPreview(String content) {
+    final normalized = content.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (normalized.isEmpty) return '';
+    const maxCharacters = 280;
+    final characters = normalized.runes.toList(growable: false);
+    if (characters.length <= maxCharacters) return normalized;
+    return String.fromCharCodes(
+      characters.sublist(characters.length - maxCharacters),
+    );
+  }
+
   Future<void> _updateIosBackgroundGeneration(
     stream_ctrl.StreamingState state,
   ) async {
@@ -173,9 +184,12 @@ class ChatActions {
     _lastIosBackgroundUpdateAt = now;
     final l10n = _l10n;
     if (l10n == null) return;
+    final preview = _liveActivityContentPreview(state.fullContentRaw);
     try {
       await IosBackgroundGenerationService.instance.update(
-        detail: l10n.iosBackgroundGenerationStreamingDetail,
+        detail: preview.isEmpty
+            ? l10n.iosBackgroundGenerationStreamingDetail
+            : preview,
         tokenLabel: l10n.iosBackgroundGenerationTokenCount(state.totalTokens),
         tokenCount: state.totalTokens,
       );
@@ -1961,7 +1975,11 @@ class ChatActions {
     // Trigger follow-up suggestions after the final assistant reply is stored.
     onMaybeGenerateSuggestions?.call(conversationId);
 
-    await _finishIosBackgroundGeneration(success: true);
+    final finalPreview = _liveActivityContentPreview(state.fullContentRaw);
+    await _finishIosBackgroundGeneration(
+      success: true,
+      detail: finalPreview.isEmpty ? null : finalPreview,
+    );
     _activeStreamingStates.remove(messageId);
   }
 
