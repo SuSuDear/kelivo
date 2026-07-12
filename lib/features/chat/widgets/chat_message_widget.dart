@@ -2408,18 +2408,17 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                               Flexible(child: _buildReconnectStatus(context))
                             else if (widget.hideStreamingIndicator)
                               const SizedBox(height: 16)
-                            else ...[
-                              const LoadingIndicator(),
-                              const SizedBox(width: 8),
-                              Text(
-                                l10n.chatMessageWidgetThinking,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: AppFontWeights.medium,
-                                  color: fg.muted,
+                            else
+                              LoadingIndicator(
+                                label: Text(
+                                  l10n.chatMessageWidgetThinking,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: AppFontWeights.medium,
+                                    color: fg.muted,
+                                  ),
                                 ),
                               ),
-                            ],
                           ],
                         ),
                       ),
@@ -3358,12 +3357,16 @@ class LoadingIndicator extends StatefulWidget {
     this.dotSize = 9,
     this.spacing = 6,
     this.color,
+    this.label,
+    this.labelGap = 8,
   });
 
   final double height;
   final double dotSize;
   final double spacing;
   final Color? color;
+  final Widget? label;
+  final double labelGap;
   @override
   State<LoadingIndicator> createState() => _LoadingIndicatorState();
 }
@@ -3402,30 +3405,83 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: List.generate(3, (i) {
-              final wave = _dotValue(i);
-              final double scale = 0.85 + 0.15 * wave; // subtle breathing
-              final double opacity = 0.45 + 0.45 * wave;
-              return Padding(
-                padding: EdgeInsets.only(right: i == 2 ? 0 : widget.spacing),
-                child: Transform.scale(
-                  scale: scale,
-                  child: Container(
-                    width: widget.dotSize,
-                    height: widget.dotSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: base.withValues(alpha: opacity),
-                    ),
+          final dots = List.generate(3, (i) {
+            final wave = _dotValue(i);
+            final double scale = 0.85 + 0.15 * wave; // subtle breathing
+            final double opacity = 0.45 + 0.45 * wave;
+            return Padding(
+              padding: EdgeInsets.only(right: i == 2 ? 0 : widget.spacing),
+              child: Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: widget.dotSize,
+                  height: widget.dotSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: base.withValues(alpha: opacity),
                   ),
                 ),
-              );
-            }),
+              ),
+            );
+          });
+          final label = widget.label;
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...dots,
+              if (label != null) ...[
+                SizedBox(width: widget.labelGap),
+                _SynchronizedLoadingLabel(
+                  progress: _controller.value,
+                  child: label,
+                ),
+              ],
+            ],
           );
         },
       ),
+    );
+  }
+}
+
+class _SynchronizedLoadingLabel extends StatelessWidget {
+  const _SynchronizedLoadingLabel({
+    required this.progress,
+    required this.child,
+  });
+
+  final double progress;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    // The three dots peak at roughly 25%, 47%, and 69% of the shared cycle.
+    // Start the text sweep as the last dot brightens so the motion reads as
+    // one continuous left-to-right highlight instead of two animations.
+    final sweep = ((progress - 0.58) / 0.42).clamp(0.0, 1.0);
+    return ShaderMask(
+      shaderCallback: (rect) {
+        final width = rect.width;
+        final highlightWidth = width * 0.45;
+        final center = -highlightWidth +
+            (width + highlightWidth * 2) * sweep;
+        return LinearGradient(
+          colors: const [
+            Color(0x00FFFFFF),
+            Color(0xB3FFFFFF),
+            Color(0x00FFFFFF),
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ).createShader(
+          Rect.fromCenter(
+            center: Offset(center, rect.center.dy),
+            width: highlightWidth,
+            height: rect.height,
+          ),
+        );
+      },
+      blendMode: BlendMode.srcATop,
+      child: child,
     );
   }
 }
