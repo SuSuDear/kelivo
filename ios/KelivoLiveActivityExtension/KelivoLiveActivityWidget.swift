@@ -39,16 +39,11 @@ struct KelivoLiveActivityWidget: Widget {
             .font(.caption.monospacedDigit())
         }
         DynamicIslandExpandedRegion(.bottom) {
-          HStack(spacing: 0) {
-            Text(context.state.detail)
-              .font(.subheadline)
-              .multilineTextAlignment(.leading)
-              .lineLimit(4)
-              .fixedSize(horizontal: false, vertical: true)
-              .layoutPriority(1)
-            Spacer(minLength: 0)
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
+          Text(context.state.detail)
+            .font(.subheadline)
+            .multilineTextAlignment(.leading)
+            .lineLimit(4)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
       } compactLeading: {
         Image(systemName: context.state.isFinished ? (context.state.success ? "checkmark.circle.fill" : "xmark.circle.fill") : "sparkles")
