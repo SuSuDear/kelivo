@@ -1631,6 +1631,7 @@ class StreamingState {
   int totalTokens = 0;
   TokenUsage? usage;
   String bufferedReasoning = '';
+  String iosBackgroundDisplayContent = '';
   DateTime? reasoningStartAt;
   bool finishHandled = false;
   bool receivedDoneChunk = false;

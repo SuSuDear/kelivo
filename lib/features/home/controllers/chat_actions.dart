@@ -161,8 +161,41 @@ class ChatActions {
 
   DateTime? _lastIosBackgroundUpdateAt;
 
+  String _systemDisplayPlainText(String content) {
+    var text = content
+        .replaceAll(RegExp(r'<!--.*?-->', dotAll: true), ' ')
+        .replaceAllMapped(
+          RegExp(r'!\[([^\]]*)\]\([^)]*\)'),
+          (match) => match.group(1) ?? '',
+        )
+        .replaceAllMapped(
+          RegExp(r'\[([^\]]+)\]\([^)]*\)'),
+          (match) => match.group(1) ?? '',
+        )
+        .replaceAll(RegExp(r'^\s*```[^\n]*', multiLine: true), '')
+        .replaceAll(RegExp(r'^\s*~~~[^\n]*', multiLine: true), '')
+        .replaceAll(RegExp(r'<[^>]+>'), ' ')
+        .replaceAll(RegExp(r'^\s{0,3}#{1,6}\s+', multiLine: true), '')
+        .replaceAll(RegExp(r'^\s{0,3}>\s?', multiLine: true), '')
+        .replaceAll(RegExp(r'^\s*[-+*]\s+', multiLine: true), '')
+        .replaceAll(RegExp(r'^\s*\d+[.)]\s+', multiLine: true), '')
+        .replaceAll(RegExp(r'^\s*([-*_])(?:\s*\1){2,}\s*$', multiLine: true), '')
+        .replaceAll(RegExp(r'[*_~`]+'), '')
+        .replaceAllMapped(
+          RegExp(r'\\([\\`*_{}\[\]()#+\-.!>~|])'),
+          (match) => match.group(1) ?? '',
+        )
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'");
+    return text.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
   String _liveActivityContentPreview(String content) {
-    final normalized = content.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final normalized = _systemDisplayPlainText(content);
     if (normalized.isEmpty) return '';
     const maxCharacters = 280;
     final characters = normalized.runes.toList(growable: false);
@@ -172,19 +205,37 @@ class ChatActions {
     );
   }
 
+  String _liveActivitySource(stream_ctrl.StreamingState state) {
+    final displayContent = state.iosBackgroundDisplayContent.trim();
+    return displayContent.isEmpty ? state.fullContentRaw : displayContent;
+  }
+
+  String _toolLiveActivityContent(stream_ctrl.StreamingState state) {
+    final tools = streamController.getToolParts(state.messageId);
+    if (tools == null || tools.isEmpty) return '';
+    final latest = tools.last;
+    return (latest.loading
+                ? latest.displayTitle
+                : latest.finalTitle ?? latest.resultTitle)
+            ?.trim() ??
+        latest.toolName;
+  }
+
   Future<void> _updateIosBackgroundGeneration(
-    stream_ctrl.StreamingState state,
-  ) async {
+    stream_ctrl.StreamingState state, {
+    bool force = false,
+  }) async {
     final now = DateTime.now();
     final lastUpdate = _lastIosBackgroundUpdateAt;
-    if (lastUpdate != null &&
+    if (!force &&
+        lastUpdate != null &&
         now.difference(lastUpdate) < const Duration(milliseconds: 500)) {
       return;
     }
     _lastIosBackgroundUpdateAt = now;
     final l10n = _l10n;
     if (l10n == null) return;
-    final preview = _liveActivityContentPreview(state.fullContentRaw);
+    final preview = _liveActivityContentPreview(_liveActivitySource(state));
     try {
       await IosBackgroundGenerationService.instance.update(
         detail: preview.isEmpty
@@ -1532,6 +1583,12 @@ class ChatActions {
             );
           },
     );
+    final segments = streamController.getReasoningSegments(state.messageId);
+    state.iosBackgroundDisplayContent =
+        segments != null && segments.isNotEmpty
+        ? segments.last.text
+        : state.bufferedReasoning;
+    unawaited(_updateIosBackgroundGeneration(state));
   }
 
   /// Handle tool calls chunk from stream.
@@ -1555,6 +1612,12 @@ class ChatActions {
           },
       getToolEventsFromDb: (String messageId) =>
           chatService.getToolEvents(messageId),
+    );
+    final toolContent = _toolLiveActivityContent(state);
+    final contentChanged = toolContent != state.iosBackgroundDisplayContent;
+    state.iosBackgroundDisplayContent = toolContent;
+    unawaited(
+      _updateIosBackgroundGeneration(state, force: contentChanged),
     );
   }
 
@@ -1584,6 +1647,12 @@ class ChatActions {
               metadata: metadata,
             );
           },
+    );
+    final toolContent = _toolLiveActivityContent(state);
+    final contentChanged = toolContent != state.iosBackgroundDisplayContent;
+    state.iosBackgroundDisplayContent = toolContent;
+    unawaited(
+      _updateIosBackgroundGeneration(state, force: contentChanged),
     );
   }
 
@@ -1701,7 +1770,15 @@ class ChatActions {
       await _finishReasoningOnContent(state);
     }
 
-    unawaited(_updateIosBackgroundGeneration(state));
+    final switchedToAnswer =
+        chunkContent.isNotEmpty &&
+        state.iosBackgroundDisplayContent.isNotEmpty;
+    if (chunkContent.isNotEmpty) {
+      state.iosBackgroundDisplayContent = '';
+    }
+    unawaited(
+      _updateIosBackgroundGeneration(state, force: switchedToAnswer),
+    );
 
     // Re-check before scheduling timer — timer creation after _finishStreaming
     // would create a new timer that periodically overwrites _messages[index]
@@ -1975,7 +2052,7 @@ class ChatActions {
     // Trigger follow-up suggestions after the final assistant reply is stored.
     onMaybeGenerateSuggestions?.call(conversationId);
 
-    final finalPreview = _liveActivityContentPreview(state.fullContentRaw);
+    final finalPreview = _liveActivityContentPreview(sanitizedContent);
     await _finishIosBackgroundGeneration(
       success: true,
       detail: finalPreview.isEmpty ? null : finalPreview,
