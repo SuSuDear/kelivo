@@ -3374,8 +3374,6 @@ class LoadingIndicator extends StatefulWidget {
 class _LoadingIndicatorState extends State<LoadingIndicator>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  double _previousProgress = 0;
-  bool _labelShimmerCompleted = false;
 
   @override
   void initState() {
@@ -3383,18 +3381,7 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1100),
       vsync: this,
-    )..addListener(_trackLabelShimmerCycle);
-    _controller.repeat();
-  }
-
-  void _trackLabelShimmerCycle() {
-    final progress = _controller.value;
-    if (widget.label != null &&
-        !_labelShimmerCompleted &&
-        progress < _previousProgress) {
-      _labelShimmerCompleted = true;
-    }
-    _previousProgress = progress;
+    )..repeat();
   }
 
   @override
@@ -3446,7 +3433,6 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
                 SizedBox(width: widget.labelGap),
                 _SynchronizedLoadingLabel(
                   progress: _controller.value,
-                  enabled: !_labelShimmerCompleted,
                   child: label,
                 ),
               ],
@@ -3461,44 +3447,46 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
 class _SynchronizedLoadingLabel extends StatelessWidget {
   const _SynchronizedLoadingLabel({
     required this.progress,
-    required this.enabled,
     required this.child,
   });
 
   final double progress;
-  final bool enabled;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    if (!enabled) return child;
     // The three dots peak at roughly 25%, 47%, and 69% of the shared cycle.
     // Start the text sweep as the last dot brightens so the motion reads as
     // one continuous left-to-right highlight instead of two animations.
     final sweep = ((progress - 0.58) / 0.42).clamp(0.0, 1.0);
-    return ShaderMask(
-      shaderCallback: (rect) {
-        final width = rect.width;
-        final highlightWidth = width * 0.45;
-        final center = -highlightWidth +
-            (width + highlightWidth * 2) * sweep;
-        return LinearGradient(
-          colors: const [
-            Color(0x00FFFFFF),
-            Color(0xB3FFFFFF),
-            Color(0x00FFFFFF),
-          ],
-          stops: const [0.0, 0.5, 1.0],
-        ).createShader(
-          Rect.fromCenter(
-            center: Offset(center, rect.center.dy),
-            width: highlightWidth,
-            height: rect.height,
-          ),
-        );
-      },
-      blendMode: BlendMode.srcATop,
-      child: child,
+    final pulse = math.sin(sweep * math.pi).clamp(0.0, 1.0);
+    return Transform.scale(
+      alignment: Alignment.centerLeft,
+      scale: 0.98 + 0.04 * pulse,
+      child: ShaderMask(
+        shaderCallback: (rect) {
+          final width = rect.width;
+          final highlightWidth = width * 0.45;
+          final center = -highlightWidth +
+              (width + highlightWidth * 2) * sweep;
+          return LinearGradient(
+            colors: const [
+              Color(0x00FFFFFF),
+              Color(0xB3FFFFFF),
+              Color(0x00FFFFFF),
+            ],
+            stops: const [0.0, 0.5, 1.0],
+          ).createShader(
+            Rect.fromCenter(
+              center: Offset(center, rect.center.dy),
+              width: highlightWidth,
+              height: rect.height,
+            ),
+          );
+        },
+        blendMode: BlendMode.srcATop,
+        child: child,
+      ),
     );
   }
 }
