@@ -559,7 +559,6 @@
 				33C7E5A3E28DE46E88A88507 /* zh-Hant */,
 			);
 			name = Localizable.strings;
-			path = Localizable.strings;
 			sourceTree = "<group>";
 		};
 		597C0B7AC7EDB9DB7D568FC8 /* InfoPlist.strings */ = {
@@ -580,7 +579,6 @@
 				75A6012937ECAA9ABD08FBA0 /* zh-Hant */,
 			);
 			name = Localizable.strings;
-			path = Localizable.strings;
 			sourceTree = "<group>";
 		};
 /* End PBXVariantGroup section */
