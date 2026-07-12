@@ -150,6 +150,40 @@ class SqliteChatStorage {
     conversations.clearCached();
     messages.clearCached();
     toolEvents.clearCached();
+    await compactIfEmpty();
+  }
+
+  Future<bool> isEmpty() async {
+    final counts = await Future.wait<int>([
+      _countRows('conversations'),
+      _countRows('messages'),
+      _countRows('tool_events'),
+    ]);
+    return counts.every((count) => count == 0);
+  }
+
+  Future<int> _countRows(String table) async {
+    final rows = await database.rawQuery('SELECT COUNT(*) AS c FROM $table');
+    final value = rows.first['c'];
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  Future<void> compactIfEmpty() async {
+    if (!await isEmpty()) return;
+    try {
+      await Future.wait([
+        conversations.flushAll(),
+        messages.flushAll(),
+        toolEvents.flushAll(),
+      ]);
+      await database.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
+      await database.execute('VACUUM');
+      await database.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
+    } catch (error, stackTrace) {
+      debugPrint('[SqliteChatStorage] compactIfEmpty failed: $error');
+      debugPrint('$stackTrace');
+    }
   }
 }
 

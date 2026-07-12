@@ -372,6 +372,7 @@ class ChatService extends ChangeNotifier {
 
     // Delete orphaned files (not referenced by any remaining conversation)
     await _cleanupOrphanUploads();
+    await _sqliteStorage.compactIfEmpty();
 
     notifyListeners();
   }
@@ -447,6 +448,7 @@ class ChatService extends ChangeNotifier {
 
     if (!deleted) return;
     await _cleanupOrphanUploads();
+    await _sqliteStorage.compactIfEmpty();
     notifyListeners();
   }
 
@@ -1610,6 +1612,7 @@ class ChatService extends ChangeNotifier {
 
     // Clean up orphaned upload files that are no longer referenced by any message
     await _cleanupOrphanUploads();
+    await _sqliteStorage.compactIfEmpty();
 
     notifyListeners();
   }
