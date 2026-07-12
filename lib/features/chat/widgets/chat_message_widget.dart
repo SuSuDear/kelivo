@@ -4078,11 +4078,24 @@ class _ChainOfThoughtToolStep extends StatefulWidget {
 }
 
 class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
+  final ScrollController _previewScroll = ScrollController();
   bool get _isAskUser => widget.part.toolName == LocalToolNames.askUser;
   bool? _askUserExpanded;
 
   bool get _askUserAnswered =>
       widget.part.content?.trim().isNotEmpty == true && !widget.part.loading;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_isAskUser && widget.part.loading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _previewScroll.hasClients) {
+          _previewScroll.jumpTo(_previewScroll.position.maxScrollExtent);
+        }
+      });
+    }
+  }
 
   @override
   void didUpdateWidget(covariant _ChainOfThoughtToolStep oldWidget) {
@@ -4093,6 +4106,19 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
     if (_isAskUser && !wasAnswered && _askUserAnswered) {
       _askUserExpanded = true;
     }
+    if (!_isAskUser && widget.part.loading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _previewScroll.hasClients) {
+          _previewScroll.jumpTo(_previewScroll.position.maxScrollExtent);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _previewScroll.dispose();
+    super.dispose();
   }
 
   IconData _iconFor(String name, Map<String, dynamic> args) {
@@ -4130,6 +4156,14 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
     });
     final suffix = visibleArgs.length > 2 ? ' ...' : '';
     return entries.join(', ') + suffix;
+  }
+
+  String _streamingArgumentsPreview(Map<String, dynamic> args) {
+    final partialArgs = _partialToolArguments(args);
+    if (partialArgs != null) return partialArgs.trim();
+    final visibleArgs = _visibleToolArguments(args);
+    if (visibleArgs.isEmpty) return '';
+    return const JsonEncoder.withIndent('  ').convert(visibleArgs);
   }
 
   void _showDenyDialog(
@@ -4176,7 +4210,6 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final fg = _chatSurfaceForegroundPalette(context);
-    final settings = context.watch<SettingsProvider>();
     final approvalService = context.watch<ToolApprovalService>();
     ToolApprovalRequest? pendingRequest;
     if (widget.part.id.isNotEmpty &&
@@ -4227,35 +4260,51 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
       ),
     );
 
-    final (cleanText, _) = _parseMcpImagePaths(widget.part.content);
-    final String summaryText = approvalRequest != null
-        ? _argsSummary(approvalRequest.arguments)
-        : cleanText.isNotEmpty
-        ? cleanText
-        : ((widget.part.arguments['query'] ??
-                      widget.part.arguments['url'] ??
-                      widget.part.arguments['text']) ??
-                  '')
-              .toString();
-    final bool shouldShowSummary = settings.showToolResultSummary;
+    final streamingArguments = _streamingArgumentsPreview(
+      widget.part.arguments,
+    );
+    final String approvalSummary = approvalRequest == null
+        ? ''
+        : _argsSummary(approvalRequest.arguments);
     final askUserExpanded = _askUserExpanded ?? true;
+    final showStreamingPreview =
+        !_isAskUser && widget.part.loading && !isPendingApproval;
     final Widget? content = _isAskUser
         ? _AskUserInlineBody(
             part: widget.part,
             compact: true,
             onRecoveredAnswer: widget.onRecoveredAnswer,
           )
-        : !shouldShowSummary || summaryText.trim().isEmpty
-        ? null
-        : Text(
-            summaryText.trim(),
-            maxLines: isPendingApproval ? 2 : 4,
+        : isPendingApproval && approvalSummary.trim().isNotEmpty
+        ? Text(
+            approvalSummary.trim(),
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
               height: 1.4,
-              fontFamily: isPendingApproval ? 'monospace' : null,
+              fontFamily: 'monospace',
               color: fg.body,
+            ),
+          )
+        : !showStreamingPreview
+        ? null
+        : ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 100),
+            child: SingleChildScrollView(
+              controller: _previewScroll,
+              physics: const NeverScrollableScrollPhysics(),
+              child: SelectionArea(
+                child: Text(
+                  streamingArguments.isEmpty ? '…' : streamingArguments,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    fontFamily: 'monospace',
+                    color: fg.body,
+                  ),
+                ),
+              ),
             ),
           );
 
@@ -4324,7 +4373,6 @@ class _ToolCallItem extends StatefulWidget {
 }
 
 class _ToolCallItemState extends State<_ToolCallItem> {
-  StateSetter? _toolDetailSetState;
   // Cache image paths (local file or URL)
   List<String> _imagePaths = const [];
   String? _lastContent;
@@ -4384,21 +4432,9 @@ class _ToolCallItemState extends State<_ToolCallItem> {
   @override
   void didUpdateWidget(covariant _ToolCallItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final contentChanged = oldWidget.part.content != widget.part.content;
-    final argumentsChanged = oldWidget.part.arguments != widget.part.arguments;
-    final loadingChanged = oldWidget.part.loading != widget.part.loading;
-    if (contentChanged) {
+    if (oldWidget.part.content != widget.part.content) {
       _updateImageCache();
     }
-    if (contentChanged || argumentsChanged || loadingChanged) {
-      _toolDetailSetState?.call(() {});
-    }
-  }
-
-  @override
-  void dispose() {
-    _toolDetailSetState = null;
-    super.dispose();
   }
 
   IconData _iconFor(String name, Map<String, dynamic> args) {
@@ -4690,6 +4726,14 @@ class _ToolCallItemState extends State<_ToolCallItem> {
   void _showDetail(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final argsPretty = const JsonEncoder.withIndent(
+      '  ',
+    ).convert(widget.part.arguments);
+    final (cleanText, images) = _parseMcpImagePaths(widget.part.content);
+    final resultText = cleanText.isNotEmpty
+        ? _prettyJson(cleanText)
+        : l10n.chatMessageWidgetNoResultYet;
+
     final bool isDesktop =
         defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
@@ -4700,19 +4744,7 @@ class _ToolCallItemState extends State<_ToolCallItem> {
         context: context,
         barrierDismissible: true,
         builder: (ctx) {
-          return StatefulBuilder(
-            builder: (ctx, setDetailState) {
-              _toolDetailSetState = setDetailState;
-              final argsPretty = const JsonEncoder.withIndent(
-                '  ',
-              ).convert(widget.part.arguments);
-              final (cleanText, images) = _parseMcpImagePaths(
-                widget.part.content,
-              );
-              final resultText = cleanText.isNotEmpty
-                  ? _prettyJson(cleanText)
-                  : l10n.chatMessageWidgetNoResultYet;
-              return Dialog(
+          return Dialog(
             elevation: 12,
             insetPadding: const EdgeInsets.symmetric(
               horizontal: 24,
@@ -4890,12 +4922,8 @@ class _ToolCallItemState extends State<_ToolCallItem> {
               ),
             ),
           );
-            },
-          );
         },
-      ).whenComplete(() {
-        if (mounted) _toolDetailSetState = null;
-      });
+      );
       return;
     }
 
@@ -4908,20 +4936,8 @@ class _ToolCallItemState extends State<_ToolCallItem> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDetailState) {
-            _toolDetailSetState = setDetailState;
-            final bottomInset = MediaQuery.viewInsetsOf(ctx).bottom;
-            final argsPretty = const JsonEncoder.withIndent(
-              '  ',
-            ).convert(widget.part.arguments);
-            final (cleanText, images) = _parseMcpImagePaths(
-              widget.part.content,
-            );
-            final resultText = cleanText.isNotEmpty
-                ? _prettyJson(cleanText)
-                : l10n.chatMessageWidgetNoResultYet;
-            return SafeArea(
+        final bottomInset = MediaQuery.viewInsetsOf(ctx).bottom;
+        return SafeArea(
           child: FractionallySizedBox(
             heightFactor: 0.6,
             child: Padding(
@@ -5037,12 +5053,8 @@ class _ToolCallItemState extends State<_ToolCallItem> {
             ),
           ),
         );
-          },
-        );
       },
-    ).whenComplete(() {
-      if (mounted) _toolDetailSetState = null;
-    });
+    );
   }
 
   /// Show full-size image using ImageViewerPage for save/share/copy support.
