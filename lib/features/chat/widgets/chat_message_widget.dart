@@ -2410,13 +2410,12 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                               const SizedBox(height: 16)
                             else
                               LoadingIndicator(
-                                label: Text(
-                                  l10n.chatMessageWidgetThinking,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: AppFontWeights.medium,
-                                    color: fg.muted,
-                                  ),
+                                label: l10n.chatMessageWidgetThinking,
+                                labelStyle: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: AppFontWeights.semibold,
+                                  color: fg.muted,
+                                  height: 1,
                                 ),
                               ),
                           ],
@@ -3349,7 +3348,7 @@ class _BranchSelector extends StatelessWidget {
   }
 }
 
-// Pulsing 3-dot loading indicator for chat thinking states (shared)
+// Coordinated dot-and-label loading wave for chat thinking states (shared)
 class LoadingIndicator extends StatefulWidget {
   const LoadingIndicator({
     super.key,
@@ -3358,6 +3357,7 @@ class LoadingIndicator extends StatefulWidget {
     this.spacing = 6,
     this.color,
     this.label,
+    this.labelStyle,
     this.labelGap = 8,
   });
 
@@ -3365,8 +3365,10 @@ class LoadingIndicator extends StatefulWidget {
   final double dotSize;
   final double spacing;
   final Color? color;
-  final Widget? label;
+  final String? label;
+  final TextStyle? labelStyle;
   final double labelGap;
+
   @override
   State<LoadingIndicator> createState() => _LoadingIndicatorState();
 }
@@ -3375,13 +3377,28 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
+  Duration _animationDuration() {
+    final characterCount = widget.label?.characters.length ?? 0;
+    if (characterCount == 0) return const Duration(milliseconds: 1100);
+    return Duration(milliseconds: 180 + (3 + characterCount) * 130);
+  }
+
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1100),
+      duration: _animationDuration(),
       vsync: this,
     )..repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant LoadingIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.label != widget.label) {
+      _controller.duration = _animationDuration();
+      _controller.repeat();
+    }
   }
 
   @override
@@ -3390,103 +3407,92 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
     super.dispose();
   }
 
-  double _dotValue(int index) {
-    final phase = (_controller.value - index * 0.22) * 2 * math.pi;
-    return (math.sin(phase) + 1) / 2; // 0 -> 1 wave
+  double _waveValue(int index, int itemCount) {
+    // Keep an empty beat at both ends so the infinite loop resets invisibly.
+    final head = _controller.value * (itemCount + 2) - 1;
+    return (1 - (head - index).abs()).clamp(0.0, 1.0);
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final base = widget.color ?? cs.primary;
+    final highlight = widget.color ?? cs.primary;
+    final characters = widget.label?.characters.toList() ?? const <String>[];
+    final itemCount = 3 + characters.length;
 
-    return SizedBox(
-      height: widget.height,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          final dots = List.generate(3, (i) {
-            final wave = _dotValue(i);
-            final double scale = 0.85 + 0.15 * wave; // subtle breathing
-            final double opacity = 0.45 + 0.45 * wave;
-            return Padding(
-              padding: EdgeInsets.only(right: i == 2 ? 0 : widget.spacing),
-              child: Transform.scale(
-                scale: scale,
-                child: Container(
-                  width: widget.dotSize,
-                  height: widget.dotSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: base.withValues(alpha: opacity),
-                  ),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final dots = List.generate(3, (index) {
+          final wave = _waveValue(index, itemCount);
+          return Padding(
+            padding: EdgeInsets.only(right: index == 2 ? 0 : widget.spacing),
+            child: Transform.scale(
+              scale: 0.85 + 0.15 * wave,
+              child: Container(
+                width: widget.dotSize,
+                height: widget.dotSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: highlight.withValues(alpha: 0.45 + 0.45 * wave),
                 ),
               ),
-            );
-          });
-          final label = widget.label;
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ...dots,
-              if (label != null) ...[
-                SizedBox(width: widget.labelGap),
-                _SynchronizedLoadingLabel(
-                  progress: _controller.value,
-                  child: label,
-                ),
-              ],
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _SynchronizedLoadingLabel extends StatelessWidget {
-  const _SynchronizedLoadingLabel({
-    required this.progress,
-    required this.child,
-  });
-
-  final double progress;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    // The three dots peak at roughly 25%, 47%, and 69% of the shared cycle.
-    // Start the text sweep as the last dot brightens so the motion reads as
-    // one continuous left-to-right highlight instead of two animations.
-    final sweep = ((progress - 0.58) / 0.42).clamp(0.0, 1.0);
-    final pulse = math.sin(sweep * math.pi).clamp(0.0, 1.0);
-    return Transform.scale(
-      alignment: Alignment.centerLeft,
-      scale: 0.98 + 0.04 * pulse,
-      child: ShaderMask(
-        shaderCallback: (rect) {
-          final width = rect.width;
-          final highlightWidth = width * 0.45;
-          final center = -highlightWidth +
-              (width + highlightWidth * 2) * sweep;
-          return LinearGradient(
-            colors: const [
-              Color(0x00FFFFFF),
-              Color(0xB3FFFFFF),
-              Color(0x00FFFFFF),
-            ],
-            stops: const [0.0, 0.5, 1.0],
-          ).createShader(
-            Rect.fromCenter(
-              center: Offset(center, rect.center.dy),
-              width: highlightWidth,
-              height: rect.height,
             ),
           );
-        },
-        blendMode: BlendMode.srcATop,
-        child: child,
-      ),
+        });
+
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              height: widget.height,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: dots,
+              ),
+            ),
+            if (characters.isNotEmpty) ...[
+              SizedBox(width: widget.labelGap),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: List.generate(characters.length, (index) {
+                  final wave = _waveValue(index + 3, itemCount);
+                  final style = widget.labelStyle ??
+                      TextStyle(
+                        fontSize: 14,
+                        fontWeight: AppFontWeights.semibold,
+                        color: cs.onSurfaceVariant,
+                        height: 1,
+                      );
+                  final baseColor = style.color ?? cs.onSurfaceVariant;
+                  return Transform.scale(
+                    scale: 0.94 + 0.12 * wave,
+                    child: Text(
+                      characters[index],
+                      style: style.copyWith(
+                        color: Color.lerp(baseColor, highlight, wave),
+                        shadows: wave == 0
+                            ? null
+                            : [
+                                Shadow(
+                                  color: highlight.withValues(
+                                    alpha: 0.32 * wave,
+                                  ),
+                                  blurRadius: 5 * wave,
+                                ),
+                              ],
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }
