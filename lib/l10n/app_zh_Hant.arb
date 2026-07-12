@@ -696,7 +696,7 @@
   "chatMessageWidgetCopiedToClipboard": "已複製到剪貼簿",
   "chatMessageWidgetResendTooltip": "重新傳送",
   "chatMessageWidgetMoreTooltip": "更多",
-  "chatMessageWidgetThinking": "正在思考...",
+  "chatMessageWidgetThinking": "正在思考",
   "chatMessageWidgetTranslation": "翻譯",
   "chatMessageWidgetTranslating": "翻譯中...",
   "chatMessageWidgetCitationNotFound": "未找到引用來源",

@@ -2113,7 +2113,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMessageWidgetMoreTooltip => 'More';
 
   @override
-  String get chatMessageWidgetThinking => 'Thinking...';
+  String get chatMessageWidgetThinking => 'Thinking';
 
   @override
   String get chatMessageWidgetTranslation => 'Translation';

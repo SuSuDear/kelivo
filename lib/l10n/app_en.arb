@@ -839,7 +839,7 @@
   "chatMessageWidgetCopiedToClipboard": "Copied to clipboard",
   "chatMessageWidgetResendTooltip": "Resend",
   "chatMessageWidgetMoreTooltip": "More",
-  "chatMessageWidgetThinking": "Thinking...",
+  "chatMessageWidgetThinking": "Thinking",
   "chatMessageWidgetTranslation": "Translation",
   "chatMessageWidgetTranslating": "Translating...",
   "chatMessageWidgetCitationNotFound": "Citation source not found",

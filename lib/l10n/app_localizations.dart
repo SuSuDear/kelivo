@@ -4010,7 +4010,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatMessageWidgetThinking.
   ///
   /// In en, this message translates to:
-  /// **'Thinking...'**
+  /// **'Thinking'**
   String get chatMessageWidgetThinking;
 
   /// No description provided for @chatMessageWidgetTranslation.

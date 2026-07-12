@@ -2397,6 +2397,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                       alignment: Alignment.centerLeft,
                       child: Semantics(
                         label: l10n.chatMessageWidgetThinking,
+                        excludeSemantics: true,
                         child: Row(
                           mainAxisSize: MainAxisSize.max,
                           crossAxisAlignment: widget.reconnecting
@@ -2407,8 +2408,18 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                               Flexible(child: _buildReconnectStatus(context))
                             else if (widget.hideStreamingIndicator)
                               const SizedBox(height: 16)
-                            else
+                            else ...[
                               const LoadingIndicator(),
+                              const SizedBox(width: 8),
+                              Text(
+                                l10n.chatMessageWidgetThinking,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: AppFontWeights.medium,
+                                  color: fg.muted,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

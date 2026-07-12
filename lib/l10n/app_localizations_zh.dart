@@ -2041,7 +2041,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatMessageWidgetMoreTooltip => '更多';
 
   @override
-  String get chatMessageWidgetThinking => '正在思考...';
+  String get chatMessageWidgetThinking => '正在思考';
 
   @override
   String get chatMessageWidgetTranslation => '翻译';
@@ -7304,7 +7304,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get chatMessageWidgetMoreTooltip => '更多';
 
   @override
-  String get chatMessageWidgetThinking => '正在思考...';
+  String get chatMessageWidgetThinking => '正在思考';
 
   @override
   String get chatMessageWidgetTranslation => '翻译';
@@ -12566,7 +12566,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get chatMessageWidgetMoreTooltip => '更多';
 
   @override
-  String get chatMessageWidgetThinking => '正在思考...';
+  String get chatMessageWidgetThinking => '正在思考';
 
   @override
   String get chatMessageWidgetTranslation => '翻譯';
