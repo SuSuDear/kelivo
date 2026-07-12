@@ -3374,6 +3374,8 @@ class LoadingIndicator extends StatefulWidget {
 class _LoadingIndicatorState extends State<LoadingIndicator>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  double _previousProgress = 0;
+  bool _labelShimmerCompleted = false;
 
   @override
   void initState() {
@@ -3381,7 +3383,18 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1100),
       vsync: this,
-    )..repeat();
+    )..addListener(_trackLabelShimmerCycle);
+    _controller.repeat();
+  }
+
+  void _trackLabelShimmerCycle() {
+    final progress = _controller.value;
+    if (widget.label != null &&
+        !_labelShimmerCompleted &&
+        progress < _previousProgress) {
+      _labelShimmerCompleted = true;
+    }
+    _previousProgress = progress;
   }
 
   @override
@@ -3433,6 +3446,7 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
                 SizedBox(width: widget.labelGap),
                 _SynchronizedLoadingLabel(
                   progress: _controller.value,
+                  enabled: !_labelShimmerCompleted,
                   child: label,
                 ),
               ],
@@ -3447,14 +3461,17 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
 class _SynchronizedLoadingLabel extends StatelessWidget {
   const _SynchronizedLoadingLabel({
     required this.progress,
+    required this.enabled,
     required this.child,
   });
 
   final double progress;
+  final bool enabled;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    if (!enabled) return child;
     // The three dots peak at roughly 25%, 47%, and 69% of the shared cycle.
     // Start the text sweep as the last dot brightens so the motion reads as
     // one continuous left-to-right highlight instead of two animations.
