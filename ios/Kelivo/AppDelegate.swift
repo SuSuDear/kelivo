@@ -74,7 +74,11 @@ private final class IosBackgroundGenerationHandler: NSObject, CLLocationManagerD
   private var locationTrackingActive = false
   private var locationManager: CLLocationManager?
   private var pendingLocationAuthorizationResult: FlutterResult?
-  private var liveActivity: Any?
+  private var activeGenerationIds = Set<String>()
+  private var notificationGenerationIds = Set<String>()
+  private var refreshGenerationIds = Set<String>()
+  private var locationGenerationIds = Set<String>()
+  private var liveActivities: [String: Any] = [:]
 
   func registerBackgroundTasks() {
     BGTaskScheduler.shared.register(forTaskWithIdentifier: backgroundRefreshIdentifier, using: nil) { task in
@@ -114,8 +118,8 @@ private final class IosBackgroundGenerationHandler: NSObject, CLLocationManagerD
 
   private func start(arguments: Any?, result: @escaping FlutterResult) {
     let args = arguments as? [String: Any] ?? [:]
-    notificationsEnabled = args["notificationsEnabled"] as? Bool ?? false
-    refreshEnabled = args["refreshEnabled"] as? Bool ?? false
+    let taskNotificationsEnabled = args["notificationsEnabled"] as? Bool ?? false
+    let taskRefreshEnabled = args["refreshEnabled"] as? Bool ?? false
     let liveActivityEnabled = args["liveActivityEnabled"] as? Bool ?? false
     let locationTrackingEnabled = args["locationTrackingEnabled"] as? Bool ?? false
     let title = args["title"] as? String ?? "Kelivo"
@@ -124,8 +128,14 @@ private final class IosBackgroundGenerationHandler: NSObject, CLLocationManagerD
     let tokenLabel = args["tokenLabel"] as? String ?? "\(tokenCount) tokens"
     let conversationId = args["conversationId"] as? String ?? UUID().uuidString
 
+    activeGenerationIds.insert(conversationId)
+    if taskNotificationsEnabled { notificationGenerationIds.insert(conversationId) }
+    if taskRefreshEnabled { refreshGenerationIds.insert(conversationId) }
+    if locationTrackingEnabled { locationGenerationIds.insert(conversationId) }
+    syncGenerationOptions()
+
     beginBackgroundTask()
-    if refreshEnabled { scheduleBackgroundTasks() }
+    if taskRefreshEnabled { scheduleBackgroundTasks() }
     if locationTrackingEnabled {
       _ = startLocationTracking(requestAuthorization: false)
     }
@@ -140,8 +150,8 @@ private final class IosBackgroundGenerationHandler: NSObject, CLLocationManagerD
     let detail = args["detail"] as? String ?? ""
     let tokenCount = args["tokenCount"] as? Int ?? 0
     let tokenLabel = args["tokenLabel"] as? String ?? "\(tokenCount) tokens"
-    let conversationId = args["conversationId"] as? String ?? UUID().uuidString
-    updateLiveActivity(detail: detail, tokenCount: tokenCount, tokenLabel: tokenLabel)
+    let conversationId = args["conversationId"] as? String ?? ""
+    updateLiveActivity(taskId: conversationId, detail: detail, tokenCount: tokenCount, tokenLabel: tokenLabel)
     result(true)
   }
 
@@ -150,26 +160,41 @@ private final class IosBackgroundGenerationHandler: NSObject, CLLocationManagerD
     let title = args["title"] as? String ?? "Kelivo"
     let detail = args["detail"] as? String ?? ""
     let success = args["success"] as? Bool ?? true
-    if notificationsEnabled { showCompletionNotification(title: title, body: detail) }
-    endLiveActivity(title: title, detail: detail, success: success)
-    endBackgroundTask()
-    resetGenerationOptions()
+    let conversationId = args["conversationId"] as? String ?? ""
+    if notificationGenerationIds.contains(conversationId) {
+      showCompletionNotification(title: title, body: detail)
+    }
+    finishGeneration(taskId: conversationId, title: title, detail: detail, success: success)
     result(true)
   }
 
   private func cancel(arguments: Any?, result: @escaping FlutterResult) {
     let args = arguments as? [String: Any] ?? [:]
     let detail = args["detail"] as? String ?? kelivoLocalized("ios_background_generation_cancelled_detail", fallback: "Generation stopped")
-    endLiveActivity(title: "Kelivo", detail: detail, success: false)
-    endBackgroundTask()
-    resetGenerationOptions()
+    let conversationId = args["conversationId"] as? String ?? ""
+    finishGeneration(taskId: conversationId, title: "Kelivo", detail: detail, success: false)
     result(true)
   }
 
-  private func resetGenerationOptions() {
-    notificationsEnabled = false
-    refreshEnabled = false
-    stopLocationTracking()
+  private func syncGenerationOptions() {
+    notificationsEnabled = !notificationGenerationIds.isEmpty
+    refreshEnabled = !refreshGenerationIds.isEmpty
+    if locationGenerationIds.isEmpty {
+      stopLocationTracking()
+    }
+  }
+
+  private func finishGeneration(taskId: String, title: String, detail: String, success: Bool) {
+    guard !taskId.isEmpty else { return }
+    activeGenerationIds.remove(taskId)
+    notificationGenerationIds.remove(taskId)
+    refreshGenerationIds.remove(taskId)
+    locationGenerationIds.remove(taskId)
+    endLiveActivity(taskId: taskId, title: title, detail: detail, success: success)
+    syncGenerationOptions()
+    if activeGenerationIds.isEmpty {
+      endBackgroundTask()
+    }
   }
 
   private func getStatus(result: @escaping FlutterResult) {
@@ -180,7 +205,7 @@ private final class IosBackgroundGenerationHandler: NSObject, CLLocationManagerD
           "notificationsAuthorized": settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional,
           "liveActivityAvailable": self.liveActivitiesAvailable(),
           "liveActivitiesEnabled": self.liveActivitiesAvailable(),
-          "liveActivityActive": self.liveActivity != nil,
+          "liveActivityActive": !self.liveActivities.isEmpty,
           "locationServicesEnabled": CLLocationManager.locationServicesEnabled(),
           "locationTrackingActive": self.locationTrackingActive,
           "locationAlwaysAuthorized": self.currentLocationAuthorization() == .authorizedAlways,
@@ -425,21 +450,21 @@ private final class IosBackgroundGenerationHandler: NSObject, CLLocationManagerD
       isFinished: false,
       success: false
     )
-    if liveActivity != nil {
-      updateLiveActivity(detail: detail, tokenCount: tokenCount, tokenLabel: tokenLabel)
+    if liveActivities[taskId] != nil {
+      updateLiveActivity(taskId: taskId, detail: detail, tokenCount: tokenCount, tokenLabel: tokenLabel)
       return
     }
     do {
       let attributes = KelivoBackgroundActivityAttributes(taskId: taskId)
       if #available(iOS 16.2, *) {
         let content = ActivityContent(state: state, staleDate: nil)
-        liveActivity = try Activity<KelivoBackgroundActivityAttributes>.request(
+        liveActivities[taskId] = try Activity<KelivoBackgroundActivityAttributes>.request(
           attributes: attributes,
           content: content,
           pushType: nil
         )
       } else {
-        liveActivity = try Activity<KelivoBackgroundActivityAttributes>.request(
+        liveActivities[taskId] = try Activity<KelivoBackgroundActivityAttributes>.request(
           attributes: attributes,
           contentState: state,
           pushType: nil
@@ -450,9 +475,10 @@ private final class IosBackgroundGenerationHandler: NSObject, CLLocationManagerD
     }
   }
 
-  private func updateLiveActivity(detail: String, tokenCount: Int, tokenLabel: String) {
+  private func updateLiveActivity(taskId: String, detail: String, tokenCount: Int, tokenLabel: String) {
     guard #available(iOS 16.1, *) else { return }
-    guard let activity = liveActivity as? Activity<KelivoBackgroundActivityAttributes> else { return }
+    guard !taskId.isEmpty else { return }
+    guard let activity = liveActivities[taskId] as? Activity<KelivoBackgroundActivityAttributes> else { return }
     let state = KelivoBackgroundActivityAttributes.ContentState(
       title: kelivoLocalized("ios_background_generation_active_title", fallback: "Kelivo is generating"),
       detail: detail,
@@ -470,10 +496,9 @@ private final class IosBackgroundGenerationHandler: NSObject, CLLocationManagerD
     }
   }
 
-  private func endLiveActivity(title: String, detail: String, success: Bool) {
+  private func endLiveActivity(taskId: String, title: String, detail: String, success: Bool) {
     guard #available(iOS 16.1, *) else { return }
-    guard let activity = liveActivity as? Activity<KelivoBackgroundActivityAttributes> else { return }
-    liveActivity = nil
+    guard let activity = liveActivities.removeValue(forKey: taskId) as? Activity<KelivoBackgroundActivityAttributes> else { return }
     let state = KelivoBackgroundActivityAttributes.ContentState(
       title: title,
       detail: detail,

@@ -159,7 +159,8 @@ class ChatActions {
     }
   }
 
-  DateTime? _lastIosBackgroundUpdateAt;
+  final Map<String, DateTime> _lastIosBackgroundUpdateAt =
+      <String, DateTime>{};
 
   String _systemDisplayPlainText(String content) {
     var text = content
@@ -233,18 +234,19 @@ class ChatActions {
     bool force = false,
   }) async {
     final now = DateTime.now();
-    final lastUpdate = _lastIosBackgroundUpdateAt;
+    final lastUpdate = _lastIosBackgroundUpdateAt[state.conversationId];
     if (!force &&
         lastUpdate != null &&
         now.difference(lastUpdate) < const Duration(milliseconds: 500)) {
       return;
     }
-    _lastIosBackgroundUpdateAt = now;
+    _lastIosBackgroundUpdateAt[state.conversationId] = now;
     final l10n = _l10n;
     if (l10n == null) return;
     final preview = _liveActivityContentPreview(_liveActivitySource(state));
     try {
       await IosBackgroundGenerationService.instance.update(
+        conversationId: state.conversationId,
         detail: preview.isEmpty
             ? l10n.iosBackgroundGenerationStreamingDetail
             : preview,
@@ -257,6 +259,7 @@ class ChatActions {
   }
 
   Future<void> _finishIosBackgroundGeneration({
+    required String conversationId,
     required bool success,
     String? detail,
   }) async {
@@ -264,6 +267,7 @@ class ChatActions {
     if (l10n == null) return;
     try {
       await IosBackgroundGenerationService.instance.finish(
+        conversationId: conversationId,
         title: success
             ? l10n.iosBackgroundGenerationCompleteTitle
             : l10n.iosBackgroundGenerationInterruptedTitle,
@@ -279,10 +283,11 @@ class ChatActions {
     }
   }
 
-  Future<void> _cancelIosBackgroundGeneration() async {
+  Future<void> _cancelIosBackgroundGeneration(String conversationId) async {
     final l10n = _l10n;
     try {
       await IosBackgroundGenerationService.instance.cancel(
+        conversationId: conversationId,
         detail: l10n?.iosBackgroundGenerationCancelledDetail,
       );
     } catch (error, stackTrace) {
@@ -1100,7 +1105,9 @@ class ChatActions {
         latestStreaming.content,
         immediate: true,
       );
-      await _cancelIosBackgroundGeneration();
+      await _cancelIosBackgroundGeneration(cid);
+      _activeStreamingStates.remove(streaming.id);
+      _lastIosBackgroundUpdateAt.remove(cid);
     } else {
       _setConversationLoading(cid, false);
     }
@@ -2061,10 +2068,12 @@ class ChatActions {
 
     final finalPreview = _liveActivityContentPreview(sanitizedContent);
     await _finishIosBackgroundGeneration(
+      conversationId: conversationId,
       success: true,
       detail: finalPreview.isEmpty ? null : finalPreview,
     );
     _activeStreamingStates.remove(messageId);
+    _lastIosBackgroundUpdateAt.remove(conversationId);
   }
 
   /// Handle stream error.
@@ -2171,8 +2180,13 @@ class ChatActions {
     await _conversationStreams.remove(conversationId)?.cancel();
     onStreamError?.call(errorText);
     onStreamFinished?.call();
-    await _finishIosBackgroundGeneration(success: false, detail: errorText);
+    await _finishIosBackgroundGeneration(
+      conversationId: conversationId,
+      success: false,
+      detail: errorText,
+    );
     _activeStreamingStates.remove(messageId);
+    _lastIosBackgroundUpdateAt.remove(conversationId);
   }
 
   /// Handle stream done callback.

@@ -67,7 +67,7 @@ class IosBackgroundGenerationService {
   );
 
   bool debugForceIosForTest = false;
-  bool _nativeGenerationActive = false;
+  final Set<String> _nativeGenerationIds = <String>{};
 
   bool get _isIos => debugForceIosForTest || Platform.isIOS;
 
@@ -127,10 +127,7 @@ class IosBackgroundGenerationService {
     required String tokenLabel,
     int tokenCount = 0,
   }) async {
-    if (!_isIos || !enabled) {
-      _nativeGenerationActive = false;
-      return;
-    }
+    if (!_isIos || !enabled) return;
     if (notificationsEnabled) {
       await requestNotificationAuthorization();
     }
@@ -146,16 +143,20 @@ class IosBackgroundGenerationService {
           'tokenCount': tokenCount,
           'tokenLabel': tokenLabel,
         });
-    _nativeGenerationActive = started == true;
+    if (started == true) {
+      _nativeGenerationIds.add(conversationId);
+    }
   }
 
   Future<void> update({
+    required String conversationId,
     required String detail,
     required String tokenLabel,
     int? tokenCount,
   }) async {
-    if (!_isIos || !_nativeGenerationActive) return;
+    if (!_isIos || !_nativeGenerationIds.contains(conversationId)) return;
     await _channel.invokeMethod<bool>('update', <String, Object?>{
+      'conversationId': conversationId,
       'detail': detail,
       'tokenLabel': tokenLabel,
       if (tokenCount != null) 'tokenCount': tokenCount,
@@ -163,35 +164,41 @@ class IosBackgroundGenerationService {
   }
 
   Future<void> finish({
+    required String conversationId,
     required String title,
     required String detail,
     required bool success,
   }) async {
-    if (!_isIos || !_nativeGenerationActive) return;
+    if (!_isIos || !_nativeGenerationIds.contains(conversationId)) return;
     try {
       await _channel.invokeMethod<bool>('finish', <String, Object?>{
+        'conversationId': conversationId,
         'title': title,
         'detail': detail,
         'success': success,
       });
     } finally {
-      _nativeGenerationActive = false;
+      _nativeGenerationIds.remove(conversationId);
     }
   }
 
-  Future<void> cancel({String? detail}) async {
-    if (!_isIos || !_nativeGenerationActive) return;
+  Future<void> cancel({
+    required String conversationId,
+    String? detail,
+  }) async {
+    if (!_isIos || !_nativeGenerationIds.contains(conversationId)) return;
     try {
       await _channel.invokeMethod<bool>('cancel', <String, Object?>{
+        'conversationId': conversationId,
         if (detail != null) 'detail': detail,
       });
     } finally {
-      _nativeGenerationActive = false;
+      _nativeGenerationIds.remove(conversationId);
     }
   }
 
   void resetForTest() {
     debugForceIosForTest = false;
-    _nativeGenerationActive = false;
+    _nativeGenerationIds.clear();
   }
 }
