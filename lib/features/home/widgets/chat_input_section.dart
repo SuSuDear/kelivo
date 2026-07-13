@@ -205,6 +205,7 @@ class ChatInputSection extends StatelessWidget {
       onClearContext: isTablet ? onClearContext : null,
       onCompressContext: isTablet ? onCompressContext : null,
       backgroundImageActive: backgroundImageActive,
+      pureBackgroundActive: settings.usePureBackground,
       inputFillSurface: inputFillSurface,
       inputBackgroundOpacityLight: settings.chatInputBackgroundOpacityLight,
       inputBackgroundOpacityDark: settings.chatInputBackgroundOpacityDark,

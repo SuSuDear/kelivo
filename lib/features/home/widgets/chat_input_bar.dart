@@ -97,6 +97,7 @@ class ChatInputBar extends StatefulWidget {
     this.conversationId,
     this.sendButtonTooltip,
     this.backgroundImageActive = false,
+    this.pureBackgroundActive = false,
     this.inputFillSurface,
     this.inputBackgroundOpacityLight =
         SettingsProvider.defaultChatInputBackgroundOpacityLight,
@@ -149,6 +150,7 @@ class ChatInputBar extends StatefulWidget {
   final String? conversationId;
   final String? sendButtonTooltip;
   final bool backgroundImageActive;
+  final bool pureBackgroundActive;
   final Color? inputFillSurface;
   final double inputBackgroundOpacityLight;
   final double inputBackgroundOpacityDark;
@@ -203,6 +205,7 @@ class _ChatInputBarState extends State<ChatInputBar>
   Color _inputFillColor({
     required ThemeData theme,
     required bool backgroundImageActive,
+    required bool pureBackgroundActive,
     required Color surfaceColor,
     required double lightOpacity,
     required double darkOpacity,
@@ -214,10 +217,17 @@ class _ChatInputBarState extends State<ChatInputBar>
     final backgroundRatio = isDark
         ? 0.545 / SettingsProvider.defaultChatInputBackgroundOpacityDark
         : 0.5296 / SettingsProvider.defaultChatInputBackgroundOpacityLight;
+    final pureBackgroundRatio = isDark
+        ? 0.46 / SettingsProvider.defaultChatInputBackgroundOpacityDark
+        : 0.48 / SettingsProvider.defaultChatInputBackgroundOpacityLight;
     final targetOpacity = backgroundImageActive
         ? configuredOpacity * backgroundRatio
+        : pureBackgroundActive
+        ? configuredOpacity * pureBackgroundRatio
         : configuredOpacity;
-    final overlayAlpha = isDark ? (backgroundImageActive ? 0.09 : 0.07) : 0.02;
+    final overlayAlpha = isDark
+        ? (backgroundImageActive ? 0.09 : (pureBackgroundActive ? 0.045 : 0.07))
+        : (pureBackgroundActive ? 0.012 : 0.02);
     final overlayTint = isDark
         ? Colors.white.withValues(alpha: overlayAlpha)
         : theme.colorScheme.primary.withValues(alpha: overlayAlpha);
@@ -1691,6 +1701,7 @@ class _ChatInputBarState extends State<ChatInputBar>
     final inputFillColor = _inputFillColor(
       theme: theme,
       backgroundImageActive: widget.backgroundImageActive,
+      pureBackgroundActive: widget.pureBackgroundActive,
       surfaceColor: widget.inputFillSurface ?? theme.colorScheme.surface,
       lightOpacity: widget.inputBackgroundOpacityLight,
       darkOpacity: widget.inputBackgroundOpacityDark,
@@ -1771,9 +1782,11 @@ class _ChatInputBarState extends State<ChatInputBar>
                         // Use previous gray border for better contrast on white
                         border: Border.all(
                           color: isDark
-                              ? Colors.white.withValues(alpha: 0.10)
+                              ? Colors.white.withValues(
+                                  alpha: widget.pureBackgroundActive ? 0.07 : 0.10,
+                                )
                               : theme.colorScheme.outline.withValues(
-                                  alpha: 0.20,
+                                  alpha: widget.pureBackgroundActive ? 0.14 : 0.20,
                                 ),
                           width: 1,
                         ),
