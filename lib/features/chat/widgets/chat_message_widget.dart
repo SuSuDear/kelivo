@@ -2385,12 +2385,14 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               visualContent,
               reasoningSegments: effectiveReasoningSegments,
             );
+            final isCurrentlyOutputting =
+                renderBlocks.isNotEmpty &&
+                renderBlocks.last.type == _RenderBlockType.text;
             final hasRunningTool =
                 widget.toolParts?.any((part) => part.loading) ?? false;
-            final showEmptyThinkingLabel =
+            final showThinkingLabel =
                 widget.message.isStreaming &&
-                visualContent.trim().isEmpty &&
-                renderBlocks.isEmpty &&
+                !isCurrentlyOutputting &&
                 !hasRunningTool;
             if (renderBlocks.isEmpty &&
                 widget.message.isStreaming &&
@@ -2415,7 +2417,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                               Flexible(child: _buildReconnectStatus(context))
                             else if (widget.hideStreamingIndicator)
                               const SizedBox(height: 16)
-                            else if (showEmptyThinkingLabel)
+                            else if (showThinkingLabel)
                               LoadingIndicator(
                                 label: l10n.chatMessageWidgetThinking,
                                 labelStyle: TextStyle(
@@ -2468,6 +2470,16 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                         Flexible(child: _buildReconnectStatus(context))
                       else if (widget.hideStreamingIndicator)
                         const SizedBox(height: 16)
+                      else if (showThinkingLabel)
+                        LoadingIndicator(
+                          label: l10n.chatMessageWidgetThinking,
+                          labelStyle: TextStyle(
+                            fontSize: 14,
+                            fontWeight: AppFontWeights.semibold,
+                            color: fg.muted,
+                            height: 1,
+                          ),
+                        )
                       else
                         const LoadingIndicator(),
                     ],
