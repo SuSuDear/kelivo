@@ -8,6 +8,7 @@ import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/mcp_provider.dart';
 import '../../../core/providers/quick_phrase_provider.dart';
 import '../../../core/providers/instruction_injection_provider.dart';
+import '../../../theme/palettes.dart';
 import '../utils/model_display_helper.dart';
 import 'chat_input_bar.dart';
 import 'model_icon.dart';
@@ -126,6 +127,9 @@ class ChatInputSection extends StatelessWidget {
     _enforceModelCapabilities(context, settings, ap, a, pk, mid);
 
     final isDesktop = _isDesktopPlatform(context);
+    final inputFillSurface = settings.usePureBackground
+        ? _chatInputFillSurfaceForPureBackground(context, settings)
+        : null;
     return ChatInputBar(
       key: inputBarKey,
       onMore: onMore,
@@ -201,9 +205,20 @@ class ChatInputSection extends StatelessWidget {
       onClearContext: isTablet ? onClearContext : null,
       onCompressContext: isTablet ? onCompressContext : null,
       backgroundImageActive: backgroundImageActive,
+      inputFillSurface: inputFillSurface,
       inputBackgroundOpacityLight: settings.chatInputBackgroundOpacityLight,
       inputBackgroundOpacityDark: settings.chatInputBackgroundOpacityDark,
     );
+  }
+
+  Color _chatInputFillSurfaceForPureBackground(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    final palette = ThemePalettes.byId(settings.themePaletteId);
+    return Theme.of(context).brightness == Brightness.dark
+        ? palette.dark.surface
+        : palette.light.surface;
   }
 
   bool _isDesktopPlatform(BuildContext context) {

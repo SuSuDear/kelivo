@@ -97,6 +97,7 @@ class ChatInputBar extends StatefulWidget {
     this.conversationId,
     this.sendButtonTooltip,
     this.backgroundImageActive = false,
+    this.inputFillSurface,
     this.inputBackgroundOpacityLight =
         SettingsProvider.defaultChatInputBackgroundOpacityLight,
     this.inputBackgroundOpacityDark =
@@ -148,6 +149,7 @@ class ChatInputBar extends StatefulWidget {
   final String? conversationId;
   final String? sendButtonTooltip;
   final bool backgroundImageActive;
+  final Color? inputFillSurface;
   final double inputBackgroundOpacityLight;
   final double inputBackgroundOpacityDark;
 
@@ -201,6 +203,7 @@ class _ChatInputBarState extends State<ChatInputBar>
   Color _inputFillColor({
     required ThemeData theme,
     required bool backgroundImageActive,
+    required Color surfaceColor,
     required double lightOpacity,
     required double darkOpacity,
   }) {
@@ -221,7 +224,7 @@ class _ChatInputBarState extends State<ChatInputBar>
     final baseAlpha = ((targetOpacity - overlayAlpha) / (1.0 - overlayAlpha))
         .clamp(0.0, 1.0)
         .toDouble();
-    final base = theme.colorScheme.surface.withValues(alpha: baseAlpha);
+    final base = surfaceColor.withValues(alpha: baseAlpha);
     return Color.alphaBlend(overlayTint, base).withValues(alpha: targetOpacity);
   }
 
@@ -1688,6 +1691,7 @@ class _ChatInputBarState extends State<ChatInputBar>
     final inputFillColor = _inputFillColor(
       theme: theme,
       backgroundImageActive: widget.backgroundImageActive,
+      surfaceColor: widget.inputFillSurface ?? theme.colorScheme.surface,
       lightOpacity: widget.inputBackgroundOpacityLight,
       darkOpacity: widget.inputBackgroundOpacityDark,
     );
