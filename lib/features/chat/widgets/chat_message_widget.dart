@@ -29,6 +29,7 @@ import '../../../utils/brand_assets.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../core/models/assistant.dart';
 import '../../../shared/widgets/markdown_with_highlight.dart';
+import 'scroll_locking_selection_area.dart';
 import '../../../shared/widgets/snackbar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../l10n/app_localizations.dart';
@@ -1671,12 +1672,10 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
       );
     }
 
-    return isDesktop
-        ? SelectionArea(
-            key: ValueKey('user_${widget.message.id}'),
-            child: content,
-          )
-        : content;
+    return ScrollLockingSelectionArea(
+      key: ValueKey('user_${widget.message.id}'),
+      child: content,
+    );
   }
 
   Widget? _buildUserAttachmentPreview(
@@ -1967,7 +1966,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     );
 
     return RepaintBoundary(
-      child: SelectionArea(
+      child: ScrollLockingSelectionArea(
         key: ValueKey('assistant_${widget.message.id}'),
         child: DefaultTextStyle.merge(
           style: TextStyle(fontSize: baseAssistant, height: 1.5),
@@ -2590,7 +2589,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                           Padding(
                             padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
                             child: RepaintBoundary(
-                              child: SelectionArea(
+                              child: ScrollLockingSelectionArea(
                                 key: ValueKey(
                                   'translation_${widget.message.id}',
                                 ),

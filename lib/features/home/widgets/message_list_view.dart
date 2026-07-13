@@ -13,6 +13,7 @@ import '../../../core/providers/assistant_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
 import '../../chat/widgets/chat_message_widget.dart';
+import '../../chat/widgets/scroll_locking_selection_area.dart';
 import '../../chat/widgets/message_more_sheet.dart';
 import '../controllers/stream_controller.dart' as stream_ctrl;
 import '../controllers/streaming_content_notifier.dart';
@@ -212,6 +213,8 @@ class _MessageListViewState extends State<MessageListView> {
   final ValueNotifier<bool> _deferStreamingMessageUpdates = ValueNotifier<bool>(
     false,
   );
+  final TextSelectionScrollLockController _textSelectionScrollLock =
+      TextSelectionScrollLockController();
   DateTime? _lastHistoryLoadAt;
   Timer? _scrollIdleTimer;
   bool _pointerScrollActivityCheckScheduled = false;
@@ -232,6 +235,7 @@ class _MessageListViewState extends State<MessageListView> {
   void dispose() {
     _scrollIdleTimer?.cancel();
     _deferStreamingMessageUpdates.dispose();
+    _textSelectionScrollLock.dispose();
     super.dispose();
   }
 
@@ -281,8 +285,13 @@ class _MessageListViewState extends State<MessageListView> {
         return ValueListenableBuilder<bool>(
           valueListenable: widget.isProcessingFiles,
           builder: (context, isProcessing, child) {
+            // SelectionLockScrollPhysics reads the lock listenable during
+            // gestures, so locking does not rebuild the list (and wipe selection).
             final list = ListView.builder(
               controller: widget.scrollController,
+              physics: SelectionLockScrollPhysics(
+                lockedListenable: _textSelectionScrollLock.locked,
+              ),
               padding: EdgeInsets.fromLTRB(
                 horizontalPad,
                 widget.topContentPadding,
@@ -323,13 +332,16 @@ class _MessageListViewState extends State<MessageListView> {
               child: historyList,
             );
 
-            return Stack(
-              children: [
-                userScrollAwareList,
-                if (widget.isPinnedIndicatorActive &&
-                    widget.buildPinnedStreamingIndicator != null)
-                  widget.buildPinnedStreamingIndicator!(),
-              ],
+            return TextSelectionScrollLockScope(
+              controller: _textSelectionScrollLock,
+              child: Stack(
+                children: [
+                  userScrollAwareList,
+                  if (widget.isPinnedIndicatorActive &&
+                      widget.buildPinnedStreamingIndicator != null)
+                    widget.buildPinnedStreamingIndicator!(),
+                ],
+              ),
             );
           },
         );
@@ -340,6 +352,8 @@ class _MessageListViewState extends State<MessageListView> {
   bool _handleScrollNotification(ScrollNotification notification) {
     if (notification.depth != 0) return false;
     if (notification.metrics.axis != Axis.vertical) return false;
+    // Text selection owns the gesture arena; ignore list scroll bookkeeping.
+    if (_textSelectionScrollLock.locked.value) return false;
     if (notification is ScrollUpdateNotification) {
       if (notification.dragDetails != null) {
         _handleUserScrollActivity(notification.metrics);
