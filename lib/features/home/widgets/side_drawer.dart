@@ -3522,15 +3522,8 @@ void _toggleAssistantPicker() {
             ),
             onTap: () async {
               Haptics.light();
-              final wasExpanded = _collapsedAssistantIds.contains(assistant.id);
-              setState(() {
-                if (wasExpanded) {
-                  _collapsedAssistantIds.remove(assistant.id);
-                } else {
-                  _collapsedAssistantIds.add(assistant.id);
-                }
-              });
-              if (!wasExpanded && conversations.isEmpty) {
+              // Empty assistants: jump straight into a new chat (no expand/collapse).
+              if (conversations.isEmpty) {
                 final closeDrawer = !context
                     .read<SettingsProvider>()
                     .keepSidebarOpenOnAssistantTap;
@@ -3539,7 +3532,16 @@ void _toggleAssistantPicker() {
                 );
                 if (!context.mounted) return;
                 await widget.onNewConversation?.call(closeDrawer: closeDrawer);
+                return;
               }
+              final wasExpanded = _collapsedAssistantIds.contains(assistant.id);
+              setState(() {
+                if (wasExpanded) {
+                  _collapsedAssistantIds.remove(assistant.id);
+                } else {
+                  _collapsedAssistantIds.add(assistant.id);
+                }
+              });
             },
             onEditTap: () => _openAssistantSettings(assistant.id),
             onAvatarTap: () => _openAssistantSettings(assistant.id),
