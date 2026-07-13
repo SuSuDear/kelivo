@@ -202,11 +202,10 @@ class _ChatInputBarState extends State<ChatInputBar>
         ).hasMatch(text);
   }
 
-  Color _inputFillColor({
+  double _effectiveInputBackgroundOpacity({
     required ThemeData theme,
     required bool backgroundImageActive,
     required bool pureBackgroundActive,
-    required Color surfaceColor,
     required double lightOpacity,
     required double darkOpacity,
   }) {
@@ -220,11 +219,30 @@ class _ChatInputBarState extends State<ChatInputBar>
     final pureBackgroundRatio = isDark
         ? 0.46 / SettingsProvider.defaultChatInputBackgroundOpacityDark
         : 0.48 / SettingsProvider.defaultChatInputBackgroundOpacityLight;
-    final targetOpacity = backgroundImageActive
-        ? configuredOpacity * backgroundRatio
+    final ratio = backgroundImageActive
+        ? backgroundRatio
         : pureBackgroundActive
-        ? configuredOpacity * pureBackgroundRatio
-        : configuredOpacity;
+        ? pureBackgroundRatio
+        : 1.0;
+    return (configuredOpacity * ratio).clamp(0.0, 1.0).toDouble();
+  }
+
+  Color _inputFillColor({
+    required ThemeData theme,
+    required bool backgroundImageActive,
+    required bool pureBackgroundActive,
+    required Color surfaceColor,
+    required double lightOpacity,
+    required double darkOpacity,
+  }) {
+    final isDark = theme.brightness == Brightness.dark;
+    final targetOpacity = _effectiveInputBackgroundOpacity(
+      theme: theme,
+      backgroundImageActive: backgroundImageActive,
+      pureBackgroundActive: pureBackgroundActive,
+      lightOpacity: lightOpacity,
+      darkOpacity: darkOpacity,
+    );
     final overlayAlpha = isDark
         ? (backgroundImageActive ? 0.09 : (pureBackgroundActive ? 0.045 : 0.07))
         : (pureBackgroundActive ? 0.012 : 0.02);
@@ -1706,6 +1724,17 @@ class _ChatInputBarState extends State<ChatInputBar>
       lightOpacity: widget.inputBackgroundOpacityLight,
       darkOpacity: widget.inputBackgroundOpacityDark,
     );
+    final inputFillOpacity = _effectiveInputBackgroundOpacity(
+      theme: theme,
+      backgroundImageActive: widget.backgroundImageActive,
+      pureBackgroundActive: widget.pureBackgroundActive,
+      lightOpacity: widget.inputBackgroundOpacityLight,
+      darkOpacity: widget.inputBackgroundOpacityDark,
+    );
+    final inputChromeStrength = (inputFillOpacity / 0.48)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    final inputBlurSigma = 14.0 * inputChromeStrength;
     final hasText = _controller.text.trim().isNotEmpty;
     final hasImages = _images.isNotEmpty;
     final hasDocs = _docs.isNotEmpty;
@@ -1773,7 +1802,10 @@ class _ChatInputBarState extends State<ChatInputBar>
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                    filter: ui.ImageFilter.blur(
+                      sigmaX: inputBlurSigma,
+                      sigmaY: inputBlurSigma,
+                    ),
                     child: Container(
                       decoration: BoxDecoration(
                         // Translucent background over blurred content
@@ -1783,10 +1815,14 @@ class _ChatInputBarState extends State<ChatInputBar>
                         border: Border.all(
                           color: isDark
                               ? Colors.white.withValues(
-                                  alpha: widget.pureBackgroundActive ? 0.07 : 0.10,
+                                  alpha:
+                                      (widget.pureBackgroundActive ? 0.07 : 0.10) *
+                                      inputChromeStrength,
                                 )
                               : theme.colorScheme.outline.withValues(
-                                  alpha: widget.pureBackgroundActive ? 0.14 : 0.20,
+                                  alpha:
+                                      (widget.pureBackgroundActive ? 0.14 : 0.20) *
+                                      inputChromeStrength,
                                 ),
                           width: 1,
                         ),
