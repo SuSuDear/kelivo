@@ -18,6 +18,7 @@ import '../../backup/pages/backup_page.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/models/assistant.dart';
 import '../../chat/pages/chat_history_page.dart';
+import '../../assistant/pages/assistant_settings_edit_page.dart';
 import '../../../desktop/chat_history_dialog.dart';
 import 'package:flutter/services.dart';
 import 'dart:io' show File;
@@ -1543,6 +1544,16 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                                 IosIconButton(
                                                   size: 16,
                                                   color: textBase,
+                                                  icon: Lucide.Plus,
+                                                  padding: const EdgeInsets.all(
+                                                    4,
+                                                  ),
+                                                  onTap:
+                                                      _createAssistantFromDrawer,
+                                                ),
+                                                IosIconButton(
+                                                  size: 16,
+                                                  color: textBase,
                                                   icon: Lucide.X,
                                                   padding: const EdgeInsets.all(
                                                     4,
@@ -1576,39 +1587,57 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                         ? null
                                         : Padding(
                                             padding: const EdgeInsets.only(
-                                              right: 6,
+                                              right: 4,
                                             ),
-                                            child: IosIconButton(
-                                              size: 16,
-                                              color: textBase,
-                                              icon: Lucide.History,
-                                              padding: const EdgeInsets.all(4),
-                                              onTap: () async {
-                                                final keepSidebarOpenOnTopicTap =
-                                                    context
-                                                        .read<
-                                                          SettingsProvider
-                                                        >()
-                                                        .keepSidebarOpenOnTopicTap;
-                                                final selectedId =
-                                                    await showChatHistoryDesktopDialog(
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                IosIconButton(
+                                                  size: 16,
+                                                  color: textBase,
+                                                  icon: Lucide.History,
+                                                  padding:
+                                                      const EdgeInsets.all(4),
+                                                  onTap: () async {
+                                                    final keepSidebarOpenOnTopicTap =
+                                                        context
+                                                            .read<
+                                                              SettingsProvider
+                                                            >()
+                                                            .keepSidebarOpenOnTopicTap;
+                                                    final selectedId =
+                                                        await showChatHistoryDesktopDialog(
                                                       context,
                                                       assistantId:
                                                           currentAssistantId,
                                                     );
-                                                if (!context.mounted) return;
-                                                if (selectedId != null &&
-                                                    selectedId.isNotEmpty) {
-                                                  final closeDrawer =
-                                                      !keepSidebarOpenOnTopicTap;
-                                                  widget.onSelectConversation
-                                                      ?.call(
-                                                        selectedId,
-                                                        closeDrawer:
-                                                            closeDrawer,
-                                                      );
-                                                }
-                                              },
+                                                    if (!context.mounted) {
+                                                      return;
+                                                    }
+                                                    if (selectedId != null &&
+                                                        selectedId.isNotEmpty) {
+                                                      final closeDrawer =
+                                                          !keepSidebarOpenOnTopicTap;
+                                                      widget
+                                                          .onSelectConversation
+                                                          ?.call(
+                                                            selectedId,
+                                                            closeDrawer:
+                                                                closeDrawer,
+                                                          );
+                                                    }
+                                                  },
+                                                ),
+                                                IosIconButton(
+                                                  size: 16,
+                                                  color: textBase,
+                                                  icon: Lucide.Plus,
+                                                  padding:
+                                                      const EdgeInsets.all(4),
+                                                  onTap:
+                                                      _createAssistantFromDrawer,
+                                                ),
+                                              ],
                                             ),
                                           ),
                                     suffixIconConstraints: const BoxConstraints(
@@ -1922,6 +1951,20 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                         );
                                       }
                                     },
+                                  ),
+                                ),
+                              ),
+                              // 新建助手（与发送旁加号一致）
+                              SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: Center(
+                                  child: IosIconButton(
+                                    size: 20,
+                                    color: textBase,
+                                    icon: Lucide.Plus,
+                                    padding: const EdgeInsets.all(8),
+                                    onTap: _createAssistantFromDrawer,
                                   ),
                                 ),
                               ),
@@ -2318,7 +2361,104 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     );
   }
 
-  void _toggleAssistantPicker() {
+
+  Future<void> _createAssistantFromDrawer() async {
+    final l10n = AppLocalizations.of(context)!;
+    final name = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final controller = TextEditingController();
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 12,
+              bottom: MediaQuery.viewInsetsOf(ctx).bottom + 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: cs.onSurface.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.assistantSettingsAddSheetTitle,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: AppFontWeights.semibold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: l10n.assistantSettingsAddSheetHint,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: Text(l10n.assistantSettingsAddSheetCancel),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () =>
+                            Navigator.of(ctx).pop(controller.text.trim()),
+                        child: Text(l10n.assistantSettingsAddSheetSave),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted) return;
+    final trimmed = (name ?? '').trim();
+    if (trimmed.isEmpty) return;
+    final assistantProvider = context.read<AssistantProvider>();
+    final id = await assistantProvider.addAssistant(
+      name: trimmed,
+      context: context,
+    );
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AssistantSettingsEditPage(assistantId: id),
+      ),
+    );
+  }
+
+void _toggleAssistantPicker() {
     final goingToExpand = !_assistantsExpanded;
     setState(() {
       _assistantsExpanded = goingToExpand;

@@ -394,8 +394,10 @@ class AssistantProvider extends ChangeNotifier {
           (context != null
               ? AppLocalizations.of(context)!.assistantProviderNewAssistantName
               : 'New Assistant')),
-      temperature: 0.6,
+      // New assistants default to model defaults for sampling and no context cap.
+      temperature: null,
       topP: null,
+      limitContextMessages: false,
     );
     _assistants.add(a);
     await _persist();
