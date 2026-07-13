@@ -102,8 +102,16 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ToolApprovalService()),
         ChangeNotifierProvider(create: (_) => AskUserInteractionService()),
         ChangeNotifierProvider(
-          create: (ctx) =>
-              AssistantProvider(chatService: ctx.read<ChatService>()),
+          create: (ctx) {
+            final assistants = AssistantProvider(
+              chatService: ctx.read<ChatService>(),
+            );
+            // MCP is globally enabled by default: newly enabled servers bind to all assistants.
+            ctx.read<McpProvider>().onServerEnabled = (serverId) async {
+              await assistants.bindMcpServerToAllAssistants(serverId);
+            };
+            return assistants;
+          },
         ),
         ChangeNotifierProvider(create: (_) => TagProvider()),
         ChangeNotifierProvider(create: (_) => QuickPhraseProvider()),
@@ -306,6 +314,26 @@ class MyApp extends StatelessWidget {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       try {
                         ctx.read<AssistantProvider>().ensureDefaults(ctx);
+                      } catch (_) {}
+                      try {
+                        // Existing assistants with empty MCP list inherit all enabled servers.
+                        // Retry briefly so async provider loads can finish first.
+                        Future<void>(() async {
+                          for (var i = 0; i < 8; i++) {
+                            if (!ctx.mounted) return;
+                            final ap = ctx.read<AssistantProvider>();
+                            final mcp = ctx.read<McpProvider>();
+                            if (ap.assistants.isNotEmpty) {
+                              await ap.ensureDefaultMcpServers(
+                                mcp.enabledServerIds,
+                              );
+                              return;
+                            }
+                            await Future<void>.delayed(
+                              const Duration(milliseconds: 50),
+                            );
+                          }
+                        });
                       } catch (_) {}
                       try {
                         ctx.read<ChatService>().setDefaultConversationTitle(

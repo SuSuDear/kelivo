@@ -16,6 +16,7 @@ import '../../settings/pages/settings_page.dart';
 import '../../translate/pages/translate_page.dart';
 import '../../backup/pages/backup_page.dart';
 import '../../../core/providers/assistant_provider.dart';
+import '../../../core/providers/mcp_provider.dart';
 import '../../../core/models/assistant.dart';
 import '../../chat/pages/chat_history_page.dart';
 import '../../assistant/pages/assistant_settings_edit_page.dart';
@@ -2446,9 +2447,11 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     final trimmed = (name ?? '').trim();
     if (trimmed.isEmpty) return;
     final assistantProvider = context.read<AssistantProvider>();
+    final mcpServerIds = context.read<McpProvider>().enabledServerIds;
     final id = await assistantProvider.addAssistant(
       name: trimmed,
       context: context,
+      mcpServerIds: mcpServerIds,
     );
     if (!mounted) return;
     await Navigator.of(context).push(

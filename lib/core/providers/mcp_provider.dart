@@ -228,6 +228,9 @@ class McpProvider extends ChangeNotifier {
   static const String _prefsKey = 'mcp_servers_v1';
   static const String _prefsTimeoutKey = 'mcp_request_timeout_ms_v1';
 
+  /// Called when an MCP server is created/enabled so hosts can bind it globally.
+  Future<void> Function(String serverId)? onServerEnabled;
+
   final Map<String, mcp.Client> _clients = {};
   final Map<String, McpStatus> _status = {}; // id -> status
   final Map<String, String> _errors = {}; // id -> last error
@@ -244,6 +247,10 @@ class McpProvider extends ChangeNotifier {
   }
 
   List<McpServerConfig> get servers => List.unmodifiable(_servers);
+  List<String> get enabledServerIds => _servers
+      .where((s) => s.enabled)
+      .map((s) => s.id)
+      .toList(growable: false);
   McpStatus statusFor(String id) => _status[id] ?? McpStatus.idle;
   String? errorFor(String id) => _errors[id];
   bool get hasAnyEnabled => _servers.any((s) => s.enabled);
@@ -590,6 +597,12 @@ class McpProvider extends ChangeNotifier {
     await _persist();
     notifyListeners();
     if (enabled) {
+      final bind = onServerEnabled;
+      if (bind != null) {
+        try {
+          await bind(id);
+        } catch (_) {}
+      }
       unawaited(connect(id));
     }
     return id;
@@ -598,12 +611,21 @@ class McpProvider extends ChangeNotifier {
   Future<void> updateServer(McpServerConfig updated) async {
     final idx = _servers.indexWhere((e) => e.id == updated.id);
     if (idx < 0) return;
+    final wasEnabled = _servers[idx].enabled;
     _servers = List<McpServerConfig>.of(_servers)..[idx] = updated;
     await _persist();
     notifyListeners();
     if (!updated.enabled) {
       await disconnect(updated.id);
     } else {
+      if (!wasEnabled) {
+        final bind = onServerEnabled;
+        if (bind != null) {
+          try {
+            await bind(updated.id);
+          } catch (_) {}
+        }
+      }
       // Always reconnect after saving to apply changes (url/transport/name)
       await disconnect(updated.id);
       unawaited(connect(updated.id));

@@ -386,7 +386,11 @@ class AssistantProvider extends ChangeNotifier {
     ];
   }
 
-  Future<String> addAssistant({String? name, dynamic context}) async {
+  Future<String> addAssistant({
+    String? name,
+    dynamic context,
+    List<String>? mcpServerIds,
+  }) async {
     final a = Assistant(
       id: const Uuid().v4(),
       name:
@@ -398,11 +402,62 @@ class AssistantProvider extends ChangeNotifier {
       temperature: null,
       topP: null,
       limitContextMessages: false,
+      // MCP is globally enabled by default for new assistants.
+      mcpServerIds: List<String>.of(mcpServerIds ?? const <String>[]),
     );
     _assistants.add(a);
     await _persist();
     notifyListeners();
     return a.id;
+  }
+
+  /// Bind an MCP server to every assistant (used for global-by-default MCP).
+  Future<void> bindMcpServerToAllAssistants(String serverId) async {
+    final id = serverId.trim();
+    if (id.isEmpty) return;
+    var changed = false;
+    for (var i = 0; i < _assistants.length; i++) {
+      final a = _assistants[i];
+      if (a.mcpServerIds.contains(id)) continue;
+      _assistants[i] = a.copyWith(
+        mcpServerIds: <String>[...a.mcpServerIds, id],
+      );
+      changed = true;
+    }
+    if (!changed) return;
+    await _persist();
+    notifyListeners();
+  }
+
+  static const String _mcpGlobalDefaultMigratedKey =
+      'mcp_global_default_migrated_v1';
+
+  /// One-time migration: assistants with empty MCP list inherit all enabled servers.
+  /// Runs only once so later explicit "clear all" is preserved.
+  Future<void> ensureDefaultMcpServers(List<String> enabledServerIds) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_mcpGlobalDefaultMigratedKey) == true) return;
+    // Assistants may still be loading; caller can retry.
+    if (_assistants.isEmpty) return;
+
+    final ids = enabledServerIds
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList(growable: false);
+    if (ids.isNotEmpty) {
+      var changed = false;
+      for (var i = 0; i < _assistants.length; i++) {
+        final a = _assistants[i];
+        if (a.mcpServerIds.isNotEmpty) continue;
+        _assistants[i] = a.copyWith(mcpServerIds: List<String>.of(ids));
+        changed = true;
+      }
+      if (changed) {
+        await _persist();
+        notifyListeners();
+      }
+    }
+    await prefs.setBool(_mcpGlobalDefaultMigratedKey, true);
   }
 
   Future<String?> duplicateAssistant(

@@ -4,6 +4,7 @@ import '../../../icons/lucide_adapter.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
+import '../../../core/providers/mcp_provider.dart';
 import '../../../core/models/assistant.dart';
 import 'assistant_settings_edit_page.dart';
 import '../../../core/services/haptics.dart';
@@ -45,9 +46,11 @@ class AssistantSettingsPage extends StatelessWidget {
                 final assistantProvider = context.read<AssistantProvider>();
                 final name = await _showAddAssistantSheet(context);
                 if (!context.mounted || name == null) return;
+                final mcpServerIds = context.read<McpProvider>().enabledServerIds;
                 final id = await assistantProvider.addAssistant(
                   name: name.trim(),
                   context: context,
+                  mcpServerIds: mcpServerIds,
                 );
                 if (!context.mounted) return;
                 await Navigator.of(context).push(
