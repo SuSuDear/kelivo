@@ -2385,11 +2385,13 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               visualContent,
               reasoningSegments: effectiveReasoningSegments,
             );
-            final isCurrentlyOutputting =
-                renderBlocks.isNotEmpty &&
-                renderBlocks.last.type == _RenderBlockType.text;
-            final showThinkingLabel =
-                widget.message.isStreaming && !isCurrentlyOutputting;
+            final hasRunningTool =
+                widget.toolParts?.any((part) => part.loading) ?? false;
+            final showEmptyThinkingLabel =
+                widget.message.isStreaming &&
+                visualContent.trim().isEmpty &&
+                renderBlocks.isEmpty &&
+                !hasRunningTool;
             if (renderBlocks.isEmpty &&
                 widget.message.isStreaming &&
                 visualContent.trim().isEmpty) {
@@ -2413,7 +2415,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                               Flexible(child: _buildReconnectStatus(context))
                             else if (widget.hideStreamingIndicator)
                               const SizedBox(height: 16)
-                            else
+                            else if (showEmptyThinkingLabel)
                               LoadingIndicator(
                                 label: l10n.chatMessageWidgetThinking,
                                 labelStyle: TextStyle(
@@ -2422,7 +2424,9 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                                   color: fg.muted,
                                   height: 1,
                                 ),
-                              ),
+                              )
+                            else
+                              const LoadingIndicator(),
                           ],
                         ),
                       ),
@@ -2464,16 +2468,6 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                         Flexible(child: _buildReconnectStatus(context))
                       else if (widget.hideStreamingIndicator)
                         const SizedBox(height: 16)
-                      else if (showThinkingLabel)
-                        LoadingIndicator(
-                          label: l10n.chatMessageWidgetThinking,
-                          labelStyle: TextStyle(
-                            fontSize: 14,
-                            fontWeight: AppFontWeights.semibold,
-                            color: fg.muted,
-                            height: 1,
-                          ),
-                        )
                       else
                         const LoadingIndicator(),
                     ],
