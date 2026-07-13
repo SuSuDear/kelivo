@@ -167,8 +167,13 @@ class _ScrollLockingSelectionAreaState extends State<ScrollLockingSelectionArea>
       selectionControls: widget.selectionControls,
       contextMenuBuilder: widget.contextMenuBuilder,
       magnifierConfiguration: widget.magnifierConfiguration,
-      onSelectionChanged: (SelectedContent? content) {
-        final hasSelection = content != null && content.plainText.isNotEmpty;
+      // Avoid naming SelectedContent explicitly: some Flutter SDK builds do not
+      // surface that type name cleanly to app libraries even though the
+      // SelectionArea callback itself is available.
+      onSelectionChanged: (content) {
+        final plainText = content?.plainText;
+        final hasSelection =
+            plainText is String && plainText.trim().isNotEmpty;
         _setActive(hasSelection);
       },
       child: widget.child,
