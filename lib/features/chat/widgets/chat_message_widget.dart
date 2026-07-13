@@ -2390,10 +2390,19 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                 renderBlocks.last.type == _RenderBlockType.text;
             final hasRunningTool =
                 widget.toolParts?.any((part) => part.loading) ?? false;
+            // Deep reasoning has its own progress UI (same idea as tools),
+            // so hide the trailing "Thinking" indicator while it is active.
+            final hasActiveReasoning =
+                widget.reasoningLoading ||
+                (effectiveReasoningSegments?.any(
+                      (segment) => segment.loading,
+                    ) ??
+                    false);
             final showThinkingLabel =
                 widget.message.isStreaming &&
                 !isCurrentlyOutputting &&
-                !hasRunningTool;
+                !hasRunningTool &&
+                !hasActiveReasoning;
             if (renderBlocks.isEmpty &&
                 widget.message.isStreaming &&
                 visualContent.trim().isEmpty) {
