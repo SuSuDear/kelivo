@@ -1147,12 +1147,12 @@ class _ChatInputBarState extends State<ChatInputBar>
                     : (_skillsInvocationActive
                           ? 'Skills active for this message'
                           : 'Skills'),
-                icon: Lucide.Sparkles,
+                icon: Lucide.Astroid,
                 active: _skillsInvocationActive || widget.conversationSkillsActive,
                 onTap: lockTap(widget.onOpenSkills),
               ),
               menu: DesktopContextMenuItem(
-                icon: Lucide.Sparkles,
+                icon: Lucide.Astroid,
                 label: 'Skills',
                 onTap: lockTap(widget.onOpenSkills),
               ),
