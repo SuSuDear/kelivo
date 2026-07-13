@@ -3443,7 +3443,7 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
           return Padding(
             padding: EdgeInsets.only(right: index == 2 ? 0 : widget.spacing),
             child: Transform.translate(
-              offset: Offset(0, -3.5 * wave),
+              offset: Offset(0, -2.0 * wave),
               child: Transform.scale(
                 scale: 0.85 + 0.15 * wave,
                 child: Container(
@@ -3487,7 +3487,7 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
                       );
                   final baseColor = style.color ?? cs.onSurfaceVariant;
                   return Transform.translate(
-                    offset: Offset(0, -3.0 * wave),
+                    offset: Offset(0, -1.6 * wave),
                     child: Transform.scale(
                       scale: 0.94 + 0.12 * wave,
                       child: Text(
