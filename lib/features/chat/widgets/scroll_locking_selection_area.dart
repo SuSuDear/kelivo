@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/cupertino.dart' show CupertinoTheme;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
@@ -156,9 +155,9 @@ class _EnlargedCupertinoTextSelectionControls extends TextSelectionControls {
     double textLineHeight, [
     VoidCallback? onTap,
   ]) {
-    final handleColor =
-        CupertinoTheme.maybeOf(context)?.primaryColor ??
-        Theme.of(context).colorScheme.primary;
+    // Prefer Material theme primary for broad SDK compatibility.
+    // CupertinoTheme.maybeOf is not available on all Flutter builds.
+    final handleColor = Theme.of(context).colorScheme.primary;
     final visual = _visualSize(textLineHeight);
 
     final painted = CustomPaint(
