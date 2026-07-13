@@ -4142,17 +4142,17 @@ class _ChainOfThoughtReasoningStepState
                 child: SingleChildScrollView(
                   controller: _scroll,
                   physics: const BouncingScrollPhysics(),
-                  child: SelectionArea(child: reasoningContent(display)),
+                  child: ScrollLockingSelectionArea(child: reasoningContent(display)),
                 ),
               )
             : SingleChildScrollView(
                 controller: _scroll,
                 physics: const NeverScrollableScrollPhysics(),
-                child: SelectionArea(child: reasoningContent(display)),
+                child: ScrollLockingSelectionArea(child: reasoningContent(display)),
               ),
       );
     } else if (state == _ReasoningStepState.expanded) {
-      content = SelectionArea(child: reasoningContent(display));
+      content = ScrollLockingSelectionArea(child: reasoningContent(display));
     }
 
     return _TimelineStepShell(
@@ -4412,7 +4412,7 @@ class _ChainOfThoughtToolStepState extends State<_ChainOfThoughtToolStep> {
             child: SingleChildScrollView(
               controller: _previewScroll,
               physics: const NeverScrollableScrollPhysics(),
-              child: SelectionArea(
+              child: ScrollLockingSelectionArea(
                 child: Text(
                   streamingArguments.isEmpty ? '…' : streamingArguments,
                   style: TextStyle(
@@ -6419,7 +6419,7 @@ class _ReasoningSectionState extends State<_ReasoningSection>
     }
 
     // Enable long-press text selection in reasoning body
-    body = SelectionArea(child: body);
+    body = ScrollLockingSelectionArea(child: body);
 
     return AnimatedSize(
       duration: const Duration(milliseconds: 300),

@@ -105,6 +105,20 @@ class TextSelectionScrollLockScope extends InheritedWidget {
   }
 }
 
+/// Lightweight toolbar used for chat body selection.
+///
+/// Avoids magnifier/system-menu paths that can leave a full-screen washed
+/// overlay on top of frosted chat surfaces.
+Widget chatSelectionContextMenuBuilder(
+  BuildContext context,
+  SelectableRegionState selectableRegionState,
+) {
+  return AdaptiveTextSelectionToolbar.buttonItems(
+    anchors: selectableRegionState.contextMenuAnchors,
+    buttonItems: selectableRegionState.contextMenuButtonItems,
+  );
+}
+
 /// [SelectionArea] that locks the surrounding chat list while a selection exists.
 class ScrollLockingSelectionArea extends StatefulWidget {
   const ScrollLockingSelectionArea({
@@ -112,15 +126,15 @@ class ScrollLockingSelectionArea extends StatefulWidget {
     required this.child,
     this.focusNode,
     this.selectionControls,
-    this.contextMenuBuilder,
-    this.magnifierConfiguration,
+    this.contextMenuBuilder = chatSelectionContextMenuBuilder,
+    this.magnifierConfiguration = TextMagnifierConfiguration.disabled,
   });
 
   final Widget child;
   final FocusNode? focusNode;
   final TextSelectionControls? selectionControls;
   final SelectableRegionContextMenuBuilder? contextMenuBuilder;
-  final TextMagnifierConfiguration? magnifierConfiguration;
+  final TextMagnifierConfiguration magnifierConfiguration;
 
   @override
   State<ScrollLockingSelectionArea> createState() =>
@@ -129,13 +143,41 @@ class ScrollLockingSelectionArea extends StatefulWidget {
 
 class _ScrollLockingSelectionAreaState extends State<ScrollLockingSelectionArea> {
   final Object _owner = Object();
+  FocusNode? _internalFocusNode;
   TextSelectionScrollLockController? _controller;
   bool _active = false;
+
+  FocusNode get _focusNode => widget.focusNode ?? _internalFocusNode!;
+
+  void _ensureInternalFocusNode() {
+    if (widget.focusNode == null) {
+      _internalFocusNode ??= FocusNode(debugLabel: 'chat-selection');
+    }
+  }
 
   void _setActive(bool active) {
     if (_active == active) return;
     _active = active;
     _controller?.setActive(_owner, active);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _ensureInternalFocusNode();
+  }
+
+  @override
+  void didUpdateWidget(covariant ScrollLockingSelectionArea oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode != widget.focusNode) {
+      if (widget.focusNode != null) {
+        _internalFocusNode?.dispose();
+        _internalFocusNode = null;
+      } else {
+        _ensureInternalFocusNode();
+      }
+    }
   }
 
   @override
@@ -157,26 +199,50 @@ class _ScrollLockingSelectionAreaState extends State<ScrollLockingSelectionArea>
       _controller?.setActive(_owner, false);
       _active = false;
     }
+    _internalFocusNode?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SelectionArea(
-      focusNode: widget.focusNode,
-      selectionControls: widget.selectionControls,
-      contextMenuBuilder: widget.contextMenuBuilder,
-      magnifierConfiguration: widget.magnifierConfiguration,
-      // Avoid naming SelectedContent explicitly: some Flutter SDK builds do not
-      // surface that type name cleanly to app libraries even though the
-      // SelectionArea callback itself is available.
-      onSelectionChanged: (content) {
-        final plainText = content?.plainText;
-        final hasSelection =
-            plainText is String && plainText.trim().isNotEmpty;
-        _setActive(hasSelection);
-      },
-      child: widget.child,
+    final platform = Theme.of(context).platform;
+    final selectionControls = widget.selectionControls ??
+        switch (platform) {
+          TargetPlatform.iOS || TargetPlatform.macOS =>
+            cupertinoTextSelectionHandleControls,
+          TargetPlatform.android ||
+          TargetPlatform.fuchsia =>
+            materialTextSelectionHandleControls,
+          TargetPlatform.linux || TargetPlatform.windows =>
+            desktopTextSelectionHandleControls,
+        };
+
+    // Keep selection highlight readable on chat surfaces without letting the
+    // adaptive magnifier composite a washed full-screen layer.
+    final baseTheme = Theme.of(context);
+    final selectionTheme = baseTheme.textSelectionTheme.copyWith(
+      selectionColor: baseTheme.colorScheme.primary.withValues(alpha: 0.28),
+      selectionHandleColor: baseTheme.colorScheme.primary,
+    );
+
+    return Theme(
+      data: baseTheme.copyWith(textSelectionTheme: selectionTheme),
+      child: SelectionArea(
+        focusNode: _focusNode,
+        selectionControls: selectionControls,
+        contextMenuBuilder: widget.contextMenuBuilder,
+        magnifierConfiguration: widget.magnifierConfiguration,
+        // Avoid naming SelectedContent explicitly: some Flutter SDK builds do
+        // not surface that type name cleanly to app libraries even though the
+        // SelectionArea callback itself is available.
+        onSelectionChanged: (content) {
+          final plainText = content?.plainText;
+          final hasSelection =
+              plainText is String && plainText.trim().isNotEmpty;
+          _setActive(hasSelection);
+        },
+        child: widget.child,
+      ),
     );
   }
 }
