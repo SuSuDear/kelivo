@@ -817,6 +817,15 @@ class HomeViewModel extends ChangeNotifier {
       notifyListeners();
       onConversationSwitched?.call();
       unawaited(_drainQueuedInputIfReady(id));
+      // Warm nearby chats in the background for faster subsequent switches.
+      scheduleMicrotask(() {
+        try {
+          _chatService.prefetchRecentConversations(
+            count: 6,
+            preferConversationId: id,
+          );
+        } catch (_) {}
+      });
     }
   }
 

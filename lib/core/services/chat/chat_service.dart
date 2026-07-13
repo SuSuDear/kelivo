@@ -14,8 +14,9 @@ class ChatService extends ChangeNotifier {
   static const String _activeStreamingKey = '_active_streaming_ids';
   static const String _lastConversationIdKey = 'chat_last_conversation_id_v1';
   static const int defaultInitialMessageMin = 2;
-  static const int defaultInitialMessageMax = 240;
-  static const int defaultInitialTextBudget = 20000;
+  // Keep first paint light when switching conversations.
+  static const int defaultInitialMessageMax = 80;
+  static const int defaultInitialTextBudget = 8000;
   static const int defaultHistoryPageSize = 20;
   static const int defaultLoadedWindowMax = 360;
 
@@ -298,6 +299,43 @@ class ChatService extends ChangeNotifier {
       start: start,
       limit: ids.length - start,
     );
+  }
+
+  /// Warm caches for a conversation so switching feels snappier.
+  ///
+  /// Safe to call off the critical path; no UI notifications are emitted.
+  void prefetchConversation(String conversationId) {
+    if (!_initialized || conversationId.isEmpty) return;
+    try {
+      // Warm conversation metadata + recent message window.
+      getConversation(conversationId);
+      getRecentMessages(conversationId);
+      getVersionSelections(conversationId);
+    } catch (_) {}
+  }
+
+  /// Prefetch several recent conversations without blocking the UI.
+  void prefetchRecentConversations({
+    int count = 6,
+    String? preferConversationId,
+  }) {
+    if (!_initialized) return;
+    final ids = <String>[];
+    if (preferConversationId != null && preferConversationId.isNotEmpty) {
+      ids.add(preferConversationId);
+    }
+    try {
+      for (final conversation in getAllConversations()) {
+        if (ids.contains(conversation.id)) continue;
+        ids.add(conversation.id);
+        if (ids.length >= count) break;
+      }
+    } catch (_) {
+      return;
+    }
+    for (final id in ids) {
+      prefetchConversation(id);
+    }
   }
 
   int _estimateInitialLoadWeight(ChatMessage message) {

@@ -415,8 +415,15 @@ class HomePageController extends ChangeNotifier {
           );
         };
     _viewModel.onConversationSwitched = () {
-      _restoreMessageUiState();
+      // First paint the message list, then restore tool/reasoning UI state.
+      // Doing restore synchronously makes conversation switches feel hitchy.
       _scrollToBottom(animate: false);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_context.mounted) return;
+        if (currentConversation == null) return;
+        _restoreMessageUiState();
+        notifyListeners();
+      });
     };
     _viewModel.onStreamFinished = () {
       // Trigger UI update when streaming finishes
@@ -799,14 +806,15 @@ class HomePageController extends ChangeNotifier {
   // ============================================================================
 
   Future<void> switchConversationAnimated(String id) async {
-    try {
-      await _viewModel.flushCurrentConversationProgress();
-    } catch (_) {}
     if (currentConversation?.id == id) return;
     _exitUserMessageEdit(clearDraft: true);
+
+    // Keep the outgoing fade short/non-blocking so conversation data can load
+    // immediately. A full reverse/await here is a major source of switch lag.
     if (!isDesktopPlatform) {
       try {
-        await _convoFadeController.reverse();
+        _convoFadeController.stop();
+        _convoFadeController.value = 0.0;
       } catch (_) {}
     } else {
       try {
@@ -825,7 +833,8 @@ class HomePageController extends ChangeNotifier {
 
     if (!isDesktopPlatform) {
       try {
-        await _convoFadeController.forward();
+        // Fire-and-forget fade-in so it doesn't delay interactivity.
+        unawaited(_convoFadeController.forward());
       } catch (_) {}
     }
     if (isDesktopPlatform) {
