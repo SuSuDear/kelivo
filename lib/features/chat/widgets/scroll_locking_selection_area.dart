@@ -205,20 +205,10 @@ class _ScrollLockingSelectionAreaState extends State<ScrollLockingSelectionArea>
 
   @override
   Widget build(BuildContext context) {
-    final platform = Theme.of(context).platform;
-    final selectionControls = widget.selectionControls ??
-        switch (platform) {
-          TargetPlatform.iOS || TargetPlatform.macOS =>
-            cupertinoTextSelectionHandleControls,
-          TargetPlatform.android ||
-          TargetPlatform.fuchsia =>
-            materialTextSelectionHandleControls,
-          TargetPlatform.linux || TargetPlatform.windows =>
-            desktopTextSelectionHandleControls,
-        };
-
     // Keep selection highlight readable on chat surfaces without letting the
     // adaptive magnifier composite a washed full-screen layer.
+    // Leave selectionControls null so SelectionArea picks the platform default
+    // without depending on package-private handle-control symbols.
     final baseTheme = Theme.of(context);
     final selectionTheme = baseTheme.textSelectionTheme.copyWith(
       selectionColor: baseTheme.colorScheme.primary.withValues(alpha: 0.28),
@@ -229,7 +219,7 @@ class _ScrollLockingSelectionAreaState extends State<ScrollLockingSelectionArea>
       data: baseTheme.copyWith(textSelectionTheme: selectionTheme),
       child: SelectionArea(
         focusNode: _focusNode,
-        selectionControls: selectionControls,
+        selectionControls: widget.selectionControls,
         contextMenuBuilder: widget.contextMenuBuilder,
         magnifierConfiguration: widget.magnifierConfiguration,
         // Avoid naming SelectedContent explicitly: some Flutter SDK builds do
