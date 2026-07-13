@@ -2426,9 +2426,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                                   color: fg.muted,
                                   height: 1,
                                 ),
-                              )
-                            else
-                              const LoadingIndicator(),
+                              ),
                           ],
                         ),
                       ),
@@ -2458,7 +2456,13 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
               }
             }
 
-            if (widget.message.isStreaming) {
+            // Only show a trailing indicator while waiting for the next
+            // assistant segment. Hide unlabeled dots during tool runs and
+            // while the model is already streaming visible text.
+            if (widget.message.isStreaming &&
+                (widget.reconnecting ||
+                    widget.hideStreamingIndicator ||
+                    showThinkingLabel)) {
               widgets.add(
                 Padding(
                   padding: const EdgeInsets.only(left: 4, top: 4),
@@ -2470,7 +2474,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                         Flexible(child: _buildReconnectStatus(context))
                       else if (widget.hideStreamingIndicator)
                         const SizedBox(height: 16)
-                      else if (showThinkingLabel)
+                      else
                         LoadingIndicator(
                           label: l10n.chatMessageWidgetThinking,
                           labelStyle: TextStyle(
@@ -2479,9 +2483,7 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                             color: fg.muted,
                             height: 1,
                           ),
-                        )
-                      else
-                        const LoadingIndicator(),
+                        ),
                     ],
                   ),
                 ),
@@ -3444,8 +3446,43 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        final dots = List.generate(3, (index) {
+        final labelWidgets = List.generate(characters.length, (index) {
+          // Label leads the wave so "Thinking..." reads left-to-right.
           final wave = _waveValue(index, itemCount);
+          final style = widget.labelStyle ??
+              TextStyle(
+                fontSize: 14,
+                fontWeight: AppFontWeights.semibold,
+                color: cs.onSurfaceVariant,
+                height: 1,
+              );
+          final baseColor = style.color ?? cs.onSurfaceVariant;
+          return Transform.translate(
+            offset: Offset(0, -1.6 * wave),
+            child: Transform.scale(
+              scale: 0.94 + 0.12 * wave,
+              child: Text(
+                characters[index],
+                style: style.copyWith(
+                  color: Color.lerp(baseColor, highlight, wave),
+                  shadows: wave == 0
+                      ? null
+                      : [
+                          Shadow(
+                            color: highlight.withValues(
+                              alpha: 0.32 * wave,
+                            ),
+                            blurRadius: 5 * wave,
+                          ),
+                        ],
+                ),
+              ),
+            ),
+          );
+        });
+
+        final dots = List.generate(3, (index) {
+          final wave = _waveValue(index + characters.length, itemCount);
           return Padding(
             padding: EdgeInsets.only(right: index == 2 ? 0 : widget.spacing),
             child: Transform.translate(
@@ -3469,6 +3506,14 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            if (labelWidgets.isNotEmpty) ...[
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: labelWidgets,
+              ),
+              SizedBox(width: widget.labelGap),
+            ],
             SizedBox(
               height: widget.height,
               child: Row(
@@ -3477,46 +3522,6 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
                 children: dots,
               ),
             ),
-            if (characters.isNotEmpty) ...[
-              SizedBox(width: widget.labelGap),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: List.generate(characters.length, (index) {
-                  final wave = _waveValue(index + 3, itemCount);
-                  final style = widget.labelStyle ??
-                      TextStyle(
-                        fontSize: 14,
-                        fontWeight: AppFontWeights.semibold,
-                        color: cs.onSurfaceVariant,
-                        height: 1,
-                      );
-                  final baseColor = style.color ?? cs.onSurfaceVariant;
-                  return Transform.translate(
-                    offset: Offset(0, -1.6 * wave),
-                    child: Transform.scale(
-                      scale: 0.94 + 0.12 * wave,
-                      child: Text(
-                        characters[index],
-                        style: style.copyWith(
-                          color: Color.lerp(baseColor, highlight, wave),
-                          shadows: wave == 0
-                              ? null
-                              : [
-                                  Shadow(
-                                    color: highlight.withValues(
-                                      alpha: 0.32 * wave,
-                                    ),
-                                    blurRadius: 5 * wave,
-                                  ),
-                                ],
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ],
           ],
         );
       },
