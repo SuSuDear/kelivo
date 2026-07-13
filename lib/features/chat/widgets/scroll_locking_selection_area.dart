@@ -107,8 +107,8 @@ class TextSelectionScrollLockScope extends InheritedWidget {
 
 /// Lightweight toolbar used for chat body selection.
 ///
-/// Avoids magnifier/system-menu paths that can leave a full-screen washed
-/// overlay on top of frosted chat surfaces.
+/// Uses AdaptiveTextSelectionToolbar.buttonItems for a simpler menu path while
+/// still allowing the platform magnifier configuration.
 Widget chatSelectionContextMenuBuilder(
   BuildContext context,
   SelectableRegionState selectableRegionState,
@@ -121,14 +121,15 @@ Widget chatSelectionContextMenuBuilder(
 
 /// [SelectionArea] that locks the surrounding chat list while a selection exists.
 class ScrollLockingSelectionArea extends StatefulWidget {
-  const ScrollLockingSelectionArea({
+  ScrollLockingSelectionArea({
     super.key,
     required this.child,
     this.focusNode,
     this.selectionControls,
     this.contextMenuBuilder = chatSelectionContextMenuBuilder,
-    this.magnifierConfiguration = TextMagnifierConfiguration.disabled,
-  });
+    TextMagnifierConfiguration? magnifierConfiguration,
+  }) : magnifierConfiguration = magnifierConfiguration ??
+           TextMagnifier.adaptiveMagnifierConfiguration;
 
   final Widget child;
   final FocusNode? focusNode;
@@ -205,10 +206,10 @@ class _ScrollLockingSelectionAreaState extends State<ScrollLockingSelectionArea>
 
   @override
   Widget build(BuildContext context) {
-    // Keep selection highlight readable on chat surfaces without letting the
-    // adaptive magnifier composite a washed full-screen layer.
+    // Keep selection highlight readable on chat surfaces.
     // Leave selectionControls null so SelectionArea picks the platform default
     // without depending on package-private handle-control symbols.
+    // Magnifier uses Flutter's adaptive loupe (CupertinoTextMagnifier on iOS).
     final baseTheme = Theme.of(context);
     final selectionTheme = baseTheme.textSelectionTheme.copyWith(
       selectionColor: baseTheme.colorScheme.primary.withValues(alpha: 0.28),
