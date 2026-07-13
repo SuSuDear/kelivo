@@ -12,13 +12,39 @@ class BuiltInSkill {
     required this.name,
     required this.description,
     required this.directoryPath,
+    this.directoryName,
   });
 
+  /// Display and invocation name. Prefer the `name:` value from SKILL.md.
   final String name;
   final String description;
   final String directoryPath;
 
+  /// Installed directory name kept as a backwards-compatible alias.
+  final String? directoryName;
+
   String get sourcePath => directoryPath;
+
+  String get installedName {
+    final value = directoryName?.trim();
+    if (value != null && value.isNotEmpty) return value;
+    return p.basename(directoryPath);
+  }
+
+  Iterable<String> get matchNames sync* {
+    final primary = name.trim();
+    if (primary.isNotEmpty) yield primary;
+    final installed = installedName.trim();
+    if (installed.isNotEmpty && installed.toLowerCase() != primary.toLowerCase()) {
+      yield installed;
+    }
+  }
+
+  bool matchesName(String value) {
+    final key = value.trim().toLowerCase();
+    if (key.isEmpty) return false;
+    return matchNames.any((name) => name.trim().toLowerCase() == key);
+  }
 }
 
 /// Loads user-installed Codex-style skills from the app data skills directory.
@@ -91,10 +117,12 @@ class BuiltInSkillService {
     clearCache();
 
     final content = await skillFile.readAsString();
+    final installedName = p.basename(target.path);
     return BuiltInSkill(
-      name: p.basename(target.path),
+      name: _nameFromSkillMarkdown(content, installedName),
       description: _descriptionFromSkillMarkdown(content),
       directoryPath: target.path,
+      directoryName: installedName,
     );
   }
 
@@ -133,10 +161,12 @@ class BuiltInSkillService {
     await sourceFile.copy(p.join(target.path, 'SKILL.md'));
     clearCache();
     final content = await sourceFile.readAsString();
+    final installedName = p.basename(target.path);
     return BuiltInSkill(
-      name: p.basename(target.path),
+      name: _nameFromSkillMarkdown(content, installedName),
       description: _descriptionFromSkillMarkdown(content),
       directoryPath: target.path,
+      directoryName: installedName,
     );
   }
 
@@ -217,10 +247,12 @@ class BuiltInSkillService {
     }
     clearCache();
     final content = await installedSkillFile.readAsString();
+    final installedName = p.basename(target.path);
     return BuiltInSkill(
-      name: p.basename(target.path),
+      name: _nameFromSkillMarkdown(content, installedName),
       description: _descriptionFromSkillMarkdown(content),
       directoryPath: target.path,
+      directoryName: installedName,
     );
   }
 
@@ -320,11 +352,13 @@ class BuiltInSkillService {
         try {
           content = skillFile.readAsStringSync();
         } catch (_) {}
+        final installedName = p.basename(entity.path);
         catalog.add(
           BuiltInSkill(
-            name: p.basename(entity.path),
+            name: _nameFromSkillMarkdown(content, installedName),
             description: _descriptionFromSkillMarkdown(content),
             directoryPath: entity.path,
+            directoryName: installedName,
           ),
         );
       }
@@ -404,7 +438,11 @@ class BuiltInSkillService {
     if (names.isEmpty || catalog.isEmpty) return const <BuiltInSkill>[];
     final wanted = names.map((e) => e.trim().toLowerCase()).toSet();
     final matches = catalog
-        .where((skill) => wanted.contains(skill.name.toLowerCase()))
+        .where(
+          (skill) => skill.matchNames.any(
+            (name) => wanted.contains(name.trim().toLowerCase()),
+          ),
+        )
         .toList(growable: false);
     return List<BuiltInSkill>.unmodifiable(matches);
   }
@@ -417,18 +455,19 @@ class BuiltInSkillService {
 
     final invoked = <BuiltInSkill>[];
     for (final skill in catalog) {
-      final escapedName = RegExp.escape(skill.name);
-      final dollarPattern = RegExp(
-        r'(^|[^A-Za-z0-9_-])\$' + escapedName + r'(?=$|[^A-Za-z0-9_-])',
-        caseSensitive: false,
-      );
-      final slashPattern = RegExp(
-        r'(^|\s)/(?:skills?\s+)?' + escapedName + r'(?=$|\s)',
-        caseSensitive: false,
-      );
-      if (dollarPattern.hasMatch(text) || slashPattern.hasMatch(text)) {
-        invoked.add(skill);
-      }
+      final matched = skill.matchNames.any((name) {
+        final escapedName = RegExp.escape(name);
+        final dollarPattern = RegExp(
+          r'(^|[^A-Za-z0-9_-])\$' + escapedName + r'(?=$|[^A-Za-z0-9_-])',
+          caseSensitive: false,
+        );
+        final slashPattern = RegExp(
+          r'(^|\s)\/(?:skills?\s+)?' + escapedName + r'(?=$|\s)',
+          caseSensitive: false,
+        );
+        return dollarPattern.hasMatch(text) || slashPattern.hasMatch(text);
+      });
+      if (matched) invoked.add(skill);
     }
     return List<BuiltInSkill>.unmodifiable(invoked);
   }
@@ -443,7 +482,8 @@ class BuiltInSkillService {
     final matches = <BuiltInSkill>[];
     for (final skill in catalog) {
       var score = 0;
-      final nameParts = skill.name
+      final nameParts = skill.matchNames
+          .join(' ')
           .toLowerCase()
           .split(RegExp(r'[-_\s]+'))
           .where((e) => e.length > 2)
@@ -484,7 +524,7 @@ class BuiltInSkillService {
       'directory',
       'resources',
     };
-    final source = '${skill.name} ${skill.description}'.toLowerCase();
+    final source = '${skill.matchNames.join(' ')} ${skill.description}'.toLowerCase();
     final seen = <String>{};
     for (final word in source.split(RegExp(r'[^a-z0-9]+'))) {
       if (word.length < 4 || stop.contains(word)) continue;
@@ -540,29 +580,58 @@ class BuiltInSkillService {
     }.contains(ext);
   }
 
+  static String _nameFromSkillMarkdown(String markdown, String fallback) {
+    final name = _frontMatterValue(markdown, 'name');
+    final clean = name?.trim();
+    if (clean != null && clean.isNotEmpty) return clean;
+    return fallback;
+  }
+
   static String _descriptionFromSkillMarkdown(String markdown) {
-    final lines = markdown.split('\n');
-    var inFrontMatter = false;
-    for (var i = 0; i < lines.length; i++) {
-      final line = lines[i].trim();
-      if (i == 0 && line == '---') {
-        inFrontMatter = true;
-        continue;
-      }
-      if (inFrontMatter) {
-        if (line == '---') break;
-        if (line.toLowerCase().startsWith('description:')) {
-          return line.substring('description:'.length).trim().replaceAll('"', '');
-        }
-      }
+    final description = _frontMatterValue(markdown, 'description');
+    if (description != null && description.trim().isNotEmpty) {
+      return description.trim();
     }
 
+    final lines = markdown.split('\n');
+    var inFrontMatter = false;
     for (final raw in lines) {
       final line = raw.trim();
-      if (line.isEmpty || line.startsWith('#') || line == '---') continue;
+      if (line == '---') {
+        inFrontMatter = !inFrontMatter;
+        continue;
+      }
+      if (inFrontMatter || line.isEmpty || line.startsWith('#')) continue;
       return line.length <= 180 ? line : '${line.substring(0, 177)}...';
     }
     return '';
+  }
+
+  static String? _frontMatterValue(String markdown, String key) {
+    final lines = markdown.split('\n');
+    if (lines.isEmpty || lines.first.trim() != '---') return null;
+    final wanted = key.toLowerCase();
+    for (var i = 1; i < lines.length; i++) {
+      final line = lines[i].trim();
+      if (line == '---') break;
+      final separator = line.indexOf(':');
+      if (separator <= 0) continue;
+      final field = line.substring(0, separator).trim().toLowerCase();
+      if (field != wanted) continue;
+      return _unquoteYamlScalar(line.substring(separator + 1).trim());
+    }
+    return null;
+  }
+
+  static String _unquoteYamlScalar(String value) {
+    if (value.length >= 2) {
+      final first = value[0];
+      final last = value[value.length - 1];
+      if ((first == '"' && last == '"') || (first == "'" && last == "'")) {
+        return value.substring(1, value.length - 1);
+      }
+    }
+    return value;
   }
 
   static File? _findSkillFileInDirectory(Directory dir) {
